@@ -21,6 +21,7 @@ class Header extends Component {
     render() {
         return(
             <React.Fragment>
+                <div className="header">
                 <Navbar dark expand="md" color="primary">
                     <div className="container">
                         <NavbarToggler onClick={this.toggleNav} />
@@ -45,6 +46,7 @@ class Header extends Component {
                         </Collapse>
                     </div>
                 </Navbar>
+                </div>
                 </React.Fragment>
         );
     }
