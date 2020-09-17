@@ -9,6 +9,7 @@ function Footer(props) {
                 <div className="col-4 offset-1 col-sm-2">
                     <h4>Links</h4>
                     <ul className="list-unstyled">
+                        <li><Link to="/home">Home</Link></li>
                         <li><Link to="/tv">TV</Link></li>
                         <li><Link to="/movies">Movies</Link></li>
                         <li><Link to="/profile">Profile</Link></li>
@@ -24,10 +25,10 @@ function Footer(props) {
                     <div className="text-center">
                         <h4>Follow Us!</h4>
                       <ul class="social-network social-circle">
-                       <li><a href="https://www.facebook.com/" class="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
-                       <li><a href="https://www.instagram.com/" class="icoInstagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
-                       <li><a href="https://www.twitter.com/" class="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-                       <li><a href="https://www.github.com/" class="icoGithub" title="Github"><i class="fa fa-github"></i></a></li>
+                       <li><a href="https://www.facebook.com/" className="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+                       <li><a href="https://www.instagram.com/" className="icoInstagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
+                       <li><a href="https://www.twitter.com/" className="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
+                       <li><a href="https://www.github.com/" className="icoGithub" title="Github"><i class="fa fa-github"></i></a></li>
                       </ul>				
                     </div>
                 </div>

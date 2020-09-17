@@ -4,28 +4,19 @@ import Footer from './FooterComponent';
 import Home from './HomeComponent';
 import { Switch, Route, Redirect } from 'react-router-dom';
 import Signup from './SignupComponent';
+import Signin from './SigninComponent';
 
 class Main extends Component {
 
     render() {
-        const HomePage = () => {
-            return(
-                <Home />
-            );
-        }
-
-        const Register = () => {
-            return(
-                <Signup />
-            );
-        }
 
         return(
             <div>
                 <Header />
                 <Switch>
-                    <Route path='/home' component={HomePage} />
-                    <Route path='/signup' component={Register} />
+                    <Route path='/home' component={Home} />
+                    <Route path='/signup' component={Signup} />
+                    <Route path='/signin' component={Signin} />
                     <Redirect to="/home" />
                 </Switch>
                 <Footer />
