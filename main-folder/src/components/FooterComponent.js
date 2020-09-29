@@ -28,7 +28,7 @@ function Footer(props) {
                        <li><a href="https://www.facebook.com/" className="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
                        <li><a href="https://www.instagram.com/" className="icoInstagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
                        <li><a href="https://www.twitter.com/" className="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-                       <li><a href="https://www.github.com/" className="icoGithub" title="Github"><i class="fa fa-github"></i></a></li>
+                       <li><a href="https://github.com/MoviesAndTvShowsTracker/ShowTracker" className="icoGithub" title="Github"><i class="fa fa-github"></i></a></li>
                       </ul>				
                     </div>
                 </div>
