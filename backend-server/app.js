@@ -3,9 +3,17 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
+const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+const mongoose = require('mongoose');
+
+const url = config.mongoURL;
+const connect = mongoose.connect(url);
+
+connect.then( (db) => {
+  console.log("mongo connection successful");
+}, (err) => { console.log("no connection to mongodb"); });
 
 var app = express();
 
