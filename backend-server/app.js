@@ -7,6 +7,10 @@ const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const mongoose = require('mongoose');
+var session = require('express-session');
+var FileStore = require('session-file-store')(session);
+var passport = require('passport');
+var authenticate = require('./authenticate');
 
 const url = config.mongoURL;
 const connect = mongoose.connect(url);
@@ -24,11 +28,39 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(session({
+  name: 'session-id',
+  secret: '57171-42486-19626-16719',
+  saveUninitialized: false,
+  resave: false,
+  store: new FileStore()
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
+function auth(req, res, next) {
+
+  if (!req.user) {
+    var err = new Error("You are not authenticated");
+    err.status = 401;
+    next(err);
+  }
+  else {
+    next();
+  }
+}
+// for authentication
+app.use(auth);
+
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

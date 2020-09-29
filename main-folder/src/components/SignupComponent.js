@@ -26,11 +26,13 @@ class Signup extends Component {
     super(props);
 
     this.state = {
+      username: null,
       firstName: null,
       lastName: null,
       email: null,
       password: null,
       formErrors: {
+        username:"",
         firstName: "",
         lastName: "",
         email: "",
@@ -46,6 +48,7 @@ class Signup extends Component {
     e.preventDefault();
 
     this.setState({
+      username:"",
       firstName: "",
       lastName: "",
       email: "",
@@ -54,6 +57,7 @@ class Signup extends Component {
     if (formValid(this.state)) {
       console.log(`
         --SUBMITTING--
+        User Name: ${this.state.username}
         First Name: ${this.state.firstName}
         Last Name: ${this.state.lastName}
         Email: ${this.state.email}
@@ -71,6 +75,10 @@ class Signup extends Component {
     let formErrors = { ...this.state.formErrors };
 
     switch (name) {
+      case "username":
+        formErrors.username =
+          value.length < 3 ? "minimum 3 characaters required" : "";
+        break;
       case "firstName":
         formErrors.firstName =
           value.length < 3 ? "minimum 3 characaters required" : "";
@@ -103,6 +111,21 @@ class Signup extends Component {
         <div className="form-wrapper">
           <h1>Create Account</h1>
           <form onSubmit={this.handleSubmit} noValidate>
+          <div className="email">
+              <label htmlFor="username">Username</label>
+              <input
+                className={formErrors.username.length > 0 ? "error" : null}
+                placeholder="Username"
+                type="text"
+                name="username"
+                value={this.state.username}
+                noValidate
+                onChange={this.handleChange}
+              />
+              {formErrors.username.length > 0 && (
+                <span className="errorMessage">{formErrors.username}</span>
+              )}
+            </div>
             <div className="firstName">
               <label htmlFor="firstName">First Name</label>
               <input
