@@ -29,33 +29,11 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(session({
-  name: 'session-id',
-  secret: '57171-42486-19626-16719',
-  saveUninitialized: false,
-  resave: false,
-  store: new FileStore()
-}));
 
 app.use(passport.initialize());
-app.use(passport.session());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-function auth(req, res, next) {
-
-  if (!req.user) {
-    var err = new Error("You are not authenticated");
-    err.status = 401;
-    next(err);
-  }
-  else {
-    next();
-  }
-}
-// for authentication
-app.use(auth);
 
 
 app.use(express.static(path.join(__dirname, 'public')));
