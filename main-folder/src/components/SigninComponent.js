@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 
+import axios from 'axios';
+
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
 );
@@ -26,9 +28,10 @@ class Signin extends Component {
     super(props);
 
     this.state = {
-      email: null,
+      username: null,
       password: null,
       formErrors: {
+        username: "",
         firstName: "",
         lastName: "",
         email: "",
@@ -44,13 +47,25 @@ class Signin extends Component {
     e.preventDefault();
 
     this.setState({
-      email: "",
+      username: "",
       password: "" });
 
     if (formValid(this.state)) {
+
+      var data = {
+        username : this.state.username,
+        password : this.state.password,
+      }
+
+      axios.defaults.withCredentials = true;
+      axios.post('http://localhost:5000/users/login', data)
+      .then(res => {
+        console.log("Sent from back-end : " , res);
+      })
+
       console.log(`
         --SUBMITTING--
-        Email: ${this.state.email}
+        Username: ${this.state.username}
         Password: ${this.state.password}
       `); //above is only for experiment purposes. 
     } else {
@@ -65,6 +80,10 @@ class Signin extends Component {
     let formErrors = { ...this.state.formErrors };
 
     switch (name) {
+      case "username":
+        formErrors.username =
+          value.length < 3 ? "minimum 3 characaters required" : "";
+        break;
       case "email":
         formErrors.email = emailRegex.test(value)
           ? ""
@@ -91,18 +110,18 @@ class Signin extends Component {
             <form onSubmit={this.handleSubmit} noValidate>
               
               <div className="email">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  className={formErrors.email.length > 0 ? "error" : null}
-                  placeholder="Email"
-                  type="email"
-                  name="email"
-                  value={this.state.email}
+                  className={formErrors.username.length > 0 ? "error" : null}
+                  placeholder="Username"
+                  type="text"
+                  name="username"
+                  value={this.state.username}
                   noValidate
                   onChange={this.handleChange}
                 />
-                {formErrors.email.length > 0 && (
-                  <span className="errorMessage">{formErrors.email}</span>
+                {formErrors.username.length > 0 && (
+                  <span className="errorMessage">{formErrors.username}</span>
                 )}
               </div>
               <div className="password">

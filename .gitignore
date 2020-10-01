@@ -41,6 +41,9 @@ build/Release
 node_modules/
 jspm_packages/
 
+#session file which create everytime user signup/signin
+sessions 
+
 # TypeScript v1 declaration files
 typings/
 

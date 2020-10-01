@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 
+import axios from 'axios';
+
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
 );
@@ -55,6 +57,22 @@ class Signup extends Component {
       password: "" });
 
     if (formValid(this.state)) {
+
+      var data = {
+        username: this.state.username,
+        firstName: this.state.firstName,
+        lastName: this.state.lastName,
+        email: this.state.email,
+        password: this.state.password
+      }
+
+      axios.defaults.withCredentials = true;
+      axios.post('http://localhost:5000/users/signup', data)
+      .then(res => {
+        console.log(res);
+
+      })
+
       console.log(`
         --SUBMITTING--
         User Name: ${this.state.username}
@@ -188,7 +206,7 @@ class Signup extends Component {
             </div>
             <div className="createAccount">
               <button type="submit" onClick = { this.handleSubmit } >Create Account</button>
-              <small><Link to= '/signin'> Already Have an Account? </Link></small>
+              <small><Link to= '/login'> Already Have an Account? </Link></small>
             </div>
           </form>
         </div>
