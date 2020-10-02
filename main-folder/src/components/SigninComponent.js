@@ -29,10 +29,10 @@ class Signin extends Component {
     super(props);
 
     this.state = {
-      username: null,
-      password: null,
+      username: "",
+      password: "",
       successFlag : null ,
-      userName: null,
+      userName: "",
       formErrors: {
         username: "",
         firstName: "",
@@ -91,7 +91,6 @@ class Signin extends Component {
       `); //above is only for experiment purposes. 
     } else {
       console.error("FORM INVALID - Fill up the form first");
-      alert("Please fill the form correctly.");
     }
   };
 
