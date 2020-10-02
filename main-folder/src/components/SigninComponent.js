@@ -45,10 +45,12 @@ class Signin extends Component {
 
   handleSubmit = e => {
     e.preventDefault();
-
+   
+    
     this.setState({
       username: "",
       password: "" });
+
 
     if (formValid(this.state)) {
 
@@ -60,8 +62,13 @@ class Signin extends Component {
       axios.defaults.withCredentials = true;
       axios.post('http://localhost:5000/users/login', data)
       .then(res => {
-        console.log("Sent from back-end : " , res);
+        console.log("Sent from back-end : " , res.data.status , "    "  , res.data.token);
+
+        if(res.data.status === 200){
+          localStorage.setItem("user",res.data.token)
+        }
       })
+      
 
       console.log(`
         --SUBMITTING--

@@ -15,6 +15,8 @@ router.get('/', function(req, res, next) {
 
 router.post('/signup', (req, res, next) => {
 
+  //console.log("From front-end : " + req.body.username);
+
   User.register(new User({ username: req.body.username, firstName: req.body.firstName, lastName: req.body.lastName, email: req.body.email }),
    req.body.password, (err, user) => {
     if(err) {
@@ -24,15 +26,15 @@ router.post('/signup', (req, res, next) => {
     }
     else {
         passport.authenticate('local')(req, res, () => {
-        res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        //res.json({success: true, status: 'Registration Successful!'});
+ 
+        res.json({
+          status: 200,
+          message: 'Registration Successful!'
+        })
 
-        var data = {
-          success: true, 
-          status: 'Registration Successful!'
-        }
-        res.send(JSON.stringify(data));
+
+        res.send();
 
       });
     }
@@ -41,13 +43,16 @@ router.post('/signup', (req, res, next) => {
 
 router.post('/login', passport.authenticate('local'), (req, res) => {
   var token = authenticate.getToken({_id: req.user._id});
-  res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
-  res.json({success: true, token: token, status: 'You are successfully logged in!'});
+  res.json({status: 200, token: token, message: 'You are successfully logged in!'});
+
+  res.send();
+
 });
 
 router.get('/logout', (req, res) => {
   req.logout();
+  localStorage.removeItem("user");
   res.redirect('/');
   
 });
