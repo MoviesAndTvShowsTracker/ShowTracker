@@ -89,6 +89,7 @@ class Signup extends Component {
               this.setState({
                   successFlag: true
               })
+              alert("Registration Successful!");
             }
         })
 
