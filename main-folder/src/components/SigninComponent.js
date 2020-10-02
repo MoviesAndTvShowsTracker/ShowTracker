@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 
 import axios from 'axios';
+import Profile from './ProfileComponent';
 
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -30,6 +31,8 @@ class Signin extends Component {
     this.state = {
       username: null,
       password: null,
+      successFlag : null ,
+      userName: null,
       formErrors: {
         username: "",
         firstName: "",
@@ -43,13 +46,21 @@ class Signin extends Component {
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
+  componentWillMount() {
+    this.setState({
+        successFlag : false
+    })
+  }
+
   handleSubmit = e => {
     e.preventDefault();
    
     
     this.setState({
       username: "",
-      password: "" });
+      password: "",
+      userName: this.state.username
+   });
 
 
     if (formValid(this.state)) {
@@ -65,7 +76,10 @@ class Signin extends Component {
         console.log("Sent from back-end : " , res.data.status , "    "  , res.data.token);
 
         if(res.data.status === 200){
-          localStorage.setItem("user",res.data.token)
+          localStorage.setItem("user",res.data.token);
+          this.setState({
+            successFlag: true
+          })
         }
       })
       
@@ -108,11 +122,19 @@ class Signin extends Component {
   };
 
     render() {
-      const { formErrors } = this.state;
+        var redirectVar = null;
+
+        if(this.state.successFlag){
+            return <Profile data={this.state}  />
+        }
+        
+        const { formErrors } = this.state;
 
         return (
           <div className="wrapper">
           <div className="form-wrapper">
+            {redirectVar}
+
             <h1>Create Account</h1>
             <form onSubmit={this.handleSubmit} noValidate>
               

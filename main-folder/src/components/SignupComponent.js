@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 
 import axios from 'axios';
+import Signin from './SigninComponent';
 
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -33,6 +34,7 @@ class Signup extends Component {
       lastName: null,
       email: null,
       password: null,
+      successFlag: null,
       formErrors: {
         username:"",
         firstName: "",
@@ -46,6 +48,11 @@ class Signup extends Component {
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
+  componentWillMount() {
+    this.setState({
+        successFlag : false
+    })
+  }
   handleSubmit = e => {
     e.preventDefault();
 
@@ -78,6 +85,11 @@ class Signup extends Component {
          .then(res => {
             console.log("From Back-end : " + res.data.status);
             
+            if(res.data.status === 200){
+              this.setState({
+                  successFlag: true
+              })
+            }
         })
 
       console.log(`
@@ -129,12 +141,20 @@ class Signup extends Component {
   };
 
   render() {
+    var redirectVar = null;
+
+    if(this.state.successFlag){
+      return <Signin />
+    }
     const { formErrors } = this.state;
 
     return (
       <div className="wrapper">
         <div className="form-wrapper">
+          {redirectVar}
+          
           <h1>Create Account</h1>
+
           <form onSubmit={this.handleSubmit} noValidate>
           <div className="email">
               <label htmlFor="username">Username</label>

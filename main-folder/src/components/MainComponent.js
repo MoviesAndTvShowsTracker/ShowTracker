@@ -5,6 +5,7 @@ import Home from './HomeComponent';
 import { Switch, Route, Redirect } from 'react-router-dom';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
+import Profile from './ProfileComponent';
 
 class Main extends Component {
 
@@ -17,6 +18,7 @@ class Main extends Component {
                     <Route path='/home' component={Home} />
                     <Route path='/signup' component={Signup} />
                     <Route path='/login' component={Signin} />
+                    <Route path='/profile' component={Profile} />
                     <Redirect to="/home" />
                 </Switch>
                 <Footer />
