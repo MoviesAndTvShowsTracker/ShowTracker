@@ -19,6 +19,11 @@ class Header extends Component {
     }
 
     render() {
+        function logout() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('myuser');
+            window.location.reload();
+        }
         return(
             <React.Fragment>
                 <div className="header">
@@ -40,9 +45,14 @@ class Header extends Component {
                                 <NavItem>
                                     <NavLink className="nav-link"  to='/profile'><span className="fa fa-user-circle-o fa-lg"></span> Profile</NavLink>
                                 </NavItem>
-                                <NavItem>
-                                    <NavLink className="nav-link" to='/signup'><span className="fa fa-sign-in fa-lg"></span>  Login</NavLink>
-                                </NavItem>
+                                {!localStorage.getItem('user') &&
+                                    <NavItem>
+                                        <NavLink className="nav-link" to='/login'><span className="fa fa-sign-in fa-lg"></span>  Login</NavLink>
+                                    </NavItem>
+                                }
+                                {!localStorage.getItem('user') ||
+                                    <button class="btn btn-primary" onClick= {logout}>Logout</button>
+                                }
                             </Nav>
                         </Collapse>
                     </div>

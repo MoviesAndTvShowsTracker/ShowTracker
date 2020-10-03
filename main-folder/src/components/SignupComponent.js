@@ -72,14 +72,7 @@ class Signup extends Component {
         email: this.state.email,
         password: this.state.password
       }
-      console.log(`
-      --BEFORE    SUBMITTING--
-      User Name: ${this.state.username}
-      First Name: ${this.state.firstName}
-      Last Name: ${this.state.lastName}
-      Email: ${this.state.email}
-      Password: ${this.state.password}
-    `); 
+      
       axios.defaults.withCredentials = true;
         axios.post('http://localhost:5000/users/signup', data)
          .then(res => {
