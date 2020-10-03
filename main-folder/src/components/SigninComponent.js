@@ -1,12 +1,7 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Redirect } from 'react-router-dom';
 
 import axios from 'axios';
-import Profile from './ProfileComponent';
-
-const emailRegex = RegExp(
-  /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-);
 
 const formValid = ({ formErrors, ...rest }) => {
   let valid = true;
@@ -76,14 +71,14 @@ class Signin extends Component {
         console.log("Sent from back-end : " , res.data.status , "    "  , res.data.token);
 
         if(res.data.status === 200){
+          localStorage.setItem('myuser', this.state.userName);
           localStorage.setItem("user",res.data.token);
+          alert("Successfully logged in!");
           this.setState({
             successFlag: true
-          })
+          });
         }
       })
-      
-
       console.log(`
         --SUBMITTING--
         Username: ${this.state.username}
@@ -104,11 +99,7 @@ class Signin extends Component {
         formErrors.username =
           value.length < 3 ? "minimum 3 characaters required" : "";
         break;
-      case "email":
-        formErrors.email = emailRegex.test(value)
-          ? ""
-          : "invalid email address";
-        break;
+
       case "password":
         formErrors.password =
           value.length < 6 ? "minimum 6 characaters required" : "";
@@ -124,7 +115,9 @@ class Signin extends Component {
         var redirectVar = null;
 
         if(this.state.successFlag){
-            return <Profile data={this.state}  />
+            return(
+              <Redirect to="/profile" />
+              );  
         }
         
         const { formErrors } = this.state;
