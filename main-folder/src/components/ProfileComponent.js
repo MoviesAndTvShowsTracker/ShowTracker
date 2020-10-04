@@ -10,8 +10,8 @@ const Profile = (props) => {
 
     return( 
         
-        <div>
-            <h1> Welcome {localStorage.getItem('myuser')}
+        <div> 
+            <h1 style={{color: "black"}}> Welcome {localStorage.getItem('myuser')}
             </h1>
             <div className="container col-1">
             {localStorage.getItem('user') &&

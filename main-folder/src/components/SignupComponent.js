@@ -147,7 +147,7 @@ class Signup extends Component {
         <div className="form-wrapper">
           {redirectVar}
           
-          <h1>Create Account</h1>
+          <h1 >Create Account</h1>
 
           <form onSubmit={this.handleSubmit} noValidate>
           <div className="email">
@@ -180,7 +180,7 @@ class Signup extends Component {
                 <span className="errorMessage">{formErrors.firstName}</span>
               )}
             </div>
-            <div className="lastName">
+            <div className="email">
               <label htmlFor="lastName">Last Name</label>
               <input
                 className={formErrors.lastName.length > 0 ? "error" : null}
