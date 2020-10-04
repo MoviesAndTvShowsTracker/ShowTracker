@@ -292,6 +292,19 @@ h3 {
     box-shadow: 0 1px 0 rgba(0,0,0,.45);
 }
 
+.btn-blue {
+    color: #fff;
+    background-color: #291fb8;
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#2b19ca),to(#2a0bd4));
+    background-image: -webkit-linear-gradient(top,#2314a7,#3707a7);
+    background-image: -moz- oldlinear-gradient(top,#1042a0,#1315ac);
+    background-image: -o-linear-gradient(top,#1f1da3,#1518b9);
+    background-image: linear-gradient(to bottom,#1518b3,#2a4ce4);
+    -webkit-box-shadow: 0 1px 0 rgba(0,0,0,.45);
+    -moz-box-shadow: 0 1px 0 rgba(0,0,0,.45);
+    box-shadow: 0 1px 0 rgba(0,0,0,.45);
+}
+
 @media only screen and (max-width: 1449px) and (min-width: 950px), only screen and (min-width: 1450px)
 .nmhp-cta .cta-btn-txt {
     padding: .5rem 0;

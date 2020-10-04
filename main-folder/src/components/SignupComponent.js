@@ -147,7 +147,7 @@ class Signup extends Component {
         <div className="form-wrapper">
           {redirectVar}
           
-          <h1 >Create Account</h1>
+          <h1 style={{color: "black"}}>Create Account</h1>
 
           <form onSubmit={this.handleSubmit} noValidate>
           <div className="email">
