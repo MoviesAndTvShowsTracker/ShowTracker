@@ -47,7 +47,7 @@ function Home(props) {
 			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card">
 				<div className="animation-card-container">
 					<div className="our-story-card-text">
-						<h1 id="" className="our-story-card-title" data-uia="animation-card-title">Let us be your Guide.</h1>
+						<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Let us be your Guide.</h1>
 						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-search-plus"></span> Discover something new</h3>
 						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-bell-o"></span> Keep tabs on your TV and Movies</h3>
 					</div>
@@ -65,16 +65,18 @@ function Home(props) {
 					</div>
 				</div>
 			</div>
-			<div className="our-story-card animation-card downloadAndWatch flipped" data-uia-our-story="downloadAndWatch" data-uia="our-story-card">
-				<div className="animation-card-container">
-					<div className="our-story-card-text">
-						<h1 id="" className="our-story-card-title" data-uia="animation-card-title">Save Your Shows and Movies</h1>
-						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-check-circle-o"></span> With Show Tracker never forget where you were. </h3>
-						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-bookmark-o"></span> Make your Watchlist, Favorites and many more . . . </h3>
-					</div>
-					<div className="our-story-card-img-container">
-						<div className="our-story-card-animation-container">
-							<img alt="" className="our-story-card-img" src="images/Shows.png" data-uia="our-story-card-img"/>
+			<div className="d-none d-sm-block">
+				<div className="our-story-card animation-card downloadAndWatch flipped" data-uia-our-story="downloadAndWatch" data-uia="our-story-card">
+					<div className="animation-card-container">
+						<div className="our-story-card-text">
+							<h1 id="" className="our-story-card-title" data-uia="animation-card-title">Save Your Shows and Movies</h1>
+							<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-check-circle-o"></span> With Show Tracker never forget where you were. </h3>
+							<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-bookmark-o"></span> Make your Watchlist, Favorites and many more . . . </h3>
+						</div>
+						<div className="d-none d-sm-block our-story-card-img-container">
+							<div className="our-story-card-animation-container">
+								<img alt="" className="our-story-card-img" src="images/Shows.png" data-uia="our-story-card-img"/>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -82,7 +84,7 @@ function Home(props) {
 			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card">
 				<div className="animation-card-container">
 					<div className="our-story-card-text">
-						<h1 id="" className="our-story-card-title" data-uia="animation-card-title">Now Let's get you going</h1>
+						<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Now Let's get you going</h1>
 						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle">Make Your Profile and start Tracking! </h3>
 						<div className="row">
 							<div className="col-6">
