@@ -11,8 +11,13 @@ const Profile = (props) => {
     return( 
         
         <div> 
-            <h1 style={{color: "black"}}> Welcome {localStorage.getItem('myuser')}
-            </h1>
+            {!localStorage.getItem('user') &&
+           <h1 style={{color: "black"}}>Please Login to view this page</h1>
+        }
+        {!localStorage.getItem('user') ||
+        <h1 style={{color: "black"}}> Welcome {localStorage.getItem('myuser')}
+            </h1>        }
+            
             <div className="container col-1">
             {localStorage.getItem('user') &&
                 <button class="btn btn-primary" onClick= {logout}>Logout</button>
