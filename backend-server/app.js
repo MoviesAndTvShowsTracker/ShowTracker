@@ -13,7 +13,8 @@ var passport = require('passport');
 var authenticate = require('./authenticate');
 
 const url = config.mongoURL;
-const connect = mongoose.connect(url);
+const connect = mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.set('useCreateIndex', true);
 
 connect.then( (db) => {
   console.log("mongo connection successful");

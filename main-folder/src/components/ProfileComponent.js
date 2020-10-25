@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, NavLink } from 'react-router-dom';
 
 const Profile = (props) => {
 
@@ -12,7 +13,10 @@ const Profile = (props) => {
         
         <div> 
             {!localStorage.getItem('user') &&
-           <h1 style={{color: "black"}}>Please Login to view this page</h1>
+           <Link to="/login">
+            <h1 style={{color: "black"}}>Please Login to view this page</h1>
+            <button className="mt-2 mb-2 offset-6 btn btn-primary">Login</button>
+           </Link>
         }
         {!localStorage.getItem('user') ||
         <h1 style={{color: "black"}}> Welcome {localStorage.getItem('myuser')}
