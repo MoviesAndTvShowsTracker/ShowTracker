@@ -81,39 +81,40 @@ function Home(props) {
 					</div>
 				</div>
 			</div>
-			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card">
-				<div className="animation-card-container">
-					<div className="our-story-card-text">
-						<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Now Let's get you going</h1>
-						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle">Make Your Profile and start Tracking! </h3>
-						<div className="row">
-							<div className="col-6">
-								<Link to="/signup">
-									<Button className="btn btn-red btn-block">Signup</Button>
-								</Link>
-							</div>
-							<div className="col-6">
-								<Link to="/login">
-									<Button className="btn btn-blue btn-block">Login</Button>
-								</Link>
+			{!localStorage.getItem('user') &&
+				<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card">
+					<div className="animation-card-container">
+						<div className="our-story-card-text">
+							<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Now Let's get you going</h1>
+							<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle">Make Your Profile and start Tracking! </h3>
+							<div className="row">
+								<div className="col-6">
+									<Link to="/signup">
+										<Button className="btn btn-red btn-block">Signup</Button>
+									</Link>
+								</div>
+								<div className="col-6">
+									<Link to="/login">
+										<Button className="btn btn-blue btn-block">Login</Button>
+									</Link>
+								</div>
 							</div>
 						</div>
-					</div>
-					<div className="our-story-card-img-container">
-						<div className="our-story-card-animation-container">
-							<img alt="" className="our-story-card-img" src="images/Demoss.png" style={{marginTop: "15px"}} data-uia="our-story-card-img"/>
-							<div className="our-story-card-animation">
-								<video className="our-story-card-video" autoplay="" playsinline="" muted="" loop="">
-									<source src="htps://assets.nflxext.com/ffe/siteui/acquisition/ourStory/fuji/desktop/video-tv-in-0819.m4v" type="video/mp4"/>
-								</video>
-								<div className="our-story-card-animation-text">
+						<div className="our-story-card-img-container">
+							<div className="our-story-card-animation-container">
+								<img alt="" className="our-story-card-img" src="images/Demoss.png" style={{marginTop: "15px"}} data-uia="our-story-card-img"/>
+								<div className="our-story-card-animation">
+									<video className="our-story-card-video" autoplay="" playsinline="" muted="" loop="">
+										<source src="htps://assets.nflxext.com/ffe/siteui/acquisition/ourStory/fuji/desktop/video-tv-in-0819.m4v" type="video/mp4"/>
+									</video>
+									<div className="our-story-card-animation-text">
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+				</div> }
 			</div>
-		</div>
 	</div>
     );
 }
