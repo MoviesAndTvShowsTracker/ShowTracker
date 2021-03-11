@@ -1,6 +1,37 @@
 import React, { Component } from 'react';
 import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem} from 'reactstrap';
 import { NavLink } from 'react-router-dom';
+import swal from 'sweetalert';
+
+function logout() {
+    swal("Do you want to Logout?", {
+      buttons: {
+        nope: {
+          text: "No",
+          value: "no"
+        },
+        sure: {
+          text: "I'm, Sure",
+          value: "logout"
+        }
+      }
+    }).then(value => {
+      switch (value) {
+        case "logout":
+          swal(" Logged out Successfully")
+          .then(val => {
+            localStorage.clear();
+            return window.history.go('/home');
+          });
+          break;
+        case "no":
+          swal("Ok", "success");
+          break;
+        default:
+          swal("Got away safely!");
+      }
+    });
+  };
 
 class Header extends Component {
 
@@ -19,11 +50,7 @@ class Header extends Component {
     }
 
     render() {
-        function logout() {
-            localStorage.removeItem('user');
-            localStorage.removeItem('myuser');
-            window.location.reload();
-        }
+        
         return(
             <React.Fragment>
                 <div className="header">

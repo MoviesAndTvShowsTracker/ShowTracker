@@ -7,25 +7,41 @@ import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
 
+const isLoggedIn = () => {
+    return localStorage.getItem('user') != null;
+  };
+
+const SecuredRoute = ({ component: Component, ...rest }) => (
+    <Route
+        {...rest}
+        render={props =>
+        
+        isLoggedIn() === true ? (
+            <Component {...props} />
+        ) : (
+            <Redirect to="/login" />
+        )
+        }
+    />
+)
+
 const LoginContainer = () => (
     <div>
-      <Route exact path="/" render={() => <Redirect to="/home" />} />
       <Route path="/login" component={Signin} />
     </div>
   );
 
 const SignupContainer = () => (
-<div>
-    <Route exact path="/" render={() => <Redirect to="/home" />} />
-    <Route path="/signup" component={Signup} />
-</div>
+    <div>
+        <Route path="/signup" component={Signup} />
+    </div>
 );
 
 const DefaultContainer = () => (
     <div>
         <Header />
         <Route path='/home' component={Home} />
-        <Route path='/profile' component={Profile} />
+        <SecuredRoute path='/profile' component={Profile} />
         <Redirect to="/home" />
     </div>
 );
@@ -38,7 +54,7 @@ class Main extends Component {
                 <Switch>
                     <Route exact path="/login" component={LoginContainer}/>
                     <Route exact path="/signup" component={SignupContainer}/>
-                    <Route component={DefaultContainer}/>                
+                    <Route component={DefaultContainer}/>  
                 </Switch>
                 <Footer />
             </div>

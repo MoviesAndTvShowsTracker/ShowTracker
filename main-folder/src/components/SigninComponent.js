@@ -47,6 +47,12 @@ class Signin extends Component {
     })
   }
 
+  componentDidMount() {
+    if (localStorage.getItem("user") != null) {
+        return this.props.history.goBack();
+     }
+   }
+
   handleSubmit = e => {
     e.preventDefault();
    

@@ -28,14 +28,14 @@ function Footer(props) {
                        <li><a href="https://www.facebook.com/" className="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
                        <li><a href="https://www.instagram.com/" className="icoInstagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
                        <li><a href="https://www.twitter.com/" className="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-                       <li><a href="https://github.com/MoviesAndTvShowsTracker/ShowTracker" className="icoGithub" title="Github"><i class="fa fa-github"></i></a></li>
+                       <li><a href="https://github.com/MoviesAndTvShowsTracker/ShowTracker" className="icoGithub" title="Github" target="_blank"><i class="fa fa-github"></i></a></li>
                       </ul>				
                     </div>
                 </div>
             </div>
             <div className="row justify-content-center">             
                 <div className="col-auto">
-                    For Any Queries or further Informataion please<a href="mailto:prajapatijimil@yahoo.com"> Contact Us. </a>
+                    For Any Queries or further Informataion please<a href="mailto:jprajapati2014@gmail.com"> Contact us. </a>
                      &copy; Copyright 2020 Show Tracker 
                 </div>
             </div>

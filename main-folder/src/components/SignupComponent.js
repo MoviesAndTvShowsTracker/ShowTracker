@@ -134,6 +134,12 @@ class Signup extends Component {
     this.setState({ formErrors, [name]: value });
   };
 
+  componentDidMount() {
+    if (localStorage.getItem("user") != null) {
+        return this.props.history.goBack();
+     }
+   }
+
   render() {
     var redirectVar = null;
 
