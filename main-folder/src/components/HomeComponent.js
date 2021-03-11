@@ -25,11 +25,11 @@ function Home(props) {
 					<form className="cta-form email-form" data-uia="email-form" method="GET">
 						<h3 className="email-form-title">Find where to watch TV &amp; movies and discover what's hot.</h3>
 						<div className="email-form-lockup">
-							
+							{!localStorage.getItem('user') &&
 							<div className="our-story-cta-container cta-link-wrapper">
 								<Link to="/signup">
 								<button className="btn btn-red nmhp-cta btn-none btn-custom" >
-								<span id="" className="cta-btn-txt" data-uia="">Join ShowTracker</span>
+								<span id="" className="cta-btn-txt" data-uia=""> Join ShowTracker</span>
 								<span id="" className="chevron-right-arrow" data-uia="">
 									<svg viewBox="0 0 6 12" xmlns="http://www.w3.org/2000/svg">
 										<desc>chevron</desc>
@@ -38,13 +38,27 @@ function Home(props) {
 								</span>
 								</button>
 								</Link>
-							</div>
+							</div> }
+							{localStorage.getItem('user') &&
+							<div className="our-story-cta-container cta-link-wrapper">
+								
+								<button className="btn btn-red nmhp-cta btn-none btn-custom" >
+								<span id="" className="cta-btn-txt" data-uia=""><a href="#explore" style={{textDecoration:'none', color:'white'}}>Explore The Features</a></span>
+								<span id="" className="chevron-right-arrow" data-uia="">
+									<svg viewBox="0 0 6 12" xmlns="http://www.w3.org/2000/svg">
+										<desc>chevron</desc>
+										<path d="M.61 1.312l.78-.624L5.64 6l-4.25 5.312-.78-.624L4.36 6z" fill="none" fill-rule="evenodd"></path>
+									</svg>
+								</span>
+								</button>
+								
+							</div> }
 						</div>
 					</form>
 					<h3 id="" className="our-story-card-disclaimer" data-uia="our-story-card-disclaimer"></h3>
 				</div>
 			</div>
-			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card">
+			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card" id="explore">
 				<div className="animation-card-container">
 					<div className="our-story-card-text">
 						<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Let us be your Guide.</h1>

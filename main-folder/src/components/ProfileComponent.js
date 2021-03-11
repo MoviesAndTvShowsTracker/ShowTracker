@@ -18,17 +18,12 @@ function logout() {
     }).then(value => {
       switch (value) {
         case "logout":
-          swal(" Logged out Successfully")
+          swal("", "", 'success')
           .then(val => {
             localStorage.clear();
             return window.history.go('/home');
           });
           break;
-        case "no":
-          swal("Ok", "success");
-          break;
-        default:
-          swal("Got away safely!");
       }
     });
   };
