@@ -6,6 +6,7 @@ import { Switch, Route, BrowserRouter, Redirect } from 'react-router-dom';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
+import LandingPage from './Movies/LandingComponent';
 
 const isLoggedIn = () => {
     return localStorage.getItem('user') != null;
@@ -42,7 +43,8 @@ const DefaultContainer = () => (
         <Header />
         <Route path='/home' component={Home} />
         <SecuredRoute path='/profile' component={Profile} />
-        <Redirect to="/home" />
+        <Route path='/movies' component={LandingPage} />
+        <Redirect to='/home' />
     </div>
 );
 
