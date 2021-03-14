@@ -1,7 +1,6 @@
 import React from 'react';
-import {Typography, Row} from 'antd';
+import { Row} from 'reactstrap';
 
-const {Title} = Typography;
 
 function MainImage(props) {
     return (
@@ -14,7 +13,7 @@ function MainImage(props) {
         }}>
             <div>
                 <div style={{ position: 'absolute', maxWidth: '500px', bottom: '2rem', marginLeft: '2rem' }}>
-                    <Title style={{ color: 'white' }} level={2} > {props.title}</Title>
+                    <div style={{ color: 'white' }} className="h2 font-weight-bolder" > {props.title}</div>
                     <p style={{ color: 'white', fontSize: '1rem' }}>{props.text}</p>
                 </div>
             </div>

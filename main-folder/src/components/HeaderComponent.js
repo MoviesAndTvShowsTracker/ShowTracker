@@ -24,6 +24,9 @@ function logout() {
             return window.history.go('/home');
           });
           break;
+        default:
+            swal("Nothing happened");
+            break;
       }
     });
   };
