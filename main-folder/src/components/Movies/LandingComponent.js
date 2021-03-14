@@ -9,16 +9,27 @@ import GridCard from './GridCard';
 function LandingPage() {
 
     const [Movies, setMovies] = useState([]);
+    const [CurrentPage, setCurrentPage] = useState(0);
 
     useEffect( () => {
+        const endpoint = `${API_URL}movie/popular?api_key=${API_KEY}&language=en-US&page=1`;
+        fetchMovies(endpoint);
+    }, []);
 
-        fetch(`${API_URL}movie/popular?api_key=${API_KEY}&language=en-US&page=1`)
+    const fetchMovies = (path) => {
+        fetch(path)
         .then(response => response.json())
         .then(response => {
             console.log(response);
-            setMovies(response.results);
+            setMovies([...Movies, ...response.results]);
+            setCurrentPage(response.page);
         })
-    }, []);
+    }
+
+    const handleClick = () => {
+        const endpoint = `${API_URL}movie/popular?api_key=${API_KEY}&language=en-US&page=${CurrentPage + 1}`
+        fetchMovies(endpoint);
+    }
 
     return (
         <div style={{ width: '100%', margin: 0 }}  >
@@ -45,7 +56,7 @@ function LandingPage() {
 
                 <br />
                 <div className="text-center">
-                    <button className="btn btn-primary" onClick> Load More </button>
+                    <button className="btn btn-primary" onClick={handleClick}> Load More </button>
                 </div>
 
             </div>
