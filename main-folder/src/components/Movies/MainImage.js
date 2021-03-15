@@ -6,7 +6,7 @@ function MainImage(props) {
     return (
         <div style={{
             background:`url('${props.image}'), #1c1c1c`,
-            height: '60vh',
+            height: '75vh',
             backgroundPosition: 'center',
             width: '100%',
             position: 'relative'

@@ -2,19 +2,33 @@ import React from 'react';
 import { Col } from 'reactstrap';
 function GridCard(props) {
 
-        return (
+    if(props.actor) {
+        return(
+            <Col lg={3} md={4} sm={6} xs={12} className="mb-3 mt-3">
+                <div>
+                        <img className="card card-img border-0" style={{ width: '100%', height: '300px' }} alt="img" src={props.image} />
+                        <div className="text-center text-dark font-weight-bold card-footer">
+                            <div>{props.actor} as {props.character}</div>
+                        </div>
+                </div>
+            </Col>
+        )
+    }
+    else {
+        return(
             <Col lg={3} md={4} sm={6} xs={12} className="mb-3">
                 <div>
                     <a href={`/movie/${props.movieId}`}>
-                        <img style={{ width: '100%', height: '320px' }} alt="img" src={props.image} />
-                        <div className="text-center text-dark font-weight-bold">
-                            <div>{props.movieTitle}</div>
+                        <img className="card border-0" style={{ width: '100%', height: '320px' }} alt="img" src={props.image} />
+                        <div className="text-center text-dark font-weight-bold text-decoration-none card-footer">
+                            <div>{props.name}</div>
                         </div>
                     </a>
                 </div>
             </Col>
         )
     }
+}
 
 
 export default GridCard;
