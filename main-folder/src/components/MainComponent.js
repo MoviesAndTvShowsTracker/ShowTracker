@@ -7,6 +7,7 @@ import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
 import LandingPage from './Movies/LandingComponent';
+import MovieDetail from './Movies/MovieDetail';
 
 const isLoggedIn = () => {
     return localStorage.getItem('user') != null;
@@ -41,10 +42,13 @@ const SignupContainer = () => (
 const DefaultContainer = () => (
     <div>
         <Header />
-        <Route path='/home' component={Home} />
-        <SecuredRoute path='/profile' component={Profile} />
-        <Route path='/movies' component={LandingPage} />
-        <Redirect to='/home' />
+        <Switch>
+            <Route exact path='/' component={Home} />
+            <SecuredRoute path='/profile' component={Profile} />
+            <Route exact path='/movie/:Id' component={MovieDetail} />
+            <Route path='/movies' component={LandingPage} />
+            <Redirect to={Home} />
+        </Switch>
     </div>
 );
 

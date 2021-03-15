@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem} from 'reactstrap';
 import { NavLink } from 'react-router-dom';
 import swal from 'sweetalert';
+import logo from '../logo.png';
 
 function logout() {
     swal("Do you want to Logout?", {
@@ -56,7 +57,7 @@ class Header extends Component {
                     <div className="container">
                         <NavbarToggler onClick={this.toggleNav} />
                         <NavbarBrand href="/" className="mr-auto" >
-                            <img src="images/logo.png" height="30" width="41" alt="Show Tracker" />  Show Tracker
+                            <img src={logo} height="30" width="41" alt="Show Tracker" />  Show Tracker
                         </NavbarBrand>
                         
                         <Collapse isOpen={this.state.isNavOpen} navbar>
