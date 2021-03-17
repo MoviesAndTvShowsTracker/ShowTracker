@@ -44,7 +44,7 @@ router.post('/signup', (req, res, next) => {
 router.post('/login', passport.authenticate('local'), (req, res) => {
   var token = authenticate.getToken({_id: req.user._id});
   res.setHeader('Content-Type', 'application/json');
-  res.json({status: 200, token: token, message: 'You are successfully logged in!'});
+  res.json({status: 200, token: token, userId:req.user._id, message: 'You are successfully logged in!'});
 
   res.send();
 

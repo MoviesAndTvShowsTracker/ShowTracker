@@ -4,15 +4,17 @@ import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
 import MainImage from './MainImage';
 import {Row} from 'reactstrap';
 import GridCard from './GridCard';
+import Favorite from './Favorite';
 
 function MovieDetail(props) {
 
+    const movieId = props.match.params.Id;
     const [Movie, setMovie] = useState([]);
     const [Crews, setCrews] = useState([]);
     const [ActorToggle, setActorToggle] = useState(false);
 
     useEffect(() => {
-        const movieId = props.match.params.Id;
+
         fetch(`${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`)
         .then(response => response.json())
         .then(response => {
@@ -48,10 +50,11 @@ function MovieDetail(props) {
                         <div className="h2"> Movie Information</div>
                     </div>
                     <div className="d-none d-sm-block col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <button className="btn btn-primary float-right" onClick> Add to Favorites</button>
+                        <div className="float-right">
+                            <Favorite userFrom= {localStorage.getItem('userId')} movieId={movieId} movieInfo={Movie} />
+                        </div>
                     </div>
                     <div className="d-block d-sm-none col-xs-12 col-sm-6 col-md-6 col-lg-6 text-center">
-                        <button className="btn btn-primary" onClick> Add to Favorites</button>
                     </div>
                 </div>
 

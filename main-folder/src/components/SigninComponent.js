@@ -79,6 +79,7 @@ class Signin extends Component {
         if(res.data.status === 200){
           localStorage.setItem('myuser', this.state.userName);
           localStorage.setItem("user",res.data.token);
+          localStorage.setItem('userId', res.data.userId);
           alert("Successfully logged in!");
           this.setState({
             successFlag: true
