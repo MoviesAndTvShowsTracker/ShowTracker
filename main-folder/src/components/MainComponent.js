@@ -45,8 +45,8 @@ const DefaultContainer = () => (
         <Switch>
             <Route exact path='/' component={Home} />
             <SecuredRoute path='/profile' component={Profile} />
-            <Route exact path='/movie/:Id' component={MovieDetail} />
-            <Route path='/movies' component={LandingPage} />
+            <SecuredRoute exact path='/movie/:Id' component={MovieDetail} />
+            <SecuredRoute path='/movies' component={LandingPage} />
             <Redirect to={Home} />
         </Switch>
     </div>
