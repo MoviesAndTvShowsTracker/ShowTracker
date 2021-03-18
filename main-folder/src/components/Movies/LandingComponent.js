@@ -35,8 +35,22 @@ function LandingPage() {
         <div style={{ width: '100%', margin: 0 }}  >
 
             {Movies[0] &&
-                <MainImage image={`${IMAGE_URL}original${Movies[0].backdrop_path && Movies[0].backdrop_path}`}
-                    title={Movies[0].original_title} text={Movies[0].overview} />
+                <MainImage 
+                    image={`${IMAGE_URL}w1280${Movies[0].backdrop_path && Movies[0].backdrop_path}`}
+                    title={Movies[0].original_title}
+                    text={Movies[0].overview} 
+                    movieid={Movies[0].id}
+                    
+                    image1={`${IMAGE_URL}w1280${Movies[1].backdrop_path && Movies[1].backdrop_path}`}
+                    title1={Movies[1].original_title}
+                    text1={Movies[1].overview}
+                    movieid1={Movies[1].id}
+
+                    image2={`${IMAGE_URL}w1280${Movies[2].backdrop_path && Movies[2].backdrop_path}`}
+                    title2={Movies[2].original_title}
+                    text2={Movies[2].overview}
+                    movieid2={Movies[2].id}
+                />
             }
 
             <div style={{ width: '95%', margin: '1rem auto' }}>
@@ -48,7 +62,7 @@ function LandingPage() {
                             <React.Fragment key={index}>
                                 <GridCard 
                                     image={movie.poster_path && `${IMAGE_URL}w500${movie.poster_path}`}
-                                    movieId={movie.id} movieTitle={movie.title}
+                                    movieId={movie.id} movieTitle={movie.title} name={movie.original_title}
                                 />
                             </React.Fragment>
                         ))}

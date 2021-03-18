@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router';
 import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
-import MainImage from './MainImage';
 import {Row} from 'reactstrap';
 import GridCard from './GridCard';
 import Favorite from './Favorite';
+import MainImageforDetail from './MainImageforDetail';
 
 function MovieDetail(props) {
 
@@ -38,7 +37,7 @@ function MovieDetail(props) {
         <>
             <div>
                 {Movie &&
-                    <MainImage image={`${IMAGE_URL}original${Movie.backdrop_path && Movie.backdrop_path}`}
+                    <MainImageforDetail image={`${IMAGE_URL}w1280${Movie.backdrop_path && Movie.backdrop_path}`}
                     title={Movie.original_title} text={Movie.overview} />
                 }
             </div>
