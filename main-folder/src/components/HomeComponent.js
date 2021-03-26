@@ -55,15 +55,14 @@ function Home(props) {
 							</div> }
 						</div>
 					</form>
-					<h3 id="" className="our-story-card-disclaimer" data-uia="our-story-card-disclaimer"></h3>
 				</div>
 			</div>
 			<div className="our-story-card animation-card watchOnTv" data-uia-our-story="watchOnTv" data-uia="our-story-card" id="explore">
 				<div className="animation-card-container">
 					<div className="our-story-card-text">
-						<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Let us be your Guide.</h1>
-						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-search-plus"></span> Discover something new</h3>
-						<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-bell-o"></span> Keep tabs on your TV and Movies</h3>
+						<h1 className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Let us be your Guide.</h1>
+						<h3 className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-search-plus"></span> Discover something new</h3>
+						<h3 className="our-story-card-subtitle" data-uia="our-story-card-subtitle"><span className="fa fa-bell-o"></span> Keep tabs on your TV and Movies</h3>
 					</div>
 					<div className="our-story-card-img-container">
 						<div className="our-story-card-animation-container">

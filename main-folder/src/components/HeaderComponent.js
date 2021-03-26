@@ -77,7 +77,7 @@ class Header extends Component {
                                     </NavItem>
                                 }
                                 {!localStorage.getItem('user') ||
-                                    <button class="btn btn-primary" onClick= {logout}>Logout</button>
+                                    <button className="btn btn-primary" onClick= {logout}>Logout</button>
                                 }
                             </Nav>
                         </Collapse>

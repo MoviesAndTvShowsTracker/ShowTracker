@@ -45,15 +45,16 @@ function MovieDetail(props) {
             <div style={{ width: '95%', margin: '1rem auto'}}>
                 {/* basic info */}
                 <div className="row mb-4">
-                    <div className=" col-xs-12 col-sm-6 col-md-6 col-lg-6">
+                    <div className="d-none d-sm-block col-xs-12 col-sm-6 col-md-6 col-lg-6">
                         <div className="h2"> Movie Information</div>
                     </div>
-                    <div className="d-none d-sm-block col-xs-12 col-sm-6 col-md-6 col-lg-6">
+                    <div className="d-block d-sm-none col-xs-12 col-sm-6 col-md-6 col-lg-6">
+                        <div className="h2"> Movie Information</div>
+                    </div>
+                    <div className="col-xs-12 col-sm-6 col-md-6 col-lg-6">
                         <div className="float-right">
                             <Favorite userFrom= {localStorage.getItem('userId')} movieId={movieId} movieInfo={Movie} />
                         </div>
-                    </div>
-                    <div className="d-block d-sm-none col-xs-12 col-sm-6 col-md-6 col-lg-6 text-center">
                     </div>
                 </div>
 
@@ -61,10 +62,10 @@ function MovieDetail(props) {
                 <div className="row">
                     <div className="d-none d-sm-block col-3">
                     <div className="d-none d-sm-block">
-                        <img className="img-rounded img-responsive" style={{height:'295px'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} />
+                        <img className="img-rounded img-responsive" style={{height:'295px'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
                     </div>
                     </div>
-                    <table class="col table table-hover table-responsive-xs">
+                    <table className="col table table-hover table-responsive-xs">
                         <tbody>
                         <tr>
                             <td className="font-weight-bolder">Title</td>

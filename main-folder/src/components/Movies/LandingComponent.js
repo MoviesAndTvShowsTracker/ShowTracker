@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
 import { Row } from 'reactstrap';
 import MainImage from './MainImage';

@@ -24,11 +24,11 @@ function Footer(props) {
                 <div className="col-12 col-sm-4">
                     <div className="text-center">
                         <h4>Follow Us!</h4>
-                      <ul class="social-network social-circle">
-                       <li><a href="https://www.facebook.com/" className="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
-                       <li><a href="https://www.instagram.com/" className="icoInstagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
-                       <li><a href="https://www.twitter.com/" className="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-                       <li><a href="https://github.com/MoviesAndTvShowsTracker/ShowTracker" className="icoGithub" title="Github" target="_blank"><i class="fa fa-github"></i></a></li>
+                      <ul className="social-network social-circle">
+                       <li><a href="https://www.facebook.com/" className="icoFacebook" title="Facebook"><i className="fa fa-facebook"></i></a></li>
+                       <li><a href="https://www.instagram.com/" className="icoInstagram" title="Instagram"><i className="fa fa-instagram"></i></a></li>
+                       <li><a href="https://www.twitter.com/" className="icoTwitter" title="Twitter"><i className="fa fa-twitter"></i></a></li>
+                       <li><a href="https://github.com/MoviesAndTvShowsTracker/ShowTracker" className="icoGithub" title="Github" target="_blank" rel="noopener noreferrer"><i className="fa fa-github"></i></a></li>
                       </ul>				
                     </div>
                 </div>

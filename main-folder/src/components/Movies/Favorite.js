@@ -66,7 +66,7 @@ function Favorite(props) {
 
     return (
         <div>
-            <button className="btn btn-primary" onClick={onClickFavorite}> {Favorited ? "Remove from Favorites" : "Add to Favorites"} <span class="badge badge-light"> {FavoriteNumber} </span></button>
+            <button className="btn btn-primary" onClick={onClickFavorite}> {Favorited ? "Remove from Favorites" : "Add to Favorites"} <span className="badge badge-light"> {FavoriteNumber} </span></button>
         </div>
     )
 }
