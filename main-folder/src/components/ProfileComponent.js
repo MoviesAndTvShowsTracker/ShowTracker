@@ -9,6 +9,7 @@ const Profile = (props) => {
 
   const variable = { userFrom: localStorage.getItem('userId') }
   const [FavoritedMovies, setFavoritedMovies] = useState([]);
+  const [WatchedMovies, setWatchedMovies] = useState([]);
 
   const fetchFavoriteMovies = () => {
     axios.post('http://localhost:5000/api/favorite/getFavoriteMovie', variable)
@@ -19,6 +20,20 @@ const Profile = (props) => {
       }
       else {
         alert("failed to fetch favorites");
+      }
+    })
+  }
+
+  const fetchWatchedMovies = () => {
+    
+    axios.post('http://localhost:5000/api/watch/getWatchMovie', variable)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.watch);
+        setWatchedMovies(response.data.watch);
+      }
+      else {
+        alert("failed to fetch Watched movies");
       }
     })
   }
@@ -41,8 +56,27 @@ const Profile = (props) => {
           })
   }
 
+  const removeWatched = (movieId) => {
+
+    const variable = {
+      movieId: movieId,
+      userFrom: localStorage.getItem('userId')
+    }
+
+    axios.post('http://localhost:5000/api/watch/removeFromWatched', variable)
+          .then(response => {
+              if(response.data.success) {
+                  fetchWatchedMovies();
+              }
+              else {
+                  alert('Failed to remove from Watched movies');
+              }
+          })
+  }
+
   useEffect(() => {
     fetchFavoriteMovies();
+    fetchWatchedMovies();
   }, []);
 
   
@@ -65,6 +99,28 @@ const Profile = (props) => {
         </OverlayTrigger>
         <td>{movie.movieRuntime} Minutes</td>
         <td><button className="btn btn-danger" onClick={() => onClickRemove(movie.movieId)}> Remove </button></td>
+      </tr>
+    );
+  });
+
+  const renderWatchedMovie = WatchedMovies.map((movie, index) => {
+    
+    const popover = (
+      <Popover id="popover-basic">
+        <a href={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></a>
+        <Popover.Content>
+          <img className="img-responsive" src={`${IMAGE_URL}w500/${movie.movieImage}`} alt="Movie img"/>
+        </Popover.Content>
+      </Popover>
+    );
+
+    return(
+      <tr>
+        <OverlayTrigger trigger="click" rootClose placement="bottom" overlay={popover}>
+          <td>{movie.movieTitle}</td>
+        </OverlayTrigger>
+        <td>{movie.movieRuntime} Minutes</td>
+        <td><button className="btn btn-danger" onClick={() => removeWatched(movie.movieId)}> Remove </button></td>
       </tr>
     );
   });
@@ -93,7 +149,30 @@ const Profile = (props) => {
               </table>
             </div>
           }
+        </div>
 
+        {/* watched table */}
+        <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+          <div className="h1 mb-3"><div className="fa fa-history"></div> Watched Movies</div>
+
+          {/* table */}
+          { WatchedMovies.length === 0 
+          ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
+            : <div className="row">
+              <table className="table table-hover table-responsive-xs">
+                  <thead>
+                      <tr>
+                          <th>Movie Title</th>
+                          <th>Movie Runtime</th>
+                          <th>Remove from Watched</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {renderWatchedMovie}
+                  </tbody>
+              </table>
+            </div>
+          }
         </div>
       </>
     );

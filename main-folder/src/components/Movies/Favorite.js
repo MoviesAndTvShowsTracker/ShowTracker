@@ -5,6 +5,7 @@ function Favorite(props) {
 
     const [FavoriteNumber, setFavoriteNumber] = useState(0);
     const [Favorited, setFavorited] = useState(false);
+    const [Watched, setWatched] = useState(false);
 
     const variable = {
         userFrom: props.userFrom,
@@ -30,6 +31,16 @@ function Favorite(props) {
         .then(response => {
             if(response.data.success) {
                 setFavorited(response.data.favorited);
+            }
+            else {
+                alert('Failed to perform operation');
+            }
+        })
+
+        axios.post('http://localhost:5000/api/watch/watched', variable)
+        .then(response => {
+            if(response.data.success) {
+                setWatched(response.data.watched);
             }
             else {
                 alert('Failed to perform operation');
@@ -64,9 +75,35 @@ function Favorite(props) {
         }
     }
 
+    const onClickWatched = () => {
+        if(Watched) {
+            axios.post('http://localhost:5000/api/watch/removeFromWatched', variable)
+            .then(response => {
+                if(response.data.success) {
+                    setWatched(!Watched);
+                }
+                else {
+                    alert('Failed to remove from Watched');
+                }
+            })
+        }
+        else {
+            axios.post('http://localhost:5000/api/watch/addToWatch', variable)
+            .then(response => {
+                if(response.data.success) {
+                    setWatched(!Watched);
+                }
+                else {
+                    alert('Failed to add to Watched');
+                }
+            })
+        }
+    }
+
     return (
         <div>
             <button className="btn btn-primary" onClick={onClickFavorite}> {Favorited ? "Remove from Favorites" : "Add to Favorites"} <span className="badge badge-light"> {FavoriteNumber} </span></button>
+            <button className={Watched ? "btn btn-success ml-3" : "btn btn-primary ml-3"}  onClick={onClickWatched}> {Watched ? "Watched!" : "Watched?"} </button>
         </div>
     )
 }
