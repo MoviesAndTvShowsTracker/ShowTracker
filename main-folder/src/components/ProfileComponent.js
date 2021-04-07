@@ -51,16 +51,16 @@ const Profile = (props) => {
     
     const popover = (
       <Popover id="popover-basic">
-        <a href={`movie/${movie.movieId}`}><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></a>
+        <a href={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></a>
         <Popover.Content>
-          <img className="img-rounded img-responsive" src={`${IMAGE_URL}w500/${movie.movieImage}`} alt="Movie img"/>
+          <img className="img-responsive" src={`${IMAGE_URL}w500/${movie.movieImage}`} alt="Movie img"/>
         </Popover.Content>
       </Popover>
     );
 
     return(
       <tr>
-        <OverlayTrigger trigger="click" placement="bottom" overlay={popover}>
+        <OverlayTrigger trigger="click" rootClose placement="bottom" overlay={popover}>
           <td>{movie.movieTitle}</td>
         </OverlayTrigger>
         <td>{movie.movieRuntime} Minutes</td>
@@ -72,16 +72,12 @@ const Profile = (props) => {
 
     return( 
       <>
-        <div className="float-right">
-          <h3 className="card border-0 mr-3 "> Username: {localStorage.getItem('myuser')}</h3> 
-        </div>
-        <br />
         <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
           <div className="h1 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
 
           {/* table */}
           { FavoritedMovies.length === 0 
-          ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Please add favorite movies</Link></div> 
+          ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
             : <div className="row">
               <table className="table table-hover table-responsive-xs">
                   <thead>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem} from 'reactstrap';
+import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem} from 'reactstrap';
 import { NavLink } from 'react-router-dom';
 import swal from 'sweetalert';
 import logo from '../logo.png';
@@ -55,15 +55,15 @@ class Header extends Component {
                 <div className="header">
                 <Navbar dark expand="md" color="primary">
                     <div className="container">
-                        <NavbarToggler onClick={this.toggleNav} />
                         <NavbarBrand href="/" className="mr-auto" >
                             <img src={logo} height="30" width="41" alt="Show Tracker" />  Show Tracker
                         </NavbarBrand>
+                        <NavbarToggler onClick={this.toggleNav} className="ml-auto" />
                         
                         <Collapse isOpen={this.state.isNavOpen} navbar>
                             <Nav navbar className="ml-auto">
                                 <NavItem>
-                                    <NavLink className="nav-link"  to='/tv'><span className="fa fa-tv fa-lg"></span> TV</NavLink>
+                                    <NavLink className="nav-link" to='/tv'><span className="fa fa-tv fa-lg"></span> TV</NavLink>
                                 </NavItem>
                                 <NavItem>
                                     <NavLink className="nav-link" to='/movies'><span className="fa fa-film fa-lg"></span> Movies</NavLink>
@@ -77,7 +77,19 @@ class Header extends Component {
                                     </NavItem>
                                 }
                                 {!localStorage.getItem('user') ||
-                                    <button className="btn btn-primary" onClick= {logout}>Logout</button>
+                                    <UncontrolledDropdown nav inNavbar>
+                                        <DropdownToggle nav caret>
+                                            {localStorage.getItem('myuser')}
+                                        </DropdownToggle>
+                                        <DropdownMenu right>
+                                            <NavItem>
+                                                <NavLink to='/profile' onClick={this.toggleNav} className="text-decoration-none" style={{color: 'black'}}>
+                                                    <DropdownItem> <span className="fa fa-user-circle-o"></span> Profile</DropdownItem>
+                                                </NavLink>
+                                            </NavItem>
+                                            <DropdownItem onClick={logout}> <span className="fa fa-sign-out"></span> Logout</DropdownItem>
+                                        </DropdownMenu>
+                                  </UncontrolledDropdown>
                                 }
                             </Nav>
                         </Collapse>

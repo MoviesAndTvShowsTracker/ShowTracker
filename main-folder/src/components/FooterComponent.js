@@ -35,8 +35,8 @@ function Footer(props) {
             </div>
             <div className="row justify-content-center">             
                 <div className="col-auto">
-                    For Any Queries or further Informataion please<a href="mailto:jprajapati2014@gmail.com"> Contact us. </a>
-                     &copy; Copyright 2020 Show Tracker 
+                    For any queries or further informataion please <a href="mailto:jprajapati2014@gmail.com" className="text-decoration-none">contact us. </a>
+                    &copy; Copyright {(new Date().getFullYear())} Show Tracker 
                 </div>
             </div>
         </div>

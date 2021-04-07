@@ -20,9 +20,6 @@ function GridCard(props) {
                 <div>
                     <a href={`/movie/${props.movieId}`} className="text-decoration-none">
                         <img className="card border-0" style={{ width: '100%', height: '320px' }} alt="img" src={props.image} />
-                        <div className="text-center text-dark font-weight-bold text-decoration-none card-footer">
-                            <div>{props.name}</div>
-                        </div>
                     </a>
                 </div>
             </Col>
