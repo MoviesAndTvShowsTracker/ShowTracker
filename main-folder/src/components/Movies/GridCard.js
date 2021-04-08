@@ -16,10 +16,10 @@ function GridCard(props) {
     }
     else {
         return(
-            <Col lg={3} md={4} sm={6} xs={12} className="mb-3">
+            <Col lg={3} md={4} sm={6} xs={6} className="mb-3">
                 <div>
                     <a href={`/movie/${props.movieId}`} className="text-decoration-none">
-                        <img className="card border-0" style={{ width: '100%', height: '320px' }} alt="img" src={props.image} />
+                        <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={props.image} />
                     </a>
                 </div>
             </Col>

@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "main-folder": "cd ../ && npm run start --prefix main-folder",
+    "start": "concurrently \"node ./bin/www\" \"npm run main-folder\""
   },
   "dependencies": {
     "body-parser": "^1.19.0",

@@ -117,6 +117,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    position: relative;
     background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/70731dc8-8977-4ed7-9a0a-421f510aea00/d1aef155-9681-4803-9bfc-2fb5728da810/IN-en-20200914-popsignuptwoweeks-perspective_alpha_website_small.jpg');
   }
   

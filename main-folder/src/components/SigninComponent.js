@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Link, Redirect } from 'react-router-dom';
 
 import axios from 'axios';
+import swal from 'sweetalert';
 
 const formValid = ({ formErrors, ...rest }) => {
   let valid = true;
@@ -80,7 +81,7 @@ class Signin extends Component {
           localStorage.setItem('myuser', this.state.userName);
           localStorage.setItem("user",res.data.token);
           localStorage.setItem('userId', res.data.userId);
-          alert("Successfully logged in!");
+          alert("Successfully logged in");         
           this.setState({
             successFlag: true
           });
@@ -130,7 +131,17 @@ class Signin extends Component {
         const { formErrors } = this.state;
 
         return (
+          
           <div className="wrapper">
+            <div>
+              {/* Breadcrumbs */}
+              <nav aria-label="breadcrumb" className="position-absolute" style={{top: '2rem', right: '2rem'}}>
+                        <ol className="breadcrumb">
+                            <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
+                            <li className="breadcrumb-item active" aria-current="page">Sign-in</li>
+                        </ol>
+              </nav>
+            </div>
           <div className="form-wrapper">
             {redirectVar}
 

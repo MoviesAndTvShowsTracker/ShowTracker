@@ -69,7 +69,7 @@ class Header extends Component {
                                     <NavLink className="nav-link" to='/movies'><span className="fa fa-film fa-lg"></span> Movies</NavLink>
                                 </NavItem>
                                 <NavItem>
-                                    <NavLink className="nav-link"  to='/profile'><span className="fa fa-user-circle-o fa-lg"></span> Profile</NavLink>
+                                    <NavLink className="nav-link" to='/profile'><span className="fa fa-user-circle-o fa-lg"></span> Profile</NavLink>
                                 </NavItem>
                                 {!localStorage.getItem('user') &&
                                     <NavItem>
@@ -83,7 +83,7 @@ class Header extends Component {
                                         </DropdownToggle>
                                         <DropdownMenu right>
                                             <NavItem>
-                                                <NavLink to='/profile' onClick={this.toggleNav} className="text-decoration-none" style={{color: 'black'}}>
+                                                <NavLink to='/profile' className="text-decoration-none" style={{color: 'black'}}>
                                                     <DropdownItem> <span className="fa fa-user-circle-o"></span> Profile</DropdownItem>
                                                 </NavLink>
                                             </NavItem>

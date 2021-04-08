@@ -129,6 +129,13 @@ const Profile = (props) => {
     return( 
       <>
         <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+          {/* Breadcrumbs */}
+            <nav aria-label="breadcrumb">
+                      <ol className="breadcrumb">
+                          <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
+                          <li className="breadcrumb-item active" aria-current="page">Profile</li>
+                      </ol>
+            </nav>
           <div className="h1 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
 
           {/* table */}

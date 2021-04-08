@@ -4,6 +4,7 @@ import {Row} from 'reactstrap';
 import GridCard from './GridCard';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
+import { Link } from 'react-router-dom';
 
 function MovieDetail(props) {
 
@@ -43,6 +44,14 @@ function MovieDetail(props) {
             </div>
 
             <div style={{ width: '95%', margin: '1rem auto'}}>
+                {/* Breadcrumbs */}
+                <nav aria-label="breadcrumb">
+                    <ol className="breadcrumb">
+                        <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
+                        <li className="breadcrumb-item"><Link to='/movies'>Movies</Link></li>
+                        <li className="breadcrumb-item active" aria-current="page">{Movie.title}</li>
+                    </ol>
+                </nav>
                 {/* basic info */}
                 <div className="row mb-4">
                     <div className="d-none d-sm-block col-xs-12 col-sm-6 col-md-6 col-lg-6">

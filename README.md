@@ -2,7 +2,11 @@
 
 ## I've noted some rules to follow when you're coding and commiting on Github
 
-- Use Yarn as Package manager insted on npm.
+- To start the project just go to backend-server and do `npm start`. It'll run both `client(main-folder)` and `server(backend-server)`.
+
+- Client is on `localhost:3000` and server is at `localhost:5000`.
+
+- Use Yarn if possible.
 ```
 yarn start
 yarn build

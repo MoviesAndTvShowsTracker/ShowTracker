@@ -3,6 +3,7 @@ import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
 import { Row } from 'reactstrap';
 import MainImage from './MainImage';
 import GridCard from './GridCard';
+import { Link } from 'react-router-dom';
 
 
 function LandingPage() {
@@ -53,7 +54,14 @@ function LandingPage() {
             }
 
             <div style={{ width: '95%', margin: '1rem auto' }}>
-                <div className="font-weight-bold h2" > Latest Movies </div>
+                {/* Breadcrumbs */}
+                <nav aria-label="breadcrumb">
+                    <ol className="breadcrumb">
+                        <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
+                        <li className="breadcrumb-item active" aria-current="page">Movies</li>
+                    </ol>
+                </nav>
+                <div className="font-weight-bold h2"> Latest Movies </div>
                 <hr style={{borderColor:'black'}}/>
 
                 <Row>
