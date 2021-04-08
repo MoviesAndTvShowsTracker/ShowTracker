@@ -69,7 +69,7 @@ class Header extends Component {
                                     <NavLink className="nav-link" to='/movies'><span className="fa fa-film fa-lg"></span> Movies</NavLink>
                                 </NavItem>
                                 <NavItem>
-                                    <NavLink className="nav-link" to='/profile'><span className="fa fa-user-circle-o fa-lg"></span> Profile</NavLink>
+                                    <NavLink className="nav-link" to='/search'><span className="fa fa-search fa-lg"></span> Search</NavLink>
                                 </NavItem>
                                 {!localStorage.getItem('user') &&
                                     <NavItem>
