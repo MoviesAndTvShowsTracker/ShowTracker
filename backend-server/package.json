@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "main-folder": "cd ../ && npm run start --prefix main-folder",
+    "main-folder": "cd ../ && npm start --prefix main-folder",
     "start": "concurrently \"node ./bin/www\" \"npm run main-folder\""
   },
   "dependencies": {

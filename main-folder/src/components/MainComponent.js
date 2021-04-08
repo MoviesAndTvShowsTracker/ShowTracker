@@ -8,6 +8,8 @@ import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
 import LandingPage from './Movies/LandingComponent';
 import MovieDetail from './Movies/MovieDetail';
+import TvDetail from './TV/TvShowDetail';
+import TvLandingPage from './TV/TvLandingComponent';
 
 const isLoggedIn = () => {
     return localStorage.getItem('user') != null;
@@ -47,6 +49,8 @@ const DefaultContainer = () => (
             <SecuredRoute path='/profile' component={Profile} />
             <SecuredRoute exact path='/movie/:Id' component={MovieDetail} />
             <SecuredRoute path='/movies' component={LandingPage} />
+            <SecuredRoute path='/tv/:Id' component={TvDetail} />
+            <SecuredRoute path='/tv' component={TvLandingPage} />
             <Redirect to={Home} />
         </Switch>
     </div>
