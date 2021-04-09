@@ -91,9 +91,9 @@ class Signin extends Component {
         --SUBMITTING--
         Username: ${this.state.username}
         Password: ${this.state.password}
-      `); //above is only for experiment purposes. 
+      `); //TODO: above is only for experiment purposes. 
     } else {
-      console.error("FORM INVALID - Fill up the form first");
+      swal("FORM INVALID - Fill up the detais first");
     }
   };
 

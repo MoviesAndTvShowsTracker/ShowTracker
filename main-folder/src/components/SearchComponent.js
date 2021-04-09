@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import GridCard from './Movies/GridCard';
 import { Row } from 'reactstrap';
 import TvGridCard from './TV/TvGridCard';
+import swal from 'sweetalert';
 
 class SearchBox extends Component {
 
@@ -27,8 +28,9 @@ class SearchBox extends Component {
     }
 
     handleSubmit = (e) => {
-
         e.preventDefault();
+        
+        if(this.state.selectedOption) {
         var data = this.state.searchQuery;
         const url = `${API_URL}search/${this.state.selectedOption}?api_key=${API_KEY}&language=en-US&query=${encodeURI(data)}&page=1&include_adult=false`;
         console.log(url);
@@ -38,7 +40,10 @@ class SearchBox extends Component {
             console.log(response);
             const result = response.results;
             this.setState({results: result});
-        })
+        }) }
+        else {
+            swal("please select movies or tv show");
+        }
     }
 
     onChangeValue(event) {
@@ -128,10 +133,10 @@ class SearchBox extends Component {
                         <Row>
                             {this.state.results && this.state.results.map((tvshow, index) => (
                                 <React.Fragment key={index}>
-                                    <TvGridCard 
+                                    {tvshow.poster_path && <TvGridCard 
                                         image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
                                         tvShowId={tvshow.id} tvShowTitle={tvshow.title} name={tvshow.original_title}
-                                    />
+                                    />}
                                 </React.Fragment>
                             ))}
                         </Row>   

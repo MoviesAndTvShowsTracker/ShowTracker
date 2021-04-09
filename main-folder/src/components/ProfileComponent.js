@@ -85,7 +85,7 @@ const Profile = (props) => {
     
     const popover = (
       <Popover id="popover-basic">
-        <a href={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></a>
+        <Link to={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></Link>
         <Popover.Content>
           <img className="img-responsive" src={`${IMAGE_URL}w500/${movie.movieImage}`} alt="Movie img"/>
         </Popover.Content>
@@ -107,7 +107,7 @@ const Profile = (props) => {
     
     const popover = (
       <Popover id="popover-basic">
-        <a href={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></a>
+        <Link to={`movie/${movie.movieId}`} className="text-decoration-none"><Popover.Title as="h3" alt="Favorites movies">{movie.movieTitle}</Popover.Title></Link>
         <Popover.Content>
           <img className="img-responsive" src={`${IMAGE_URL}w500/${movie.movieImage}`} alt="Movie img"/>
         </Popover.Content>
