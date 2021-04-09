@@ -1,6 +1,9 @@
 import React, { Component, useState } from 'react'
-import { API_KEY, API_URL } from '../config/keys';
+import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
+import GridCard from './Movies/GridCard';
+import { Row } from 'reactstrap';
+import TvGridCard from './TV/TvGridCard';
 
 class SearchBox extends Component {
 
@@ -8,7 +11,8 @@ class SearchBox extends Component {
         super(props);
     
         this.state = {
-          searchQuery: ""
+          searchQuery: "",
+          results: []
         }
     
         this.handleChange = this.handleChange.bind(this);
@@ -27,12 +31,13 @@ class SearchBox extends Component {
         e.preventDefault();
         var data = this.state.searchQuery;
         const url = `${API_URL}search/${this.state.selectedOption}?api_key=${API_KEY}&language=en-US&query=${encodeURI(data)}&page=1&include_adult=false`;
-
+        console.log(url);
         fetch(url)
         .then(response => response.json())
         .then(response => {
             console.log(response);
-            const result = response.results; 
+            const result = response.results;
+            this.setState({results: result});
         })
     }
 
@@ -107,7 +112,32 @@ class SearchBox extends Component {
         <div style={{ width: '95%', margin: '1rem auto' }}>
             <div className="text-center">
                 <div className="font-weight-lighter h2"> Search Results </div>
-
+                <div className="results">
+                    {this.state.selectedOption === 'movie' ? 
+                        <Row>
+                            {this.state.results && this.state.results.map((movie, index) => (
+                                <React.Fragment key={index}>
+                                    {movie.poster_path && <GridCard 
+                                        image={movie.poster_path && `${IMAGE_URL}w500${movie.poster_path}`}
+                                        movieId={movie.id} movieTitle={movie.title} name={movie.original_title}
+                                    />}
+                                </React.Fragment>
+                            ))}
+                        </Row> 
+                    :
+                        <Row>
+                            {this.state.results && this.state.results.map((tvshow, index) => (
+                                <React.Fragment key={index}>
+                                    <TvGridCard 
+                                        image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
+                                        tvShowId={tvshow.id} tvShowTitle={tvshow.title} name={tvshow.original_title}
+                                    />
+                                </React.Fragment>
+                            ))}
+                        </Row>   
+                    }
+                    
+                </div>
             </div>
         </div>
         </>
