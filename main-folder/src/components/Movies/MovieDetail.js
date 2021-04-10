@@ -11,6 +11,7 @@ function MovieDetail(props) {
     const movieId = props.match.params.Id;
     const [Movie, setMovie] = useState([]);
     const [Crews, setCrews] = useState([]);
+    const [SimilarMovies, setSimilarMovies] = useState([]);
     const [ActorToggle, setActorToggle] = useState(false);
 
     useEffect(() => {
@@ -27,11 +28,37 @@ function MovieDetail(props) {
                 console.log(response);
                 setCrews(response.cast)
             })
+
+            fetch(`${API_URL}movie/${movieId}/similar?api_key=${API_KEY}&language=en-US&page=1`)
+            .then(response => response.json())
+            .then(response => {
+                console.log(response);
+                setSimilarMovies(response.results);
+            })
         })
     }, [])
 
     const handleClick = () => {
         setActorToggle(!ActorToggle);
+    }
+
+    function convertToReadable (labelValue) {
+
+        // Nine Zeroes for Billions
+        return Math.abs(Number(labelValue)) >= 1.0e+9
+    
+        ? (Math.abs(Number(labelValue)) / 1.0e+9).toFixed(2) + " Billion"
+        // Six Zeroes for Millions 
+        : Math.abs(Number(labelValue)) >= 1.0e+6
+    
+        ? (Math.abs(Number(labelValue)) / 1.0e+6).toFixed(2) + " Million"
+        // Three Zeroes for Thousands
+        : Math.abs(Number(labelValue)) >= 1.0e+3
+    
+        ? (Math.abs(Number(labelValue)) / 1.0e+3).toFixed(2) + " Thousand"
+    
+        : Math.abs(Number(labelValue));
+    
     }
 
     return (
@@ -86,7 +113,7 @@ function MovieDetail(props) {
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Revenue</td>
-                            <td className="">${Movie.revenue}</td>
+                            <td className="">${convertToReadable(Movie.revenue)}</td>
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Runtime</td>
@@ -102,6 +129,21 @@ function MovieDetail(props) {
                         </tr>
                         </tbody>
                     </table>
+                </div>
+
+                {/* Similar movies */}
+                <div className="h2 mt-4">More Like This</div>
+                <div class="container-fluid overflow-auto">
+                    <div class="row flex-row flex-nowrap">
+                    {SimilarMovies && SimilarMovies.map((similarmovie, index) => (
+                            <React.Fragment key={index}>
+                                <GridCard 
+                                    image={similarmovie.poster_path && `${IMAGE_URL}w500${similarmovie.poster_path}`}
+                                    similarMovieId={similarmovie.id} movieTitle={similarmovie.title} name={similarmovie.original_title}
+                                />
+                            </React.Fragment>
+                    ))}
+                    </div>
                 </div>
 
                 {/* actor button */}
