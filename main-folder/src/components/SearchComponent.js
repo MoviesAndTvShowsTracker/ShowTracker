@@ -40,13 +40,20 @@ class SearchBox extends Component {
             console.log(response);
             const result = response.results;
             this.setState({results: result});
-            if(result.length) {}
+            if(result.length);
             else {
-                swal("No results found");
+                swal({title: "No results found", icon: "error"});
             } 
         }) }
         else {
-            swal("please select movies or tv show");
+            swal("Please select the option", "", "warning", {
+                buttons: {
+                    sure: {
+                      text: "Okay",
+                      className: "swal-confirm"
+                    }
+                  }
+            });
         }
     }
 

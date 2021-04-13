@@ -27,7 +27,7 @@ class Signin extends Component {
     this.state = {
       username: "",
       password: "",
-      successFlag : null ,
+      successFlag : false ,
       userName: "",
       formErrors: {
         username: "",
@@ -42,14 +42,8 @@ class Signin extends Component {
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  componentWillMount() {
-    this.setState({
-        successFlag : false
-    })
-  }
-
   componentDidMount() {
-    if (localStorage.getItem("user") != null) {
+    if (localStorage.getItem("user") !== null) {
         return this.props.history.goBack();
      }
    }
@@ -57,27 +51,25 @@ class Signin extends Component {
   handleSubmit = e => {
     e.preventDefault();
    
-    
-    this.setState({
-      username: "",
-      password: "",
-      userName: this.state.username
-   });
-
-
-    if (formValid(this.state)) {
+    if (formValid(this.state) && this.state.username && this.state.password) {
 
       var data = {
         username : this.state.username,
         password : this.state.password,
       }
 
+      this.setState({
+        username: "",
+        password: "",
+        userName: this.state.username
+     });
+
       axios.defaults.withCredentials = true;
       axios.post('http://localhost:5000/users/login', data)
       .then(res => {
         console.log("Sent from back-end : " , res.data.status , "    "  , res.data.token);
 
-        if(res.data.status === 200){
+        if(res.data.status === 200) {
           localStorage.setItem('myuser', this.state.userName);
           localStorage.setItem("user",res.data.token);
           localStorage.setItem('userId', res.data.userId);
@@ -87,15 +79,18 @@ class Signin extends Component {
           });
         }
       })
-      console.log(`
-        --SUBMITTING--
-        Username: ${this.state.username}
-        Password: ${this.state.password}
-      `); //TODO: above is only for experiment purposes. 
-    } else {
-      swal("FORM INVALID - Fill up the detais first");
+    } 
+    else {
+      swal("Fill up the detais first", "", "warning",  {
+        buttons: {
+            sure: {
+              text: "Okay",
+              className: "swal-confirm"
+            }
+          }
+        });
     }
-  };
+  }
 
   handleChange = e => {
     e.preventDefault();
@@ -173,6 +168,7 @@ class Signin extends Component {
                   value={this.state.password}
                   noValidate
                   onChange={this.handleChange}
+                  autoComplete= "on"
                 />
                 {formErrors.password.length > 0 && (
                   <span className="errorMessage">{formErrors.password}</span>

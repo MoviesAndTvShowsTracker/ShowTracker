@@ -228,3 +228,7 @@
     color: #999;
     font-weight: lighter;
   }
+
+  .swal-confirm {
+    background-color: #303F9F;
+  }

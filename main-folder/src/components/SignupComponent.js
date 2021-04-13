@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import axios from 'axios';
 import Signin from './SigninComponent';
+import swal from 'sweetalert';
 
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -29,12 +30,12 @@ class Signup extends Component {
     super(props);
 
     this.state = {
-      username: null,
-      firstName: null,
-      lastName: null,
-      email: null,
-      password: null,
-      successFlag: null,
+      username: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      successFlag: false,
       formErrors: {
         username:"",
         firstName: "",
@@ -48,20 +49,8 @@ class Signup extends Component {
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  componentWillMount() {
-    this.setState({
-        successFlag : false
-    })
-  }
   handleSubmit = e => {
     e.preventDefault();
-
-    this.setState({
-      username:"",
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "" });
 
     if (formValid(this.state)) {
 
@@ -72,6 +61,14 @@ class Signup extends Component {
         email: this.state.email,
         password: this.state.password
       }
+
+      this.setState({
+        username:"",
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "" 
+      });
       
       axios.defaults.withCredentials = true;
         axios.post('http://localhost:5000/users/signup', data)
@@ -85,19 +82,17 @@ class Signup extends Component {
               alert("Registration Successful!");
             }
         })
-
-      console.log(`
-        --SUBMITTING--
-        User Name: ${this.state.username}
-        First Name: ${this.state.firstName}
-        Last Name: ${this.state.lastName}
-        Email: ${this.state.email}
-        Password: ${this.state.password}
-      `); //above is only for experiment purposes. 
-    } else {
-      console.error("FORM INVALID - Fill up the form first");
-      alert("Please fill the form correctly.");
-    }
+    } 
+    else {
+      swal("Fill up the detais first", "", "warning",  {
+        buttons: {
+            sure: {
+              text: "Okay",
+              className: "swal-confirm"
+            }
+          }
+        });
+      }
   };
 
   handleChange = e => {
@@ -233,6 +228,7 @@ class Signup extends Component {
                 value={this.state.password}
                 noValidate
                 onChange={this.handleChange}
+                autoComplete="on"
               />
               {formErrors.password.length > 0 && (
                 <span className="errorMessage">{formErrors.password}</span>

@@ -5,29 +5,30 @@ import swal from 'sweetalert';
 import logo from '../logo.png';
 
 function logout() {
-    swal("Do you want to Logout?", {
+    swal("Do you want to Logout?", "", "warning", {
       buttons: {
-        nope: {
-          text: "No",
-          value: "no"
-        },
+        cancel: true,
         sure: {
           text: "I'm, Sure",
-          value: "logout"
+          value: "logout",
+          className: "swal-confirm"
         }
       }
     }).then(value => {
       switch (value) {
         case "logout":
-          swal("", "", 'success')
+          swal("", "", 'success', {
+            buttons: {
+                Done: {
+                  className: "swal-confirm"
+                }
+            }
+          })
           .then(val => {
             localStorage.clear();
-            return window.history.go('/home');
+            return window.history.go('/');
           });
           break;
-        default:
-            swal("Nothing happened");
-            break;
       }
     });
   };
