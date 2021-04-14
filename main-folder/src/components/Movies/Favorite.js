@@ -12,6 +12,7 @@ function Favorite(props) {
         movieId: props.movieId,
         movieTitle: props.movieInfo.original_title,
         movieImage: props.movieInfo.backdrop_path,
+        moviePosterImage: props.movieInfo.poster_path,
         movieRuntime: props.movieInfo.runtime
     }
 

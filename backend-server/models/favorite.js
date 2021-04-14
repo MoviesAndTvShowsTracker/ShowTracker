@@ -15,6 +15,9 @@ var Favorite = new Schema({
     movieImage: {
         type: String
     },
+    moviePosterImage: {
+        type: String
+    },
     movieRuntime: {
         type: String
     }

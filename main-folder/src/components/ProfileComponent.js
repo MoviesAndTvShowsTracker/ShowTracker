@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Popover from 'react-bootstrap/Popover';
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+// import Popover from 'react-bootstrap/Popover';
+// import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
+// import GridCard from './Movies/GridCard';
+import { Col } from 'reactstrap';
 
 const Profile = (props) => {
 
@@ -79,9 +81,7 @@ const Profile = (props) => {
     fetchWatchedMovies();
   }, []);
 
-  
-
-  const renderTableBody = FavoritedMovies.map((movie, index) => {
+  {/* const renderTableBody = FavoritedMovies.map((movie, index) => {
     
     const popover = (
       <Popover id="popover-basic">
@@ -101,9 +101,9 @@ const Profile = (props) => {
         <td><button className="btn btn-danger" onClick={() => onClickRemove(movie.movieId)}> Remove </button></td>
       </tr>
     );
-  });
+  }); */}
 
-  const renderWatchedMovie = WatchedMovies.map((movie, index) => {
+  {/* const renderWatchedMovie = WatchedMovies.map((movie, index) => {
     
     const popover = (
       <Popover id="popover-basic">
@@ -123,22 +123,22 @@ const Profile = (props) => {
         <td><button className="btn btn-danger" onClick={() => removeWatched(movie.movieId)}> Remove </button></td>
       </tr>
     );
-  });
+  }); */}
 
 
     return( 
       <>
         <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-          {/* Breadcrumbs */}
+            {/* Breadcrumbs */}
             <nav aria-label="breadcrumb">
                       <ol className="breadcrumb">
                           <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
                           <li className="breadcrumb-item active" aria-current="page">Profile</li>
                       </ol>
             </nav>
-          <div className="h1 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
+          </div>
+          {/* <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
 
-          {/* table */}
           { FavoritedMovies.length === 0 
           ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
             : <div className="row">
@@ -156,13 +156,11 @@ const Profile = (props) => {
               </table>
             </div>
           }
-        </div>
+        </div> */}
 
-        {/* watched table */}
-        <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-          <div className="h1 mb-3"><div className="fa fa-history"></div> Watched Movies</div>
+        {/* <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+          <div className="h2 mb-3"><div className="fa fa-history"></div> Watched Movies</div>
 
-          {/* table */}
           { WatchedMovies.length === 0 
           ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
             : <div className="row">
@@ -180,6 +178,62 @@ const Profile = (props) => {
               </table>
             </div>
           }
+        </div> */}
+
+
+        {/* Favorites movies flexbox */}
+        <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+          <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
+          { FavoritedMovies.length === 0 
+          ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
+            :
+            <div class="container-fluid overflow-auto">
+              <div class="row flex-row flex-nowrap">
+                {FavoritedMovies && FavoritedMovies.map((favoritemovie, index) => (
+                  <React.Fragment key={index}>
+                      <Col lg={3} md={4} sm={6} xs={6} className="mb-3">
+                        <div className="position-relative">
+                          <Link to={`/movie/${favoritemovie.movieId}`} className="text-decoration-none">
+                            <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoritemovie.moviePosterImage}`} />
+                            <div className="text-center font-weight-bold text-decoration-none">{favoritemovie.movieTitle}</div>
+                          </Link>
+                          <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
+                            <button className="btn btn-danger" onClick={() => onClickRemove(favoritemovie.movieId)}> Remove </button>
+                          </div>
+                        </div>
+                      </Col>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>}
+        </div>
+
+
+        {/* watched movies flexbox */}
+        <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+          <div className="h2 mb-3"><div className="fa fa-history"></div> Watched Movies</div>
+          { WatchedMovies.length === 0 
+          ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
+            :
+            <div class="container-fluid overflow-auto">
+              <div class="row flex-row flex-nowrap">
+                {WatchedMovies && WatchedMovies.map((watchedmovie, index) => (
+                  <React.Fragment key={index}>
+                      <Col lg={3} md={4} sm={6} xs={6} className="mb-3">
+                        <div className="position-relative">
+                          <Link to={`/movie/${watchedmovie.movieId}`} className="text-decoration-none">
+                            <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${watchedmovie.moviePosterImage}`} />
+                            <div className="text-center font-weight-bold text-decoration-none">{watchedmovie.movieTitle}</div>
+                          </Link>
+                          <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
+                            <button className="btn btn-danger" onClick={() => removeWatched(watchedmovie.movieId)}> Remove </button>
+                          </div>
+                        </div>
+                      </Col>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>}
         </div>
       </>
     );
