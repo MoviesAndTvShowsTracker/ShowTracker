@@ -217,7 +217,8 @@ const Profile = (props) => {
             :
             <div class="container-fluid overflow-auto">
               <div class="row flex-row flex-nowrap">
-                {WatchedMovies && WatchedMovies.map((watchedmovie, index) => (
+                {/* the array is in reverse so user can find his latest watched movies */}
+                {WatchedMovies && WatchedMovies.slice(0).reverse().map((watchedmovie, index) => (
                   <React.Fragment key={index}>
                       <Col lg={3} md={4} sm={6} xs={6} className="mb-3">
                         <div className="position-relative">

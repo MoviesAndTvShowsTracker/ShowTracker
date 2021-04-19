@@ -4,14 +4,14 @@ import {Row} from 'reactstrap';
 import GridCard from './GridCard';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
-import { Link } from 'react-router-dom';
+import { Link, withRouter } from 'react-router-dom';
+import SimilarMoviesData from './ShowSimilarMovies';
 
 function MovieDetail(props) {
 
     const movieId = props.match.params.Id;
     const [Movie, setMovie] = useState([]);
     const [Crews, setCrews] = useState([]);
-    const [SimilarMovies, setSimilarMovies] = useState([]);
     const [ActorToggle, setActorToggle] = useState(false);
 
     useEffect(() => {
@@ -29,12 +29,6 @@ function MovieDetail(props) {
                 setCrews(response.cast)
             })
 
-            fetch(`${API_URL}movie/${movieId}/similar?api_key=${API_KEY}&language=en-US&page=1`)
-            .then(response => response.json())
-            .then(response => {
-                console.log(response);
-                setSimilarMovies(response.results);
-            })
         })
     }, [])
 
@@ -132,19 +126,7 @@ function MovieDetail(props) {
                 </div>
 
                 {/* Similar movies */}
-                <div className="h2 mt-4">More Like This</div>
-                <div class="container-fluid overflow-auto">
-                    <div class="row flex-row flex-nowrap">
-                    {SimilarMovies && SimilarMovies.map((similarmovie, index) => (
-                            <React.Fragment key={index}>
-                                <GridCard 
-                                    image={similarmovie.poster_path && `${IMAGE_URL}w500${similarmovie.poster_path}`}
-                                    similarMovieId={similarmovie.id} movieTitle={similarmovie.title} name={similarmovie.original_title}
-                                />
-                            </React.Fragment>
-                    ))}
-                    </div>
-                </div>
+                <SimilarMoviesData movieId={movieId} />
 
                 {/* actor button */}
                 <div className="text-center mt-2">
