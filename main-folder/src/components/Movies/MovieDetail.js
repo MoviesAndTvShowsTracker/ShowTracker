@@ -4,7 +4,7 @@ import {Row} from 'reactstrap';
 import GridCard from './GridCard';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import SimilarMoviesData from './ShowSimilarMovies';
 
 function MovieDetail(props) {
@@ -12,6 +12,7 @@ function MovieDetail(props) {
     const movieId = props.match.params.Id;
     const [Movie, setMovie] = useState([]);
     const [Crews, setCrews] = useState([]);
+    const [WatchProviders, setWatchProviders] = useState([]);
     const [ActorToggle, setActorToggle] = useState(false);
 
     useEffect(() => {
@@ -28,8 +29,16 @@ function MovieDetail(props) {
                 console.log(response);
                 setCrews(response.cast)
             })
-
         })
+
+        fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`)
+            .then(response => response.json())
+            .then(response => {
+                console.log(response.results);
+                const ott = response.results.IN.flatrate;
+                setWatchProviders(ott ? ott : response.results.IN.buy)
+            })
+            .catch(() => console.log('error in fetching providers, do nothing'))
     }, [])
 
     const handleClick = () => {
@@ -54,7 +63,6 @@ function MovieDetail(props) {
         : Math.abs(Number(labelValue));
     
     }
-
     return (
         <>
             <div>
@@ -121,6 +129,18 @@ function MovieDetail(props) {
                             <td className="font-weight-bolder">Status</td>
                             <td className="">{Movie.status}</td>
                         </tr>
+                        {WatchProviders.length > 0 &&
+                            <tr>
+                                <td className="font-weight-bolder">Where to watch</td>
+                                <td className="">{WatchProviders.map((result, index) => (
+                                    <React.Fragment key={index}>
+                                        <img style={{height:"30px", width:"30px"}} className="img-responsive img-thumbnail mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
+                                    </React.Fragment>
+                                    
+                                ))}
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </table>
                 </div>

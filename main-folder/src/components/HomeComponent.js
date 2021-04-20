@@ -9,7 +9,7 @@ function Home(props) {
 		<div className="our-story-header-wrapper">
 		</div>
 		<div className="our-story-cards" data-uia-our-story="our-story-cards">
-			<div className="our-story-card hero-card vlv" data-uia-our-story="hero_fuji" data-uia="our-story-card">
+			<div className="our-story-card hero-card vlv" style={{height:'92vh'}}>
 				<div className="our-story-card-background">
 					<div>
 						<div className="concord-img-wrapper" data-uia="concord-img-wrapper">
@@ -28,28 +28,16 @@ function Home(props) {
 							{!localStorage.getItem('user') &&
 							<div className="our-story-cta-container cta-link-wrapper">
 								<Link to="/signup">
-								<button className="btn btn-red nmhp-cta btn-none btn-custom" >
+								<button className="btn btn-primary nmhp-cta" >
 								<span id="" className="cta-btn-txt" data-uia=""> Join ShowTracker</span>
-								<span id="" className="chevron-right-arrow" data-uia="">
-									<svg viewBox="0 0 6 12" xmlns="http://www.w3.org/2000/svg">
-										<desc>chevron</desc>
-										<path d="M.61 1.312l.78-.624L5.64 6l-4.25 5.312-.78-.624L4.36 6z" fill="none" fill-rule="evenodd"></path>
-									</svg>
-								</span>
 								</button>
 								</Link>
 							</div> }
 							{localStorage.getItem('user') &&
 							<div className="our-story-cta-container cta-link-wrapper">
 								
-								<button className="btn btn-red nmhp-cta btn-none btn-custom" >
-								<span id="" className="cta-btn-txt" data-uia=""><a href="#explore" style={{textDecoration:'none', color:'white'}}>Explore The Features</a></span>
-								<span id="" className="chevron-right-arrow" data-uia="">
-									<svg viewBox="0 0 6 12" xmlns="http://www.w3.org/2000/svg">
-										<desc>chevron</desc>
-										<path d="M.61 1.312l.78-.624L5.64 6l-4.25 5.312-.78-.624L4.36 6z" fill="none" fill-rule="evenodd"></path>
-									</svg>
-								</span>
+								<button className="btn btn-primary nmhp-cta" >
+								<span id="" className="cta-btn-txt" data-uia=""><a href="#explore" style={{textDecoration:'none', color:'white'}}>Explore The Features </a></span>
 								</button>
 								
 							</div> }
@@ -99,14 +87,14 @@ function Home(props) {
 					<div className="animation-card-container">
 						<div className="our-story-card-text">
 							<h1 id="" className="d-none d-sm-block our-story-card-title" data-uia="animation-card-title">Now Let's get you going</h1>
-							<h3 id="" className="our-story-card-subtitle" data-uia="our-story-card-subtitle">Make Your Profile and start Tracking! </h3>
+							<h4 id="" className="our-story-card-subtitle mb-2" data-uia="our-story-card-subtitle">Make Your Profile and start Tracking! </h4>
 							<div className="row">
-								<div className="col-6">
+								<div className="col mb-2">
 									<Link to="/signup">
 										<Button className="btn btn-red btn-block">Signup</Button>
 									</Link>
 								</div>
-								<div className="col-6">
+								<div className="col">
 									<Link to="/login">
 										<Button className="btn btn-blue btn-block">Login</Button>
 									</Link>
@@ -117,9 +105,7 @@ function Home(props) {
 							<div className="our-story-card-animation-container">
 								<img alt="" className="our-story-card-img" src="images/Demoss.png" style={{marginTop: "15px"}} data-uia="our-story-card-img"/>
 								<div className="our-story-card-animation">
-									<video className="our-story-card-video" autoplay="" playsinline="" muted="" loop="">
-										<source src="htps://assets.nflxext.com/ffe/siteui/acquisition/ourStory/fuji/desktop/video-tv-in-0819.m4v" type="video/mp4"/>
-									</video>
+
 									<div className="our-story-card-animation-text">
 									</div>
 								</div>
