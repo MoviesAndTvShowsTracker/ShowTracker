@@ -165,7 +165,7 @@ const Profile = (props) => {
                 <div className="card">
                   <div className="card-body">
                     <div className="d-flex flex-column align-items-center text-center">
-                      <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="User" class="rounded-circle" width="150" />
+                      <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="User" className="rounded-circle" width="150" />
                       <div>
                         <h4>{UserInfo.username}</h4>
                         {WatchedMovies.length < 20 ? <p className="mb-1 badge badge-danger badge-pill">Newbie</p>
@@ -177,50 +177,50 @@ const Profile = (props) => {
                 </div>
               </div>
               {/*  */}
-              <div class="col-md-8">
-                <div class="card mb-3">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-sm-3">
-                        <h6 class="mb-0">Full Name</h6>
+              <div className="col-md-8">
+                <div className="card mb-3">
+                  <div className="card-body">
+                    <div className="row">
+                      <div className="col-sm-3">
+                        <h6 className="mb-0">Full Name</h6>
                       </div>
-                      <div class="col-sm-9 text-secondary">
+                      <div className="col-sm-9 text-secondary">
                       {`${UserInfo.username} ${UserInfo.lastName}`}
                       </div>
                     </div>
                     <hr />
-                    <div class="row">
-                      <div class="col-sm-3">
-                        <h6 class="mb-0">Email</h6>
+                    <div className="row">
+                      <div className="col-sm-3">
+                        <h6 className="mb-0">Email</h6>
                       </div>
-                      <div class="col-sm-9 text-secondary">
+                      <div className="col-sm-9 text-secondary">
                         {UserInfo.email}
                       </div>
                     </div>
                     <hr />
-                    <div class="row">
-                      <div class="col-sm-3">
-                        <h6 class="mb-0">Phone</h6>
+                    <div className="row">
+                      <div className="col-sm-3">
+                        <h6 className="mb-0">Phone</h6>
                       </div>
-                      <div class="col-sm-9 text-secondary">
+                      <div className="col-sm-9 text-secondary">
                         (239) 816-9029
                       </div>
                     </div>
                     <hr />
-                    <div class="row">
-                      <div class="col-sm-3">
-                        <h6 class="mb-0">Country</h6>
+                    <div className="row">
+                      <div className="col-sm-3">
+                        <h6 className="mb-0">Country</h6>
                       </div>
-                      <div class="col-sm-9 text-secondary">
+                      <div className="col-sm-9 text-secondary">
                         India
                       </div>
                     </div>
                     <hr />
-                    <div class="row">
-                      <div class="col-sm-3">
-                        <h6 class="mb-0">Watched Movies</h6>
+                    <div className="row">
+                      <div className="col-sm-3">
+                        <h6 className="mb-0">Watched Movies</h6>
                       </div>
-                      <div class="col-sm-9 text-secondary">
+                      <div className="col-sm-9 text-secondary">
                         {WatchedMovies.length}
                       </div>
                     </div>
@@ -280,8 +280,8 @@ const Profile = (props) => {
           { FavoritedMovies.length === 0 
           ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
             :
-            <div class="container-fluid overflow-auto">
-              <div class="row flex-row flex-nowrap">
+            <div className="container-fluid overflow-auto">
+              <div className="row flex-row flex-nowrap">
                 {FavoritedMovies && FavoritedMovies.map((favoritemovie, index) => (
                   <React.Fragment key={index}>
                       <Col lg={3} md={4} sm={6} xs={6} className="mb-3">
@@ -308,8 +308,8 @@ const Profile = (props) => {
           { WatchedMovies.length === 0 
           ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
             :
-            <div class="container-fluid overflow-auto">
-              <div class="row flex-row flex-nowrap">
+            <div className="container-fluid overflow-auto">
+              <div className="row flex-row flex-nowrap">
                 {/* the array is in reverse so user can find his latest watched movies */}
                 {WatchedMovies && WatchedMovies.slice(0).reverse().map((watchedmovie, index) => (
                   <React.Fragment key={index}>
