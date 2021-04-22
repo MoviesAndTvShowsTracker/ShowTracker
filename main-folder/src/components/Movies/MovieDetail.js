@@ -134,7 +134,7 @@ function MovieDetail(props) {
                                 <td className="font-weight-bolder">Where to watch</td>
                                 <td className="">{WatchProviders.map((result, index) => (
                                     <React.Fragment key={index}>
-                                        <img style={{height:"30px", width:"30px"}} className="img-responsive img-thumbnail mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
+                                        <img style={{height:"30px", width:"30px"}} className="img-responsive mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
                                     </React.Fragment>
                                     
                                 ))}

@@ -12,6 +12,7 @@ const Profile = (props) => {
   const variable = { userFrom: localStorage.getItem('userId') }
   const [FavoritedMovies, setFavoritedMovies] = useState([]);
   const [WatchedMovies, setWatchedMovies] = useState([]);
+  const [UserInfo, setUserInfo] = useState([]);
 
   const fetchFavoriteMovies = () => {
     axios.post('http://localhost:5000/api/favorite/getFavoriteMovie', variable)
@@ -22,6 +23,19 @@ const Profile = (props) => {
       }
       else {
         alert("failed to fetch favorites");
+      }
+    })
+  }
+
+  const fetchUserInfo = () => {
+    axios.get(`http://localhost:5000/users/getUser/${localStorage.getItem("userId")}`)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.found);
+        setUserInfo(response.data.found);
+      }
+      else {
+        alert("failed to get user information");
       }
     })
   }
@@ -77,9 +91,15 @@ const Profile = (props) => {
   }
 
   useEffect(() => {
+    fetchUserInfo();
     fetchFavoriteMovies();
     fetchWatchedMovies();
   }, []);
+
+  {/* Joined date of the account*/}
+  const date = new Date(`${UserInfo.createdAt}`);
+  const month = date.toLocaleString('default', { month: 'long' });
+  const joinDate = `${month} ${date.getFullYear()}`;
 
   {/* const renderTableBody = FavoritedMovies.map((movie, index) => {
     
@@ -136,7 +156,80 @@ const Profile = (props) => {
                           <li className="breadcrumb-item active" aria-current="page">Profile</li>
                       </ol>
             </nav>
-          </div>
+        </div>
+
+          {/* Profile Info */}
+          {UserInfo && <div style={{width:'95%', margin:'3rem auto'}}>
+            <div className="row gutters-sm">
+              <div className="col-md-4 mb-3">
+                <div className="card">
+                  <div className="card-body">
+                    <div className="d-flex flex-column align-items-center text-center">
+                      <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="User" class="rounded-circle" width="150" />
+                      <div>
+                        <h4>{UserInfo.username}</h4>
+                        {WatchedMovies.length < 20 ? <p className="mb-1 badge badge-danger badge-pill">Newbie</p>
+                         : <p className="mb-1 badge badge-primary badge-pill">Intermediate</p> }
+                        <p className="text-secondary mb-1">Joined since {joinDate}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/*  */}
+              <div class="col-md-8">
+                <div class="card mb-3">
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <h6 class="mb-0">Full Name</h6>
+                      </div>
+                      <div class="col-sm-9 text-secondary">
+                      {`${UserInfo.username} ${UserInfo.lastName}`}
+                      </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <h6 class="mb-0">Email</h6>
+                      </div>
+                      <div class="col-sm-9 text-secondary">
+                        {UserInfo.email}
+                      </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <h6 class="mb-0">Phone</h6>
+                      </div>
+                      <div class="col-sm-9 text-secondary">
+                        (239) 816-9029
+                      </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <h6 class="mb-0">Country</h6>
+                      </div>
+                      <div class="col-sm-9 text-secondary">
+                        India
+                      </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <h6 class="mb-0">Watched Movies</h6>
+                      </div>
+                      <div class="col-sm-9 text-secondary">
+                        {WatchedMovies.length}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/*  */}
+            </div>
+          </div>}
           {/* <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
 
           { FavoritedMovies.length === 0 

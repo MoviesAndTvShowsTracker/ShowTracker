@@ -50,6 +50,19 @@ router.post('/login', passport.authenticate('local'), (req, res) => {
 
 });
 
+router.get('/getUser/:id', (req, res) => {
+  User.findById(req.params.id)
+  .then(found => {
+    if(!found) { 
+      return res.status(404).send() 
+    }
+    else { 
+      return res.status(200).json({ success: true, found }) 
+    }
+  })
+  .catch(err => res.status(400).send(err))
+});
+
 router.get('/logout', (req, res) => {
   req.logout();
   localStorage.removeItem("user");
