@@ -13,6 +13,7 @@ function MovieDetail(props) {
     const [Movie, setMovie] = useState([]);
     const [Crews, setCrews] = useState([]);
     const [WatchProviders, setWatchProviders] = useState([]);
+    const [Genres, setGenres] = useState([]);
     const [ActorToggle, setActorToggle] = useState(false);
 
     useEffect(() => {
@@ -22,6 +23,7 @@ function MovieDetail(props) {
         .then(response => {
             console.log(response);
             setMovie(response);
+            setGenres(response.genres);
 
             fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`)
             .then(response => response.json())
@@ -63,6 +65,13 @@ function MovieDetail(props) {
         : Math.abs(Number(labelValue));
     
     }
+
+    function airdate(prop) {
+        const date = new Date(prop);
+        const month = date.toLocaleString('default', { month: 'long' });
+        return `${month} ${date.getFullYear()}`;
+    }
+    
     return (
         <>
             <div>
@@ -94,15 +103,18 @@ function MovieDetail(props) {
                             <Favorite userFrom= {localStorage.getItem('userId')} movieId={movieId} movieInfo={Movie} />
                         </div>
                     </div>
+                    <div className="text-center card-footer col-12 mt-4 d-block d-sm-none"><span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div>
                 </div>
 
                 {/* movie info part */}
                 <div className="row">
-                    <div className="d-none d-sm-block col-3">
+                    <div className="d-none d-sm-block col-3 text-center">
                     <div className="d-none d-sm-block">
-                        <img className="img-rounded img-responsive" style={{height:'295px'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
+                        <img className="img-responsive card" style={{height:'295px', width:'100%'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
+                        <div className="card-footer"> <span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div>
                     </div>
                     </div>
+                    
                     <table className="col table table-hover table-responsive-xs">
                         <tbody>
                         <tr>
@@ -111,7 +123,15 @@ function MovieDetail(props) {
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Release Date</td>
-                            <td className="">{Movie.release_date}</td>
+                            <td className="">{airdate(Movie.release_date)}</td>
+                        </tr>
+                        <tr>
+                            <td className="font-weight-bolder">Genre</td>
+                            <td className="">{Genres.map((item, index) => (
+                                <React.Fragment key={index}>
+                                    {item.name + " "}
+                                </React.Fragment>
+                            ))}</td>
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Revenue</td>
@@ -120,10 +140,6 @@ function MovieDetail(props) {
                         <tr>
                             <td className="font-weight-bolder">Runtime</td>
                             <td className="">{Movie.runtime} Minutes</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Rating</td>
-                            <td><div className="fa fa-imdb fa-lg"></div> {Movie.vote_average}/10 ({Movie.vote_count} Votes)</td>
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Status</td>
@@ -136,7 +152,6 @@ function MovieDetail(props) {
                                     <React.Fragment key={index}>
                                         <img style={{height:"30px", width:"30px"}} className="img-responsive mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
                                     </React.Fragment>
-                                    
                                 ))}
                                 </td>
                             </tr>

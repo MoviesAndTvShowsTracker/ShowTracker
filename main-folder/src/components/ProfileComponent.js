@@ -185,7 +185,7 @@ const Profile = (props) => {
                         <h6 className="mb-0">Full Name</h6>
                       </div>
                       <div className="col-sm-9 text-secondary">
-                      {`${UserInfo.username} ${UserInfo.lastName}`}
+                      {`${UserInfo.firstName} ${UserInfo.lastName}`}
                       </div>
                     </div>
                     <hr />
