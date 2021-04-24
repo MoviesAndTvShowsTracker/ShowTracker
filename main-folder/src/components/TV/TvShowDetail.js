@@ -112,14 +112,14 @@ function TvDetail(props) {
                             <td className="font-weight-bolder">Title</td>
                             <td className="">{TvShow.name}</td>
                         </tr>
-                        <tr>
+                        {CreatedBy.length > 0 && <tr>
                             <td className="font-weight-bolder">Created By</td>
                             <td className="">{CreatedBy.map((item, index) => (
                                 <React.Fragment key={index}>
                                     {item.name + " "}
                                 </React.Fragment>
                             ))}</td>
-                        </tr>
+                        </tr>}
                         <tr>
                             <td className="font-weight-bolder">Genre</td>
                             <td className="">{Genres.map((item, index) => (
