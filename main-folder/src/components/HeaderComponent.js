@@ -53,8 +53,7 @@ class Header extends Component {
         
         return(
             <React.Fragment>
-                <div className="header">
-                <Navbar dark expand="md" color="primary">
+                <Navbar dark expand="md" color="primary" sticky="top">
                     <div className="container">
                         <NavbarBrand href="/" className="mr-auto" >
                             <img src={logo} height="30" width="41" alt="Show Tracker" />  Show Tracker
@@ -96,7 +95,6 @@ class Header extends Component {
                         </Collapse>
                     </div>
                 </Navbar>
-                </div>
                 </React.Fragment>
         );
     }

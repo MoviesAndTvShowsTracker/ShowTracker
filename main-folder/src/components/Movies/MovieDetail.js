@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
-import {Row} from 'reactstrap';
-import GridCard from './GridCard';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
 import { Link } from 'react-router-dom';
@@ -66,6 +64,12 @@ function MovieDetail(props) {
     
     }
 
+    function time_convert(num) {
+        var hours = Math.floor(num / 60);  
+        var minutes = num % 60;
+        return `${hours}h ${minutes}m`; 
+    }
+
     function airdate(prop) {
         const date = new Date(prop);
         const month = date.toLocaleString('default', { month: 'long' });
@@ -77,7 +81,7 @@ function MovieDetail(props) {
             <div>
                 {Movie &&
                     <MainImageforDetail image={`${IMAGE_URL}w1280${Movie.backdrop_path && Movie.backdrop_path}`}
-                    title={Movie.original_title} text={Movie.overview} />
+                    title={Movie.title} text={Movie.overview} />
                 }
             </div>
 
@@ -139,7 +143,7 @@ function MovieDetail(props) {
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Runtime</td>
-                            <td className="">{Movie.runtime} Minutes</td>
+                            <td className="">{time_convert(Movie.runtime)}</td>
                         </tr>
                         <tr>
                             <td className="font-weight-bolder">Status</td>
@@ -160,26 +164,38 @@ function MovieDetail(props) {
                     </table>
                 </div>
 
+                {/* actor button */}
+                <div className="text-center mt-2">
+                    <button className={ActorToggle ? "btn btn-danger" : "btn btn-primary"} onClick={handleClick}> { ActorToggle ? "Hide Cast" : "Show Cast" } </button>
+                </div>
+
+                {/* actors grid shown only if button clicked*/}
+                {ActorToggle &&
+                <>
+                    <div className="h2">Cast and Crews</div>
+                    <div className="container-fluid scrollbar-custom mt-3">
+                        <div className="row flex-row flex-nowrap">
+                            {Crews && Crews.map((crew, index) => (
+                                <React.Fragment key={index}>
+                                    {crew.profile_path &&
+                                        <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                                            <img className="card card-img border-0" style={{ width: '100%', height: '300px' }} alt="img" src={`${IMAGE_URL}original${crew.profile_path}`} loading="lazy"/>
+                                            <div className="text-center text-dark font-weight-bold card-footer">
+                                                <div>{crew.name} as {crew.character}</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                </>
+                }
+
                 {/* Similar movies */}
                 <SimilarMoviesData movieId={movieId} />
 
-                {/* actor button */}
-                <div className="text-center mt-2">
-                    <button className="btn btn-primary" onClick={handleClick}> View Actors</button>
-                </div>
-
-                {/* actors grid */}
-                {ActorToggle &&
-                <Row>
-                    {Crews && Crews.map((crew, index) => (
-                        <React.Fragment key={index}>
-                            {crew.profile_path &&
-                            <GridCard 
-                                actor={crew.name} character={crew.character} image={`${IMAGE_URL}original${crew.profile_path}`}
-                            />}
-                        </React.Fragment>
-                    ))}
-                </Row>}
+                
             </div>
         </>
     )
