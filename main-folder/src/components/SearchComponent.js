@@ -31,20 +31,40 @@ class SearchBox extends Component {
         e.preventDefault();
         
         if(this.state.selectedOption) {
-        var data = this.state.searchQuery;
-        const url = `${API_URL}search/${this.state.selectedOption}?api_key=${API_KEY}&language=en-US&query=${encodeURI(data)}&page=1&include_adult=false`;
-        console.log(url);
-        fetch(url)
-        .then(response => response.json())
-        .then(response => {
-            console.log(response);
-            const result = response.results;
-            this.setState({results: result});
-            if(result.length);
+            if(this.state.searchQuery) {
+                var data = this.state.searchQuery;
+                const url = `${API_URL}search/${this.state.selectedOption}?api_key=${API_KEY}&language=en-US&query=${encodeURI(data)}&page=1&include_adult=false`;
+                console.log(url);
+                fetch(url)
+                .then(response => response.json())
+                .then(response => {
+                    console.log(response);
+                    const result = response.results;
+                    this.setState({results: result});
+                    if(result.length);
+                    else {
+                        swal("No Results Found", "", "error", {
+                            buttons: {
+                                sure: {
+                                  text: "Okay",
+                                  className: "swal-confirm"
+                                }
+                              }
+                        });
+                    } 
+                }) 
+            }
             else {
-                swal({title: "No results found", icon: "error"});
-            } 
-        }) }
+                swal("Please enter the search value", "", "warning", {
+                    buttons: {
+                        sure: {
+                          text: "Okay",
+                          className: "swal-confirm"
+                        }
+                      }
+                });
+            }
+        }
         else {
             swal("Please select the option", "", "warning", {
                 buttons: {
@@ -133,7 +153,8 @@ class SearchBox extends Component {
                         <Row>
                             {this.state.results && this.state.results.map((movie, index) => (
                                 <React.Fragment key={index}>
-                                    {movie.poster_path && <GridCard 
+                                    {movie.poster_path && 
+                                    <GridCard 
                                         image={movie.poster_path && `${IMAGE_URL}w500${movie.poster_path}`}
                                         movieId={movie.id} movieTitle={movie.title} name={movie.original_title}
                                     />}
@@ -144,7 +165,8 @@ class SearchBox extends Component {
                         <Row>
                             {this.state.results && this.state.results.map((tvshow, index) => (
                                 <React.Fragment key={index}>
-                                    {tvshow.poster_path && <TvGridCard 
+                                    {tvshow.poster_path && 
+                                    <TvGridCard 
                                         image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
                                         tvShowId={tvshow.id} tvShowTitle={tvshow.title} name={tvshow.original_title}
                                     />}
