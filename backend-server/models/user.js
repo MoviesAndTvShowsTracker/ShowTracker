@@ -8,6 +8,11 @@ var User = new Schema({
         unique: true,
         required: true
     },
+    phonenumber:{
+        type: Number,
+        default: "",
+        maxlength: 10
+    },
     firstName: {
         type: String,
         required: true

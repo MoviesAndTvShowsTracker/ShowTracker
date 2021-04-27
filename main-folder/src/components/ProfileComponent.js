@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import swal from 'sweetalert';
 
 const Profile = (props) => {
 
@@ -9,6 +11,51 @@ const Profile = (props) => {
   const [FavoritedMovies, setFavoritedMovies] = useState([]);
   const [WatchedMovies, setWatchedMovies] = useState([]);
   const [UserInfo, setUserInfo] = useState([]);
+  const [modal, setModal] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  {/*adding or updating phone Number functions*/}
+  const onChangeHandler = event => {
+    setInputValue(event.target.value);
+  };
+
+  const submitValue = (e) => {
+    e.preventDefault();
+    {/*if condition checks length=10 and no alphabets or no alphanumeric chars*/}
+    if(!/^\d{10}$/.test(inputValue)) {
+      swal("Please enter the valid number", "", "warning")
+    }
+    else {
+    const data ={
+      inputValue: inputValue,
+      userId: localStorage.getItem('userId')
+    };
+    console.log(data);
+    axios.post("http://localhost:5000/users/updateOrAddPhone", data)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.docs);
+        setInputValue("");
+        toggle();
+        swal("", "", "success", {
+          buttons: {
+              sure: {
+                text: "Okay",
+                className: "swal-confirm"
+              }
+            }
+      });
+      fetchUserInfo();
+      }
+      else {
+        swal("failed to get user information");
+      }
+    });
+    }
+  }
+  {/*end of phone number functions*/}
+
+  const toggle = () => setModal(!modal);
 
   const fetchFavoriteMovies = () => {
     axios.post('http://localhost:5000/api/favorite/getFavoriteMovie', variable)
@@ -91,7 +138,7 @@ const Profile = (props) => {
     fetchFavoriteMovies();
     fetchWatchedMovies();
   }, []);
-
+    
   {/* Joined date of the account*/}
   const date = new Date(`${UserInfo.createdAt}`);
   const month = date.toLocaleString('default', { month: 'long' });
@@ -154,7 +201,39 @@ const Profile = (props) => {
                       <h6 className="mb-0">Phone</h6>
                     </div>
                     <div className="col-sm-9 text-secondary">
-                      (239) 816-9029
+                      {UserInfo.phonenumber 
+                      ?
+                      <div> {/*edit modal*/}
+                        {UserInfo.phonenumber}
+                        <div className="float-right">
+                          <button className="btn text-primary p-0" onClick={toggle}><span className="fa fa-edit fa-lg"></span> Edit</button>
+                          <Modal isOpen={modal} toggle={toggle} centered="true">
+                            <ModalHeader toggle={toggle}>Enter New Number</ModalHeader>
+                            <ModalBody>
+                              <input className="col-12" type="tel" placeholder="Phone" maxLength="10" onChange={onChangeHandler} value={inputValue}/>
+                            </ModalBody>
+                            <ModalFooter>
+                              <button className="btn btn-secondary" onClick={toggle}>Cancel</button>
+                              <button className="btn btn-primary" type="submit" onClick={submitValue}>Submit</button>{' '}
+                            </ModalFooter>
+                          </Modal>
+                        </div>
+                      </div>
+                      :
+                      <div> {/*Add number modal*/}
+                          <button className="btn btn-primary" onClick={toggle}><span className="fa fa-phone"></span> Add Phone</button>
+                          <Modal isOpen={modal} toggle={toggle} centered="true">
+                            <ModalHeader toggle={toggle}>Enter Number</ModalHeader>
+                            <ModalBody>
+                              <input className="col-12" type="tel" placeholder="Phone" maxLength="10" onChange={onChangeHandler} value={inputValue}/>
+                            </ModalBody>
+                            <ModalFooter>
+                              <button className="btn btn-secondary" onClick={toggle}>Cancel</button>
+                              <button className="btn btn-primary" type="submit" onClick={submitValue}>Submit</button>{' '}
+                            </ModalFooter>
+                          </Modal>
+                        </div>
+                      }
                     </div>
                   </div>
                   <hr />

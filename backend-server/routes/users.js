@@ -70,4 +70,15 @@ router.get('/logout', (req, res) => {
   
 });
 
+router.post('/updateOrAddPhone', (req, res) => {
+  User.findByIdAndUpdate(req.body.userId, {phonenumber: req.body.inputValue},  function (err, docs) {
+    if (err) {
+      return res.status(404).send();
+    }
+    else {
+      return res.status(200).json({ success: true, docs });
+    }
+  })
+});
+
 module.exports = router;
