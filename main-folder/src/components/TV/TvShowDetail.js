@@ -2,16 +2,17 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainImageforDetail from './MainImageforDetail';
-// import { CardBody, Card, Collapse } from 'reactstrap';
+import SimilarTvShows from './SimilarTvShows';
 
 function TvDetail(props) {
 
     const tvShowId = props.match.params.Id;
     const [TvShow, setTvShow] = useState([]);
-    // const [ToggleNumber, setToggleNumber] = useState(1);
     const [CreatedBy, setCreatedBy] = useState([]);
     const [Genres, setGenres] = useState([]);
+    const [Seasons, setSeasons] = useState([]);
     const [WatchProviders, setWatchProviders] = useState([]);
+    
     useEffect(() => {
 
         fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`)
@@ -20,7 +21,8 @@ function TvDetail(props) {
             console.log(response);
             setTvShow(response);
             setCreatedBy(response.created_by);
-            setGenres(response.genres)
+            setGenres(response.genres);
+            setSeasons(response.seasons)
         })
 
         fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`)
@@ -57,43 +59,6 @@ function TvDetail(props) {
                     </ol>
                 </nav>
                 
-                {/* <div>
-                <div class="card">
-                    <div class="card-header">
-                        <button class="btn btn-link" onClick={() => setToggleNumber(1)}>
-                        Collapsible Group Item #1
-                        </button>
-                    </div>
-                </div>
-                    <Collapse isOpen={ToggleNumber === 1 ? true : false}>
-                    <Card>
-                        <CardBody>
-                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt magni, voluptas debitis
-                        similique porro a molestias consequuntur earum odio officiis natus, amet hic, iste sed
-                        dignissimos esse fuga! Minus, alias.
-                        </CardBody>
-                    </Card>
-                    </Collapse>
-
-                    <div class="card">
-                    <div class="card-header">
-                        <button class="btn btn-link" onClick={() => setToggleNumber(2)}>
-                        Collapsible Group Item #2
-                        </button>
-                    </div>
-                </div>
-                    <Collapse isOpen={ToggleNumber === 2 ? true : false}>
-                    <Card>
-                        <CardBody>
-                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt magni, voluptas debitis
-                        similique porro a molestias consequuntur earum odio officiis natus, amet hic, iste sed
-                        dignissimos esse fuga! Minus, alias.
-                        </CardBody>
-                    </Card>
-                    </Collapse>
-                </div> */}
-
-            {/*  */}
             <div className="row">
                     <div className="col-xs-12 col-sm-6 col-md-6 col-lg-6">
                         <div className="h2"> Information</div>
@@ -154,6 +119,32 @@ function TvDetail(props) {
                         </tbody>
                     </table>
             </div>
+            {/* Seasons */}
+            <div className="mt-3">
+                <div className="h2"><span className="fa fa-list-alt"></span> Seasons</div>
+                {Seasons.slice(0).reverse().map((results, index) => (
+                    <React.Fragment key={index}>
+                        {results.poster_path && 
+                            <div className="p-0 mb-3 col-12">
+                                <div className="card">
+                                    <div className="card-header font-weight-bold text-primary">{results.name} <div className="text-secondary">{`${new Date(results.air_date).getFullYear()} | ${results.episode_count} Episodes`}</div></div>
+                                    <div className="card-body row">
+                                        <div className="col-4 col-md-2">
+                                            <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.poster_path}`} />
+                                        </div>
+                                        <div className="col-8 col-md-10">
+                                            {results.overview}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </React.Fragment>
+                ))
+                }
+            </div>
+            {/* similar shows */}
+            <SimilarTvShows showId={tvShowId} />
         </div>
         </>
     )
