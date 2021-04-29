@@ -273,7 +273,7 @@ const Profile = (props) => {
                 <React.Fragment key={index}>
                     <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
                       <div className="position-relative">
-                        <Link to={`/movie/${favoritemovie.movieId}`} className="text-decoration-none">
+                        <Link to={`/movies/${favoritemovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoritemovie.moviePosterImage}`} />
                           <div className="text-center font-weight-bold text-decoration-none">{favoritemovie.movieTitle}</div>
                         </Link>
@@ -302,7 +302,7 @@ const Profile = (props) => {
                 <React.Fragment key={index}>
                     <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
                       <div className="position-relative">
-                        <Link to={`/movie/${watchedmovie.movieId}`} className="text-decoration-none">
+                        <Link to={`/movies/${watchedmovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${watchedmovie.moviePosterImage}`} />
                           <div className="text-center font-weight-bold text-decoration-none">{watchedmovie.movieTitle}</div>
                         </Link>

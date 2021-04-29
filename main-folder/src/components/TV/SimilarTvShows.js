@@ -19,8 +19,8 @@ function SimilarTvShows(props) {
     return (
         <>
             <div className="h2 mt-4">More Like This</div>
-            <div class="container-fluid scrollbar-custom">
-                <div class="row flex-row flex-nowrap">
+            <div className="container-fluid scrollbar-custom">
+                <div className="row flex-row flex-nowrap">
                 {SimilarShows && SimilarShows.map((shows, index) => (
                     <React.Fragment key={index}>
                         <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">

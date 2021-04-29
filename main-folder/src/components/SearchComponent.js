@@ -112,29 +112,29 @@ class SearchBox extends Component {
                         </div>
                         {/* radio buttons */}
                         <div className="mt-2">
-                            <div class="form-check">
+                            <div className="form-check">
                                 <input 
-                                class="form-check-input" 
+                                className="form-check-input" 
                                 type="radio" 
                                 name="movie" 
                                 value="movie"
                                 checked={this.state.selectedOption === "movie"}
                                 onChange={this.onChangeValue}
                                 />
-                                <span class="form-check-label font-weight-bold">
+                                <span className="form-check-label font-weight-bold">
                                     Movies
                                 </span>
                             </div>
-                            <div class="form-check">
+                            <div className="form-check">
                                 <input 
-                                class="form-check-input" 
+                                className="form-check-input" 
                                 type="radio" 
                                 value="tv" 
                                 name="tvshow" 
                                 checked={this.state.selectedOption === "tv"}
                                 onChange={this.onChangeValue}
                                 />
-                                <span class="form-check-label font-weight-bold">
+                                <span className="form-check-label font-weight-bold">
                                     TV Shows
                                 </span>
                             </div>
