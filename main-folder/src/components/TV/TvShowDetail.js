@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainImageforDetail from './MainImageforDetail';
+import SeasonEpisodes from './SeasonEpisodes';
 import SimilarTvShows from './SimilarTvShows';
 
 function TvDetail(props) {
@@ -11,7 +12,9 @@ function TvDetail(props) {
     const [CreatedBy, setCreatedBy] = useState([]);
     const [Genres, setGenres] = useState([]);
     const [Seasons, setSeasons] = useState([]);
+    const [Crews, setCrews] = useState([]);
     const [WatchProviders, setWatchProviders] = useState([]);
+    const [ActorToggle, setActorToggle] = useState(false);
     
     useEffect(() => {
 
@@ -23,6 +26,13 @@ function TvDetail(props) {
             setCreatedBy(response.created_by);
             setGenres(response.genres);
             setSeasons(response.seasons)
+        })
+
+        fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`)
+            .then(response => response.json())
+            .then(response => {
+                console.log(response);
+                setCrews(response.cast)
         })
 
         fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`)
@@ -39,6 +49,10 @@ function TvDetail(props) {
         const date = new Date(prop);
         const month = date.toLocaleString('default', { month: 'long' });
         return `${month} ${date.getFullYear()}`;
+    }
+
+    const handleClick = () => {
+        setActorToggle(!ActorToggle);
     }
     
     return (
@@ -119,6 +133,35 @@ function TvDetail(props) {
                         </tbody>
                     </table>
             </div>
+
+            {/* Show Cast button */}
+            <div className="text-center mt-2">
+                    <button className={ActorToggle ? "btn btn-danger" : "btn btn-primary"} onClick={handleClick}> { ActorToggle ? "Hide Cast" : "Show Cast" } </button>
+            </div>
+
+            {/* actors grid shown only if button clicked*/}
+            {ActorToggle &&
+                <>
+                    <div className="h2">Cast and Crews</div>
+                    <div className="container-fluid scrollbar-custom mt-3">
+                        <div className="row flex-row flex-nowrap">
+                            {Crews && Crews.map((crew, index) => (
+                                <React.Fragment key={index}>
+                                    {crew.profile_path &&
+                                        <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3 mb-2">
+                                            <img className="card card-img border-0" style={{ width: '100%', height: '300px' }} alt="img" src={`${IMAGE_URL}original${crew.profile_path}`} loading="lazy"/>
+                                            <div className="text-center text-dark font-weight-bold card-footer">
+                                                <div>{crew.name} as {crew.character}</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            }
+
             {/* Seasons */}
             <div className="mt-3">
                 <div className="h2"><span className="fa fa-list-alt"></span> Seasons</div>
@@ -127,13 +170,13 @@ function TvDetail(props) {
                         {results.poster_path && 
                             <div className="p-0 mb-3 col-12">
                                 <div className="card">
-                                    <div className="card-header font-weight-bold text-primary">{results.name} <div className="text-secondary">{`${new Date(results.air_date).getFullYear()} | ${results.episode_count} Episodes`}</div></div>
+                                    <div className="card-header font-weight-bold text-primary"><Link to={`/tv/${tvShowId}/${results.season_number}/episodes`}>{results.name}</Link> <div className="text-secondary">{`${new Date(results.air_date).getFullYear()} | ${results.episode_count} Episodes`}</div></div>
                                     <div className="card-body row">
                                         <div className="col-4 col-md-2">
                                             <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.poster_path}`} />
                                         </div>
                                         <div className="col-8 col-md-10">
-                                            {results.overview}
+                                            {results.overview ? results.overview : "No Information Available"}
                                         </div>
                                     </div>
                                 </div>

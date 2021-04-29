@@ -11,6 +11,7 @@ import MovieDetail from './Movies/MovieDetail';
 import TvDetail from './TV/TvShowDetail';
 import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
+import SeasonEpisodes from './TV/SeasonEpisodes';
 
 const isLoggedIn = () => {
     return localStorage.getItem('user') != null;
@@ -47,12 +48,13 @@ const DefaultContainer = () => (
         <Header />
         <Switch>
             <Route exact path='/' component={Home} />
-            <SecuredRoute path='/profile' component={Profile} />
+            <SecuredRoute exact path='/profile' component={Profile} />
             <SecuredRoute exact path='/movie/:Id' component={withRouter(MovieDetail)} />
-            <SecuredRoute path='/movies' component={LandingPage} />
+            <SecuredRoute exact path='/movies' component={LandingPage} />
             <Route path='/search' component={SearchBox} />
             <SecuredRoute exact path='/tv/:Id' component={withRouter(TvDetail)} />
-            <SecuredRoute path='/tv' component={TvLandingPage} />
+            <SecuredRoute exact path='/tv/:Id/:seasonNumber/episodes' component={withRouter(SeasonEpisodes)} />
+            <SecuredRoute exact path='/tv' component={TvLandingPage} />
             <Redirect to={Home} />
         </Switch>
     </div>
