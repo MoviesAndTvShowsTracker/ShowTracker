@@ -1,7 +1,9 @@
 import React from 'react'
+import Fade from 'react-reveal/Fade';
 
 function MainImageforDetail(props) {
     return (
+        <Fade top>
         <div style={{
                     backgroundImage:`url('${props.image}')`,
                     height: '75vh',
@@ -16,6 +18,7 @@ function MainImageforDetail(props) {
         </div>
 
         </div>
+        </Fade>
     )
 }
 

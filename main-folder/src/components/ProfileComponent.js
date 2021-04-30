@@ -4,6 +4,7 @@ import { IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import swal from 'sweetalert';
+import Fade from 'react-reveal/Fade';
 
 const Profile = (props) => {
 
@@ -305,6 +306,7 @@ const Profile = (props) => {
               {FavoritedMovies && FavoritedMovies.map((favoritemovie, index) => (
                 <React.Fragment key={index}>
                     <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                      <Fade>
                       <div className="position-relative">
                         <Link to={`/movies/${favoritemovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoritemovie.moviePosterImage}`} />
@@ -314,6 +316,7 @@ const Profile = (props) => {
                           <button className="btn btn-danger" onClick={() => onClickRemove(favoritemovie.movieId)}> Remove </button>
                         </div>
                       </div>
+                      </Fade>
                     </div>
                 </React.Fragment>
               ))}
@@ -334,6 +337,7 @@ const Profile = (props) => {
               {WatchedMovies && WatchedMovies.slice(0).reverse().map((watchedmovie, index) => (
                 <React.Fragment key={index}>
                     <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                    <Fade>
                       <div className="position-relative">
                         <Link to={`/movies/${watchedmovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${watchedmovie.moviePosterImage}`} />
@@ -343,6 +347,7 @@ const Profile = (props) => {
                           <button className="btn btn-danger" onClick={() => removeWatched(watchedmovie.movieId)}> Remove </button>
                         </div>
                       </div>
+                      </Fade>
                     </div>
                 </React.Fragment>
               ))}
@@ -362,6 +367,7 @@ const Profile = (props) => {
               {FavoritedShows && FavoritedShows.map((favoriteshow, index) => (
                 <React.Fragment key={index}>
                     <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                      <Fade>
                       <div className="position-relative">
                         <Link to={`/tv/${favoriteshow.tvId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
@@ -371,6 +377,7 @@ const Profile = (props) => {
                           <button className="btn btn-danger" onClick={() => removeFavoriteShow(favoriteshow.tvId)}> Remove </button>
                         </div>
                       </div>
+                      </Fade>
                     </div>
                 </React.Fragment>
               ))}

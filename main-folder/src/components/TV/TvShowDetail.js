@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainImageforDetail from './MainImageforDetail';
-import SeasonEpisodes from './SeasonEpisodes';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
+import Fade from 'react-reveal/Fade';
 
 function TvDetail(props) {
 
@@ -177,6 +177,7 @@ function TvDetail(props) {
                     <React.Fragment key={index}>
                         {results.poster_path && 
                             <div className="p-0 mb-3 col-12">
+                                <Fade>
                                 <div className="card">
                                     <div className="card-header font-weight-bold text-primary"><Link to={`/tv/${tvShowId}/${results.season_number}/episodes`}>{results.name}</Link> <div className="text-secondary">{`${new Date(results.air_date).getFullYear()} | ${results.episode_count} Episodes`}</div></div>
                                     <div className="card-body row">
@@ -188,6 +189,7 @@ function TvDetail(props) {
                                         </div>
                                     </div>
                                 </div>
+                                </Fade>
                             </div>
                         }
                     </React.Fragment>

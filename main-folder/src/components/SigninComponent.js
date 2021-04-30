@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Link, Redirect } from 'react-router-dom';
+import Fade from 'react-reveal/Fade';
 
 import axios from 'axios';
 import swal from 'sweetalert';
@@ -155,7 +156,7 @@ class Signin extends Component {
                   onChange={this.handleChange}
                 />
                 {formErrors.username.length > 0 && (
-                  <span className="errorMessage">{formErrors.username}</span>
+                  <Fade bottom collapse><span className="errorMessage">{formErrors.username}</span></Fade>
                 )}
               </div>
               <div className="password">
@@ -171,7 +172,7 @@ class Signin extends Component {
                   autoComplete= "on"
                 />
                 {formErrors.password.length > 0 && (
-                  <span className="errorMessage">{formErrors.password}</span>
+                  <Fade bottom collapse><span className="errorMessage">{formErrors.password}</span></Fade>
                 )}
               </div>
               <div className="createAccount">

@@ -4,6 +4,7 @@ import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
 import { Link } from 'react-router-dom';
 import SimilarMoviesData from './ShowSimilarMovies';
+import Fade from 'react-reveal/Fade';
 
 function MovieDetail(props) {
 
@@ -116,8 +117,8 @@ function MovieDetail(props) {
                 <div className="row">
                     <div className="d-none d-sm-block col-3 text-center">
                     <div className="d-none d-sm-block">
-                        <img className="img-responsive card" style={{height:'295px', width:'100%'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
-                        <div className="card-footer"> <span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div>
+                        <Fade><img className="img-responsive card" style={{height:'295px', width:'100%'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
+                        <div className="card-footer"> <span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div></Fade>
                     </div>
                     </div>
                     

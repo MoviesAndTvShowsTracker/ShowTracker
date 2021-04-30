@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import Fade from 'react-reveal/Fade';
 
 function SeasonEpisodes(props) {
 
@@ -59,6 +60,7 @@ function SeasonEpisodes(props) {
                 </div>
                 {Episodes.map((results, index) => (
                     <React.Fragment key={index}>
+                        <Fade>
                             <div className="p-0 mb-3 col-12">
                                 <div className="card">
                                     <div className="card-header font-weight-bold text-primary">{results.episode_number}. {results.name} <div className="text-secondary">{results.air_date ? `${airdate(results.air_date)} |` : "-"}  <span className="fa fa-star mr-1"></span>{results.vote_average ? results.vote_average : "-"}/10</div></div>
@@ -83,6 +85,7 @@ function SeasonEpisodes(props) {
                                     </div>
                                 </div>
                             </div>
+                        </Fade>
                     </React.Fragment>
                 ))
                 }

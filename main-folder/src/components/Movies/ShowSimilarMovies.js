@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import Fade from 'react-reveal/Fade';
 
 function SimilarMoviesData(props) {
 
@@ -24,12 +25,14 @@ function SimilarMoviesData(props) {
                 {SimilarMovies && SimilarMovies.map((similarmovie, index) => (
                     <React.Fragment key={index}>
                         <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                            <Fade>
                             <div>
                                 <Link to={`/movies/${similarmovie.id}`} className="text-decoration-none" >
                                     <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={similarmovie.poster_path && `${IMAGE_URL}w500${similarmovie.poster_path}`} loading="lazy" />
                                     <div className="text-center font-weight-bold">{similarmovie.title}</div>
                                 </Link>
                             </div>
+                            </Fade>
                         </div>
                     </React.Fragment>
                 ))}

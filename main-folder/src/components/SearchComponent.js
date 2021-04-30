@@ -5,6 +5,7 @@ import GridCard from './Movies/GridCard';
 import { Row } from 'reactstrap';
 import TvGridCard from './TV/TvGridCard';
 import swal from 'sweetalert';
+import Fade from 'react-reveal/Fade';
 
 class SearchBox extends Component {
 

@@ -1,10 +1,12 @@
 import React from 'react';
 import Carousel from 'react-bootstrap/Carousel'
 import { Link } from 'react-router-dom';
+import Fade from 'react-reveal/Fade';
 
 
 function MainImage(props) {
     return (
+        <Fade left>
         <Carousel>
             <Carousel.Item>
             <Link to={`/movies/${props.movieid}`}>
@@ -33,7 +35,8 @@ function MainImage(props) {
                     </Carousel.Caption>
             </Link>
             </Carousel.Item>
-</Carousel>
+        </Carousel>
+        </Fade>
     )
 }
 
