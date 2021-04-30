@@ -9,6 +9,7 @@ const Profile = (props) => {
 
   const variable = { userFrom: localStorage.getItem('userId') }
   const [FavoritedMovies, setFavoritedMovies] = useState([]);
+  const [FavoritedShows, setFavoritedShows] = useState([]);
   const [WatchedMovies, setWatchedMovies] = useState([]);
   const [UserInfo, setUserInfo] = useState([]);
   const [modal, setModal] = useState(false);
@@ -63,6 +64,19 @@ const Profile = (props) => {
       if(response.data.success) {
         console.log(response.data.favorites);
         setFavoritedMovies(response.data.favorites);
+      }
+      else {
+        alert("failed to fetch favorites");
+      }
+    })
+  }
+
+  const fetchFavoriteShows = () => {
+    axios.post('http://localhost:5000/api/tv/favorite/getFavoriteMovie', variable)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.favorites);
+        setFavoritedShows(response.data.favorites);
       }
       else {
         alert("failed to fetch favorites");
@@ -133,10 +147,29 @@ const Profile = (props) => {
           })
   }
 
+  const removeFavoriteShow = (tvId) => {
+
+    const variable = {
+      tvId: tvId,
+      userFrom: localStorage.getItem('userId')
+    }
+
+    axios.post('http://localhost:5000/api/tv/favorite/removeFromFavorite', variable)
+          .then(response => {
+              if(response.data.success) {
+                  fetchFavoriteShows();
+              }
+              else {
+                  alert('Failed to remove from Watched movies');
+              }
+          })
+  }
+
   useEffect(() => {
     fetchUserInfo();
     fetchFavoriteMovies();
     fetchWatchedMovies();
+    fetchFavoriteShows()
   }, []);
     
   {/* Joined date of the account*/}
@@ -308,6 +341,34 @@ const Profile = (props) => {
                         </Link>
                         <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
                           <button className="btn btn-danger" onClick={() => removeWatched(watchedmovie.movieId)}> Remove </button>
+                        </div>
+                      </div>
+                    </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>}
+      </div>
+
+      {/* Favorite shows flexbox */}
+      <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
+        <div className="h2 mb-3"><div className="fa fa-history"></div> Favorite Shows</div>
+        { FavoritedShows.length === 0 
+        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/tv" className="text-decoration-none">Find latest TV Shows</Link></div> 
+          :
+          <div className="container-fluid scrollbar-custom">
+            <div className="row flex-row flex-nowrap">
+              {/* the array is in reverse so user can find his latest watched movies */}
+              {FavoritedShows && FavoritedShows.map((favoriteshow, index) => (
+                <React.Fragment key={index}>
+                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                      <div className="position-relative">
+                        <Link to={`/tv/${favoriteshow.tvId}`} className="text-decoration-none">
+                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
+                          <div className="text-center font-weight-bold text-decoration-none">{favoriteshow.tvTitle}</div>
+                        </Link>
+                        <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
+                          <button className="btn btn-danger" onClick={() => removeFavoriteShow(favoriteshow.tvId)}> Remove </button>
                         </div>
                       </div>
                     </div>

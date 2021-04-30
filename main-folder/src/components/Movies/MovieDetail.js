@@ -39,6 +39,8 @@ function MovieDetail(props) {
                 setWatchProviders(ott ? ott : response.results.IN.buy)
             })
             .catch(() => console.log('error in fetching providers, do nothing'))
+
+        window.scrollTo(0, 0);
     }, [])
 
     const handleClick = () => {

@@ -4,6 +4,7 @@ import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainImageforDetail from './MainImageforDetail';
 import SeasonEpisodes from './SeasonEpisodes';
 import SimilarTvShows from './SimilarTvShows';
+import TvFavorites from './TvFavorites';
 
 function TvDetail(props) {
 
@@ -43,6 +44,8 @@ function TvDetail(props) {
                 setWatchProviders(ott ? ott : response.results.IN.buy)
             })
             .catch(() => console.log('error in fetching providers, do nothing'))
+        
+        window.scrollTo(0, 0); {/* scroll to top react router behavior to keep the next page on same position*/}
     }, [])
 
     function airdate(prop) {
@@ -75,7 +78,12 @@ function TvDetail(props) {
                 
             <div className="row">
                     <div className="col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <div className="h2"> Information</div>
+                        <div className="h2"><span className="fa fa-info-circle"></span> Information</div>
+                    </div>
+                    <div className="col-xs-12 col-sm-6 col-md-6 col-lg-6">
+                        <div className="float-right">
+                            <TvFavorites userFrom={localStorage.getItem('userId')} tvId={tvShowId} tvInfo={TvShow} />
+                        </div>
                     </div>
                     <div className=" mt-3 col-12 card-footer text-center d-block d-sm-none"> <span className="fa fa-imdb fa-lg"></span>{TvShow.vote_average}/10 ({TvShow.vote_count} Votes)</div>
 

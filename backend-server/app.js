@@ -13,6 +13,7 @@ var passport = require('passport');
 var authenticate = require('./authenticate');
 const favorite = require('./routes/favorites');
 const watch = require('./routes/watch');
+const favoritefortv = require('./routes/favoritefortv');
 
 const url = config.mongoURL;
 const connect = mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true});
@@ -58,9 +59,9 @@ app.use(passport.initialize());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/api/tv/favorite', favoritefortv);
 app.use('/api/favorite', favorite);
 app.use('/api/watch', watch);
-
 
 app.use(express.static(path.join(__dirname, 'public')));
 
