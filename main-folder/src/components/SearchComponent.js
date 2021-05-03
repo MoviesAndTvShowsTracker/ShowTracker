@@ -98,8 +98,8 @@ class SearchBox extends Component {
                 </nav>
             </div>
 
-            <div className="row">
-                <div className="col-6 offset-3">
+            <div className="row m-0">
+                <div className="col-12 col-md-6 col-sm-6 offset-md-3 offset-sm-3">
                     <form className="form-group">
                         <div className="input-group">
                             <input 

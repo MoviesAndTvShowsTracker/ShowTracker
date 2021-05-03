@@ -128,7 +128,7 @@ class Signin extends Component {
 
         return (
           
-          <div className="wrapper">
+          <div className="wrapper row m-0">
             <div>
               {/* Breadcrumbs */}
               <nav aria-label="breadcrumb" className="position-absolute" style={{top: '2rem', right: '2rem'}}>
@@ -138,7 +138,7 @@ class Signin extends Component {
                         </ol>
               </nav>
             </div>
-          <div className="form-wrapper">
+          <div className="form-wrapper col-lg-4">
             {redirectVar}
 
             <h1 className="font-weight-lighter" style={{color: "black"}}> Login</h1>

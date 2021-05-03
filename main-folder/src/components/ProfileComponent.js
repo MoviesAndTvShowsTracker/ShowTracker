@@ -85,8 +85,14 @@ const Profile = (props) => {
     })
   }
 
+  {/*below get request is require user to authenticate first. auth only shown in this request
+  just to show that it works you can apply this in all requests*/}
   const fetchUserInfo = () => {
-    axios.get(`http://localhost:5000/users/getUser/${localStorage.getItem("userId")}`)
+    axios.get(`http://localhost:5000/users/getUser/${localStorage.getItem("userId")}`, {
+      headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('user')
+      }
+    })
     .then(response => {
       if(response.data.success) {
         console.log(response.data.found);

@@ -51,8 +51,9 @@ class Signup extends Component {
 
   handleSubmit = e => {
     e.preventDefault();
-
-    if (formValid(this.state)) {
+    {/* isempty checks if all field contain value */}
+    const isempty = this.state.username && this.state.firstName && this.state.lastName && this.state.email && this.state.password
+    if (formValid(this.state) && isempty) {
 
       var data = {
         username: this.state.username,
@@ -152,7 +153,7 @@ class Signup extends Component {
                   <li className="breadcrumb-item active" aria-current="page">Sign-up</li>
               </ol>
           </nav>
-        <div className="form-wrapper">
+        <div className="form-wrapper col-sm-6 col-md-4">
           {redirectVar}
           
           <h1 style={{color: "black"}}>Create Account</h1>

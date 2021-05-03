@@ -10,7 +10,7 @@ function Favorite(props) {
     const variable = {
         userFrom: props.userFrom,
         movieId: props.movieId,
-        movieTitle: props.movieInfo.original_title,
+        movieTitle: props.movieInfo.title,
         movieImage: props.movieInfo.backdrop_path,
         moviePosterImage: props.movieInfo.poster_path,
         movieRuntime: props.movieInfo.runtime
