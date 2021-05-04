@@ -4,6 +4,7 @@ import { Row } from 'reactstrap';
 import MainImage from './MainImage';
 import GridCard from './GridCard';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 
 
 function LandingPage() {
@@ -32,6 +33,10 @@ function LandingPage() {
     }
 
     return (
+        <>
+        <Helmet>
+            <title>Explore Latest Movies</title>
+        </Helmet>
         <div style={{ width: '100%', margin: 0 }}  >
 
             {Movies[0] &&
@@ -80,6 +85,7 @@ function LandingPage() {
             </div>
 
         </div>
+        </>
     )
 }
 

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Signin from './SigninComponent';
 import swal from 'sweetalert';
+import { Helmet } from 'react-helmet';
 
 const emailRegex = RegExp(
   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -145,6 +146,10 @@ class Signup extends Component {
     const { formErrors } = this.state;
 
     return (
+      <>
+      <Helmet>
+            <title>Create an account</title>
+      </Helmet>
       <div className="wrapper">
           {/* Breadcrumbs */}
           <nav aria-label="breadcrumb" className="position-absolute" style={{top: '2rem', right: '2rem'}}>
@@ -242,6 +247,7 @@ class Signup extends Component {
           </form>
         </div>
       </div>
+      </>
     );
   }
 }

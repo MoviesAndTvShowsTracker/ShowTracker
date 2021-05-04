@@ -1,10 +1,15 @@
 import React from "react";
+import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Button } from "reactstrap";
 import '../homepage.css';
 
 function Home(props) {
     return ( 
+		<>
+		<Helmet>
+            <title>Show Tracker - Track your favorite Movies and TV Shows</title>
+        </Helmet>
 		<div className="our-story-container" dir="ltr">
 		<div className="our-story-header-wrapper">
 		</div>
@@ -115,6 +120,7 @@ function Home(props) {
 				</div> }
 			</div>
 	</div>
+	</>
     );
 }
 

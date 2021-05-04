@@ -5,11 +5,13 @@ import MainImageforDetail from './MainImageforDetail';
 import { Link } from 'react-router-dom';
 import SimilarMoviesData from './ShowSimilarMovies';
 import Fade from 'react-reveal/Fade';
+import { Helmet } from 'react-helmet';
 
 function MovieDetail(props) {
 
     const movieId = props.match.params.Id;
     const [Movie, setMovie] = useState([]);
+    const [Actors, setActors] = useState([]);
     const [Crews, setCrews] = useState([]);
     const [WatchProviders, setWatchProviders] = useState([]);
     const [Genres, setGenres] = useState([]);
@@ -28,7 +30,8 @@ function MovieDetail(props) {
             .then(response => response.json())
             .then(response => {
                 console.log(response);
-                setCrews(response.cast)
+                setActors(response.cast);
+                setCrews(response.crew)
             })
         })
 
@@ -81,6 +84,9 @@ function MovieDetail(props) {
     
     return (
         <>
+        <Helmet>
+            <title> {Movie.title ? `${Movie.title}` : "Loading..."}</title>
+        </Helmet>
             <div>
                 {Movie &&
                     <MainImageforDetail image={`${IMAGE_URL}w1280${Movie.backdrop_path && Movie.backdrop_path}`}
@@ -133,6 +139,10 @@ function MovieDetail(props) {
                             <td className="">{airdate(Movie.release_date)}</td>
                         </tr>
                         <tr>
+                            <td className="font-weight-bolder">Director</td>
+                            <td className="">{Crews.filter(value => value.job === 'Director').map((val, index) => (val.name + " "))}</td>
+                        </tr>
+                        <tr>
                             <td className="font-weight-bolder">Genre</td>
                             <td className="">{Genres.map((item, index) => (
                                 <React.Fragment key={index}>
@@ -147,10 +157,6 @@ function MovieDetail(props) {
                         <tr>
                             <td className="font-weight-bolder">Runtime</td>
                             <td className="">{time_convert(Movie.runtime)}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Status</td>
-                            <td className="">{Movie.status}</td>
                         </tr>
                         {WatchProviders.length > 0 &&
                             <tr>
@@ -175,10 +181,10 @@ function MovieDetail(props) {
                 {/* actors grid shown only if button clicked*/}
                 {ActorToggle &&
                 <>
-                    <div className="h2">Cast and Crews</div>
+                    <div className="h2">Cast</div>
                     <div className="container-fluid scrollbar-custom mt-3">
                         <div className="row flex-row flex-nowrap">
-                            {Crews && Crews.map((crew, index) => (
+                            {Actors && Actors.map((crew, index) => (
                                 <React.Fragment key={index}>
                                     {crew.profile_path &&
                                         <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
@@ -194,11 +200,8 @@ function MovieDetail(props) {
                     </div>
                 </>
                 }
-
                 {/* Similar movies */}
                 <SimilarMoviesData movieId={movieId} />
-
-                
             </div>
         </>
     )

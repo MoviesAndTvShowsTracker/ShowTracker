@@ -5,6 +5,7 @@ import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
 import Fade from 'react-reveal/Fade';
+import { Helmet } from 'react-helmet'
 
 function TvDetail(props) {
 
@@ -41,7 +42,8 @@ function TvDetail(props) {
             .then(response => {
                 console.log(response.results);
                 const ott = response.results.IN.flatrate;
-                setWatchProviders(ott ? ott : response.results.IN.buy)
+                const free = response.results.IN.free;
+                setWatchProviders(ott ? ott : response.results.IN.buy || free)
             })
             .catch(() => console.log('error in fetching providers, do nothing'))
         
@@ -60,6 +62,10 @@ function TvDetail(props) {
     
     return (
         <>
+        {/* title of the page */}
+        <Helmet>
+            <title> {TvShow.name ? `TV Show | ${TvShow.name}` : "TV Shows"}</title>
+        </Helmet>
         <div>
             <MainImageforDetail tvShowId={tvShowId} image={`${IMAGE_URL}w1280${TvShow.backdrop_path && TvShow.backdrop_path}`} 
                 title={TvShow.original_name} text={TvShow.overview}
@@ -132,7 +138,7 @@ function TvDetail(props) {
                                 <td className="font-weight-bolder">Where to watch</td>
                                 <td className="">{WatchProviders.map((result, index) => (
                                     <React.Fragment key={index}>
-                                        <img style={{height:"30px", width:"30px"}} className="img-responsive mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
+                                        <img style={{height:"30px", width:"30px"}} className="img-responsive mr-2" src={`${IMAGE_URL}w92${result.logo_path}`} />
                                     </React.Fragment>
                                 ))}
                                 </td>
@@ -181,11 +187,11 @@ function TvDetail(props) {
                                 <div className="card">
                                     <div className="card-header font-weight-bold text-primary"><Link to={`/tv/${tvShowId}/${results.season_number}/episodes`}>{results.name}</Link> <div className="text-secondary">{`${new Date(results.air_date).getFullYear()} | ${results.episode_count} Episodes`}</div></div>
                                     <div className="card-body row">
-                                        <div className="col-4 col-md-2">
-                                            <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.poster_path}`} />
+                                        <div className="col-4 col-md-3">
+                                            <img style={{height:"10rem", width:"10rem"}} className="img-responsive rounded" src={`${IMAGE_URL}w500${results.poster_path}`} />
                                         </div>
-                                        <div className="col-8 col-md-10">
-                                            {results.overview ? results.overview : "No Information Available"}
+                                        <div className="col-8 col-md-9">
+                                            <div className="giveMeEllipsis">{results.overview ? results.overview : "No Information Available"}</div>
                                         </div>
                                     </div>
                                 </div>

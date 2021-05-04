@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import swal from 'sweetalert';
 import Fade from 'react-reveal/Fade';
+import { Helmet } from 'react-helmet';
 
 const Profile = (props) => {
 
@@ -176,7 +177,9 @@ const Profile = (props) => {
     fetchUserInfo();
     fetchFavoriteMovies();
     fetchWatchedMovies();
-    fetchFavoriteShows()
+    fetchFavoriteShows();
+
+    window.scrollTo(0,0);
   }, []);
     
   {/* Joined date of the account*/}
@@ -186,6 +189,9 @@ const Profile = (props) => {
 
   return( 
     <>
+      <Helmet>
+          <title>{UserInfo.username ? `Profile - ${UserInfo.username}` : "Profile"}</title>
+      </Helmet>
       <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
           {/* Breadcrumbs */}
           <nav aria-label="breadcrumb">

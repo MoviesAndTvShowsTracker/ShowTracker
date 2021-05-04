@@ -6,6 +6,7 @@ import { Row } from 'reactstrap';
 import TvGridCard from './TV/TvGridCard';
 import swal from 'sweetalert';
 import Fade from 'react-reveal/Fade';
+import { Helmet } from 'react-helmet';
 
 class SearchBox extends Component {
 
@@ -87,6 +88,9 @@ class SearchBox extends Component {
     render() {
     return (
         <>
+        <Helmet>
+            <title>{this.state.searchQuery ? `Search ${this.state.searchQuery}` : "Search Movies and TV Shows"}</title>
+        </Helmet>
         <div className="mt-3">
         {/* Breadcrumb */}
             <div style={{ width: '95%', margin: '1rem auto' }}>
@@ -147,8 +151,8 @@ class SearchBox extends Component {
 
         {/* search results */}
         <div style={{ width: '95%', margin: '1rem auto' }}>
-            <div className="text-center">
-                <div className="font-weight-lighter h2"> Search Results </div>
+            <div>
+                <div className="font-weight-lighter h2 text-center"> Search Results </div>
                 <div className="results">
                     {this.state.selectedOption === 'movie' ? 
                         <Row>

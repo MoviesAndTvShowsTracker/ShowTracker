@@ -265,3 +265,11 @@ html {
   .scrollbar-custom::-webkit-scrollbar-thumb:hover {
     background-color: #a8bbbf;
   }
+
+  .giveMeEllipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4; /* number of lines to show */
+ }

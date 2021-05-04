@@ -24,6 +24,7 @@ function SimilarTvShows(props) {
                 <div className="row flex-row flex-nowrap">
                 {SimilarShows && SimilarShows.map((shows, index) => (
                     <React.Fragment key={index}>
+                        {shows.poster_path &&
                         <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
                             <Fade>
                             <div>
@@ -33,7 +34,7 @@ function SimilarTvShows(props) {
                                 </Link>
                             </div>
                             </Fade>
-                        </div>
+                        </div>}
                     </React.Fragment>
                 ))}
                 </div>

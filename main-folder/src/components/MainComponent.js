@@ -52,10 +52,10 @@ const DefaultContainer = () => (
             <SecuredRoute exact path='/movies/:Id' component={withRouter(MovieDetail)} />
             <SecuredRoute exact path='/movies' component={LandingPage} />
             <Route path='/search' component={SearchBox} />
+            <SecuredRoute exact path='/tv' component={TvLandingPage} />
             <SecuredRoute exact path='/tv/:Id' component={withRouter(TvDetail)} />
             <SecuredRoute exact path='/tv/:Id/:seasonNumber/episodes' component={withRouter(SeasonEpisodes)} />
-            <SecuredRoute exact path='/tv' component={TvLandingPage} />
-            <Redirect to={Home} />
+            <Redirect to={Home}/>
         </Switch>
     </div>
 );
@@ -71,8 +71,8 @@ class Main extends Component {
                     <Route exact path="/signup" component={SignupContainer}/>
                     <Route component={DefaultContainer}/>  
                 </Switch>
-                </BrowserRouter>
                 <Footer />
+                </BrowserRouter>
             </div>
         );
     }

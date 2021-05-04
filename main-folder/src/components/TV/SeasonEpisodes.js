@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import Fade from 'react-reveal/Fade';
+import { Helmet } from 'react-helmet';
 
 function SeasonEpisodes(props) {
 
@@ -37,6 +38,10 @@ function SeasonEpisodes(props) {
 
     return (
         <>
+        {/* title of the page */}
+        <Helmet>
+            <title> {TvShow.name ? `Episodes S${Seasons.season_number} | ${TvShow.name}` : "TV Shows"}</title>
+        </Helmet>
             <div style={{ width: '95%', margin: '1rem auto'}}>
                 {/* breadcrumbs */}
                 <nav aria-label="breadcrumb">
@@ -65,18 +70,18 @@ function SeasonEpisodes(props) {
                                 <div className="card">
                                     <div className="card-header font-weight-bold text-primary">{results.episode_number}. {results.name} <div className="text-secondary">{results.air_date ? `${airdate(results.air_date)} |` : "-"}  <span className="fa fa-star mr-1"></span>{results.vote_average ? results.vote_average : "-"}/10</div></div>
                                     <div className="card-body row m-0">
-                                        <div className="col-4 col-md-2">
-                                            {/* <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.still_path}`} /> */}
-                                        </div>
-                                        <div className="col-8 col-md-10">
-                                            {results.overview ? results.overview : "No Information Available"} 
+                                        {/* <div className="col-4 col-md-2">
+                                            <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.still_path}`} />
+                                        </div> */}
+                                        <div className="col-12 col-md-10 pl-0">
+                                            <div className="giveMeEllipsis">{results.overview ? results.overview : "No Information Available"}</div> 
 
-                                            {results.overview && 
+                                            {results.crew.length > 0 && 
                                                 <div className="mt-3 text-info font-weight-bold">Director:
                                                     {results.crew.filter(value => value.job === "Director").map((val) => (<span> {val.name}. </span>))}
                                                 </div>
                                             }
-                                            {results.overview && 
+                                            {results.crew.length > 0 && 
                                                 <div className="mt-3 text-info font-weight-bold">Writer:
                                                     {results.crew.filter(value => value.job === "Writer").map((val) => (<span> {val.name}. </span>))}
                                                 </div>

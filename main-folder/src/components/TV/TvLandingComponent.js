@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { Row } from 'reactstrap';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
@@ -31,6 +32,10 @@ function TvLandingPage() {
 
     return (
         <> 
+        {/* title of the page */}
+        <Helmet>
+            <title>Explore TV Shows</title>
+        </Helmet>
             <div style={{ width: '100%', margin: 0 }}>
                 {TvShows[0] &&
                     <MainTvImage 
