@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Watch = require('../models/watch');
+const moviewatchlist = require('../models/moviewatchlist');
 
 router.use(bodyParser.json());
 
@@ -24,7 +25,16 @@ router.post('/watched', (req, res) => {
 });
 
 router.post('/addToWatch', (req, res) => {
-    //save the info of movie
+    //we can't have watchlist of watched movies, so it'll find the movie in watchlist if it exist, we delete and add movie to watched.
+    moviewatchlist.findOneAndDelete({ movieId: req.body.movieId, userFrom: req.body.userFrom }, function (err, docs) {
+        if (err){
+            console.log(err)
+        }
+        else{
+            console.log("Deleted movie from watchlist if found : ", docs);
+        }
+    })
+
     const watch = new Watch(req.body);
     watch.save((err, doc) => {
         if(err) return res.json({success: false, err })

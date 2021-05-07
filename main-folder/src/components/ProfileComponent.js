@@ -229,7 +229,7 @@ const Profile = (props) => {
                       <h6 className="mb-0">Full Name</h6>
                     </div>
                     <div className="col-sm-9 text-secondary">
-                    {`${UserInfo.firstName} ${UserInfo.lastName}`}
+                    {UserInfo.firstName + " " + UserInfo.lastName}
                     </div>
                   </div>
                   <hr />
@@ -322,7 +322,7 @@ const Profile = (props) => {
                       <div className="position-relative">
                         <Link to={`/movies/${favoritemovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoritemovie.moviePosterImage}`} />
-                          <div className="text-center font-weight-bold text-decoration-none">{favoritemovie.movieTitle}</div>
+                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoritemovie.movieTitle}</div>
                         </Link>
                         <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
                           <button className="btn btn-danger" onClick={() => onClickRemove(favoritemovie.movieId)}> Remove </button>
@@ -353,7 +353,7 @@ const Profile = (props) => {
                       <div className="position-relative">
                         <Link to={`/movies/${watchedmovie.movieId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${watchedmovie.moviePosterImage}`} />
-                          <div className="text-center font-weight-bold text-decoration-none">{watchedmovie.movieTitle}</div>
+                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{watchedmovie.movieTitle}</div>
                         </Link>
                         <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
                           <button className="btn btn-danger" onClick={() => removeWatched(watchedmovie.movieId)}> Remove </button>
@@ -383,7 +383,7 @@ const Profile = (props) => {
                       <div className="position-relative">
                         <Link to={`/tv/${favoriteshow.tvId}`} className="text-decoration-none">
                           <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
-                          <div className="text-center font-weight-bold text-decoration-none">{favoriteshow.tvTitle}</div>
+                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.tvTitle}</div>
                         </Link>
                         <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
                           <button className="btn btn-danger" onClick={() => removeFavoriteShow(favoriteshow.tvId)}> Remove </button>

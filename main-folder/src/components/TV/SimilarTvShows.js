@@ -30,7 +30,7 @@ function SimilarTvShows(props) {
                             <div>
                                 <Link to={`/tv/${shows.id}`} className="text-decoration-none" >
                                     <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={shows.poster_path && `${IMAGE_URL}w500${shows.poster_path}`} loading="lazy" />
-                                    <div className="text-center font-weight-bold">{shows.name}</div>
+                                    <div className="font-weight-bold" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{shows.name}</div>
                                 </Link>
                             </div>
                             </Fade>

@@ -1,4 +1,4 @@
-import React, { Component, useState } from 'react'
+import React, { Component } from 'react'
 import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
 import GridCard from './Movies/GridCard';
