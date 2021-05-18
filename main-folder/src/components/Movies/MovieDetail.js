@@ -40,7 +40,8 @@ function MovieDetail(props) {
             .then(response => {
                 console.log(response.results);
                 const ott = response.results.IN.flatrate;
-                setWatchProviders(ott ? ott : response.results.IN.buy)
+                const rent = response.results.IN.rent;
+                setWatchProviders(ott ? ott : response.results.IN.buy || rent)
             })
             .catch(() => console.log('error in fetching providers, do nothing'))
 
