@@ -86,7 +86,7 @@ function MovieDetail(props) {
     return (
         <>
         <Helmet>
-            <title> {Movie.title ? `${Movie.title}` : "Loading..."}</title>
+            <title> {Movie.title ? Movie.title : "Loading..."}</title>
         </Helmet>
             <div>
                 {Movie &&
