@@ -49,6 +49,12 @@ class Header extends Component {
         });
     }
 
+    mobileToggle = () => {
+        if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+         this.toggleNav()
+        };
+    };
+
     render() {
         
         return(
@@ -63,17 +69,17 @@ class Header extends Component {
                         <Collapse isOpen={this.state.isNavOpen} navbar>
                             <Nav navbar className="ml-auto">
                                 <NavItem>
-                                    <NavLink className="nav-link" to='/tv'><span className="fa fa-tv fa-lg"></span> TV</NavLink>
+                                    <NavLink className="nav-link" to='/tv' onClick={() => this.mobileToggle()}><span className="fa fa-tv fa-lg"></span> TV</NavLink>
                                 </NavItem>
                                 <NavItem>
-                                    <NavLink className="nav-link" to='/movies'><span className="fa fa-film fa-lg"></span> Movies</NavLink>
+                                    <NavLink className="nav-link" to='/movies' onClick={() => this.mobileToggle()}><span className="fa fa-film fa-lg"></span> Movies</NavLink>
                                 </NavItem>
                                 <NavItem>
-                                    <NavLink className="nav-link" to='/search'><span className="fa fa-search fa-lg"></span> Search</NavLink>
+                                    <NavLink className="nav-link" to='/search' onClick={() => this.mobileToggle()}><span className="fa fa-search fa-lg"></span> Search</NavLink>
                                 </NavItem>
                                 {!localStorage.getItem('user') &&
                                     <NavItem>
-                                        <NavLink className="nav-link" to='/login'><span className="fa fa-sign-in fa-lg"></span>  Login</NavLink>
+                                        <NavLink className="nav-link" to='/login' onClick={() => this.mobileToggle()}><span className="fa fa-sign-in fa-lg"></span>  Login</NavLink>
                                     </NavItem>
                                 }
                                 {!localStorage.getItem('user') ||
@@ -83,7 +89,7 @@ class Header extends Component {
                                         </DropdownToggle>
                                         <DropdownMenu right>
                                             <NavItem>
-                                                <NavLink to='/profile' className="text-decoration-none" style={{color: 'black'}}>
+                                                <NavLink to='/profile' className="text-decoration-none" style={{color: 'black'}} onClick={() => this.mobileToggle()}>
                                                     <DropdownItem> <span className="fa fa-user-circle-o"></span> Profile</DropdownItem>
                                                 </NavLink>
                                             </NavItem>

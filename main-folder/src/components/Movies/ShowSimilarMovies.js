@@ -19,7 +19,7 @@ function SimilarMoviesData(props) {
 
     return (
         <>
-            <div className="h2 mt-4">More Like This</div>
+            {SimilarMovies.length > 0 &&<div className="h2 mt-4">More Like This</div>}
             <div className="container-fluid scrollbar-custom">
                 <div className="row flex-row flex-nowrap">
                 {SimilarMovies && SimilarMovies.map((similarmovie, index) => (

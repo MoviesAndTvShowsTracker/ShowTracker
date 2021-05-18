@@ -155,7 +155,7 @@ class SearchBox extends Component {
                 <div className="font-weight-lighter h2 text-center"> Search Results </div>
                 <div className="results">
                     {this.state.selectedOption === 'movie' ? 
-                        <Row>
+                        <div className="row">
                             {this.state.results && this.state.results.map((movie, index) => (
                                 <React.Fragment key={index}>
                                     {movie.poster_path && 
@@ -165,19 +165,19 @@ class SearchBox extends Component {
                                     />}
                                 </React.Fragment>
                             ))}
-                        </Row> 
+                        </div> 
                     :
-                        <Row>
+                        <div className="row">
                             {this.state.results && this.state.results.map((tvshow, index) => (
                                 <React.Fragment key={index}>
                                     {tvshow.poster_path && 
                                     <TvGridCard 
                                         image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
-                                        tvShowId={tvshow.id} tvShowTitle={tvshow.title} name={tvshow.original_title}
+                                        tvShowId={tvshow.id} tvShowTitle={tvshow.name} name={tvshow.original_name}
                                     />}
                                 </React.Fragment>
                             ))}
-                        </Row>   
+                        </div>   
                     }
                     
                 </div>

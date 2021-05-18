@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
-import { Row } from 'reactstrap';
 import MainImage from './MainImage';
 import GridCard from './GridCard';
 import { Link } from 'react-router-dom';

@@ -12,6 +12,7 @@ import TvDetail from './TV/TvShowDetail';
 import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
+import ScrollToTop from './ScrollToTop';
 
 const isLoggedIn = () => {
     return localStorage.getItem('user') != null;
@@ -71,6 +72,7 @@ class Main extends Component {
                     <Route exact path="/signup" component={SignupContainer}/>
                     <Route component={DefaultContainer}/>  
                 </Switch>
+                <ScrollToTop />
                 <Footer />
                 </BrowserRouter>
             </div>

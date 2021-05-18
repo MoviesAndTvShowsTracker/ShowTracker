@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
-import { Row } from 'reactstrap';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainTvImage from './MainTvImage';
 import TvGridCard from './TvGridCard';
@@ -67,16 +66,16 @@ function TvLandingPage() {
                 <div className="font-weight-bold h2"> Latest TV Shows </div>
                 <hr style={{borderColor:'black'}}/>
 
-                <Row>
-                        {TvShows && TvShows.map((tvshow, index) => (
-                            <React.Fragment key={index}>
-                                <TvGridCard 
-                                    image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
-                                    tvShowId={tvshow.id} tvShowTitle={tvshow.title} name={tvshow.original_title}
-                                />
-                            </React.Fragment>
-                        ))}
-                </Row>
+                <div className="row">
+                    {TvShows && TvShows.map((tvshow, index) => (
+                        <React.Fragment key={index}>
+                            <TvGridCard 
+                                image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
+                                tvShowId={tvshow.id} tvShowTitle={tvshow.name} name={tvshow.original_name}
+                            />
+                        </React.Fragment>
+                    ))}
+                </div>
 
                 <br />
                 <div className="text-center">

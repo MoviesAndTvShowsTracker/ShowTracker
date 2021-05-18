@@ -28,6 +28,8 @@ function SeasonEpisodes(props) {
             console.log(response);
             setTvShow(response);
         })
+
+        window.scrollTo(0,0);
     }, [])
 
     function airdate(prop) {
@@ -68,7 +70,7 @@ function SeasonEpisodes(props) {
                         <Fade>
                             <div className="p-0 mb-3 col-12">
                                 <div className="card">
-                                    <div className="card-header font-weight-bold text-primary">{results.episode_number}. {results.name} <div className="text-secondary">{results.air_date ? `${airdate(results.air_date)} |` : "-"}  <span className="fa fa-star mr-1"></span>{results.vote_average ? results.vote_average : "-"}/10</div></div>
+                                    <div className="card-header font-weight-bold text-primary">{results.episode_number}. {results.name} <div className="text-secondary">{results.air_date ? `${airdate(results.air_date)} |` : "-"}  <span className="fa fa-star mr-1"></span>{results.vote_average ? Number(results.vote_average).toFixed(1) : "-"}/10</div></div>
                                     <div className="card-body row m-0">
                                         {/* <div className="col-4 col-md-2">
                                             <img style={{height:"200px", width:"150px"}} className="img-responsive" src={`${IMAGE_URL}w500${results.still_path}`} />
@@ -83,7 +85,7 @@ function SeasonEpisodes(props) {
                                             }
                                             {results.crew.length > 0 && 
                                                 <div className="mt-3 text-info font-weight-bold">Writer:
-                                                    {results.crew.filter(value => value.job === "Writer").map((val) => (<span> {val.name}. </span>))}
+                                                    {results.crew.filter(value => value.department === "Writing").map((val) => (<span> {val.name}. </span>))}
                                                 </div>
                                             }
                                         </div>
