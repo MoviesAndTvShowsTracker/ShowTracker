@@ -40,4 +40,12 @@ router.post('/removeFromWatchlist', (req, res) => {
     })
 });
 
+router.post('/getTvWatchlist', (req, res) => {
+    tvwatchlist.find({'userFrom': req.body.userFrom})
+    .exec((err, watchlist) => {
+        if(err) return res.status(400).send(err);
+        return res.status(200).json({ success: true, watchlist });
+    })
+});
+
 module.exports = router;

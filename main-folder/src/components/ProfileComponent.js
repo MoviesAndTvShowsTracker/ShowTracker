@@ -16,6 +16,9 @@ const Profile = (props) => {
   const [UserInfo, setUserInfo] = useState([]);
   const [modal, setModal] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [LoadMoreToggle, setLoadMoreToggle] = useState(false);
+  const [MovieWatchlist, setMovieWatchlist] = useState([]);
+  const [TvWatchlist, setTvWatchlist] = useState([]);
 
   {/*adding or updating phone Number functions*/}
   const onChangeHandler = event => {
@@ -181,6 +184,30 @@ const Profile = (props) => {
 
     window.scrollTo(0,0);
   }, []);
+
+  const onClickLoadMore = () => {
+    axios.post('http://localhost:5000/api/watchlist/getMovieWatchlist', variable)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.watchlist);
+        setMovieWatchlist(response.data.watchlist);
+      }
+      else {
+        alert("failed to fetch movies watchlist");
+      }
+    })
+    axios.post('http://localhost:5000/api/tv/watchlist/getTvWatchlist', variable)
+    .then(response => {
+      if(response.data.success) {
+        console.log(response.data.watchlist);
+        setTvWatchlist(response.data.watchlist);
+      }
+      else {
+        alert("failed to fetch tv watchlist");
+      }
+    })
+    setLoadMoreToggle(!LoadMoreToggle);
+  }
     
   {/* Joined date of the account*/}
   const date = new Date(`${UserInfo.createdAt}`);
@@ -309,7 +336,7 @@ const Profile = (props) => {
 
       {/* Favorites movies flexbox */}
       <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> My Favorites</div>
+        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Favorite Movies</div>
         { FavoritedMovies.length === 0 
         ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
           :
@@ -335,7 +362,6 @@ const Profile = (props) => {
             </div>
           </div>}
       </div>
-
 
       {/* watched movies flexbox */}
       <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
@@ -369,7 +395,7 @@ const Profile = (props) => {
 
       {/* Favorite shows flexbox */}
       <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-history"></div> Favorite Shows</div>
+        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Favorite Shows</div>
         { FavoritedShows.length === 0 
         ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/tv" className="text-decoration-none">Find latest TV Shows</Link></div> 
           :
@@ -396,6 +422,57 @@ const Profile = (props) => {
             </div>
           </div>}
       </div>
+
+      {/* see more lists */}
+      <div className="text-center">
+        <button className={LoadMoreToggle ? "btn btn-danger mb-2" : "btn btn-primary mb-2"} onClick={onClickLoadMore  }>{LoadMoreToggle ? "Hide Lists" : "See More Lists"}</button>
+      </div>
+      {LoadMoreToggle && 
+        <div className="mt-2" style={{width:'95%', margin:'3rem auto'}}>
+        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Movie Watchlist</div>
+        { MovieWatchlist.length === 0 
+        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest Movies</Link></div> 
+          :
+          <div className="container-fluid scrollbar-custom mb-3">
+            <div className="row flex-row flex-nowrap">
+              {/* the array is in reverse so user can find his latest watched movies */}
+              {MovieWatchlist && MovieWatchlist.map((favoriteshow, index) => (
+                <React.Fragment key={index}>
+                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                      <Fade>
+                        <Link to={`/movies/${favoriteshow.movieId}`} className="text-decoration-none">
+                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.moviePosterImage}`} />
+                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.movieTitle}</div>
+                        </Link>
+                      </Fade>
+                    </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>}
+
+        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> TV Watchlist</div>
+        { TvWatchlist.length === 0 
+        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/tv" className="text-decoration-none">Find latest TV Shows</Link></div> 
+          :
+          <div className="container-fluid scrollbar-custom">
+            <div className="row flex-row flex-nowrap">
+              {/* the array is in reverse so user can find his latest watched movies */}
+              {TvWatchlist && TvWatchlist.map((favoriteshow, index) => (
+                <React.Fragment key={index}>
+                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+                      <Fade>
+                        <Link to={`/movies/${favoriteshow.tvId}`} className="text-decoration-none">
+                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
+                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.tvTitle}</div>
+                        </Link>
+                      </Fade>
+                    </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>}
+      </div>}
     </>
   );
 }

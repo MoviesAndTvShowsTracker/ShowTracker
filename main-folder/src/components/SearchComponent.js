@@ -2,10 +2,8 @@ import React, { Component } from 'react'
 import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import { Link } from 'react-router-dom';
 import GridCard from './Movies/GridCard';
-import { Row } from 'reactstrap';
 import TvGridCard from './TV/TvGridCard';
 import swal from 'sweetalert';
-import Fade from 'react-reveal/Fade';
 import { Helmet } from 'react-helmet';
 
 class SearchBox extends Component {
