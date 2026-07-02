@@ -5,6 +5,7 @@
   "scripts": {
     "main-folder": "cd ../ && npm start --prefix main-folder",
     "start": "concurrently \"node ./bin/www\" \"npm run main-folder\"",
+    "start:api": "node ./bin/www",
     "import-tvtime": "node scripts/import-tvtime.js"
   },
   "dependencies": {

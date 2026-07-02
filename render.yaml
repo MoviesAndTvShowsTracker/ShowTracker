@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: marquee-api
+    runtime: node
+    rootDir: backend-server
+    buildCommand: npm install
+    startCommand: node bin/www
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TMDB_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

@@ -30,8 +30,18 @@ var app = express();
 
 var cors = require('cors');
 
+function parseCorsOrigins() {
+  const raw = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '';
+  const fromEnv = raw
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (fromEnv.length) return fromEnv;
+  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
+}
+
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: parseCorsOrigins(),
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -46,6 +56,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(passport.initialize());
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, service: 'marquee-api' });
+});
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);

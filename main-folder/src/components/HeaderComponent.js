@@ -98,8 +98,9 @@ export default function Header() {
                       <NavLink
                         to="/profile"
                         onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
                       >
+                        <User className="h-4 w-4" />
                         Profile
                       </NavLink>
                       <NavLink

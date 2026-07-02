@@ -12,6 +12,7 @@ import {
 } from '../utils/tvProgress';
 import PageTitle from '../utils/PageTitle';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
+import TvTimeWelcomeBanner from './home/TvTimeWelcomeBanner';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 
@@ -108,6 +109,8 @@ export default function HomeDashboard() {
           <h1 className="page-title mt-2">{greeting}</h1>
           <p className="mt-2 text-sm text-muted">Pick up where you left off.</p>
         </header>
+
+        <TvTimeWelcomeBanner />
 
         <section aria-label="Continue watching" className="mb-10 md:mb-12">
           <div className="mb-4 flex items-end justify-between gap-3">
