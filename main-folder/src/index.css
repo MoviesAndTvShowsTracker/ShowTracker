@@ -1,13 +1,149 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .animate-fade-up,
+    .bento-card {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+@layer components {
+  .btn-primary {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-sm bg-accent px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-canvas transition-all duration-200 hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent cursor-pointer;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-sm border border-border bg-surface px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-ink transition-all duration-200 hover:border-muted hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted cursor-pointer;
+  }
+
+  .btn-ghost {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-sm px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-ink-bright cursor-pointer;
+  }
+
+  .btn-link {
+    @apply text-xs font-bold uppercase tracking-widest text-link transition-colors duration-200 hover:text-ink-bright cursor-pointer;
+  }
+
+  .input-field {
+    @apply w-full rounded-sm border border-border bg-canvas px-4 py-3 text-base text-ink-bright placeholder:text-muted transition-colors duration-200 focus:border-link focus:outline-none focus:ring-1 focus:ring-link/40;
+  }
+
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-[0.12em] text-muted;
+  }
+
+  .page-title {
+    @apply font-serif text-2xl font-normal text-ink-bright sm:text-3xl;
+  }
+
+  .nav-link {
+    @apply text-xs font-bold uppercase tracking-[0.1em] transition-colors duration-200;
+  }
+
+  .poster-rail {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .poster-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .poster-rail > * {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  .poster-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  @media (min-width: 640px) {
+    .poster-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .poster-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .poster-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+
+  .bento-card {
+    @apply relative overflow-hidden rounded-sm border border-border bg-surface p-5 transition-all duration-300 ease-out cursor-pointer;
+  }
+
+  .bento-card:hover {
+    @apply -translate-y-1 border-muted/50 shadow-bento;
+  }
+
+  .bento-card:active {
+    @apply translate-y-0;
+  }
+
+  .app-header {
+    @apply sticky top-0 z-50 border-b border-border bg-canvas/95 backdrop-blur-md;
+  }
+
+  .mobile-nav-shell {
+    @apply fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none md:hidden;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+  }
+
+  .mobile-nav-pill {
+    @apply pointer-events-auto flex w-full max-w-md items-stretch justify-around rounded-full border border-border/60 bg-surface/90 px-1.5 py-1.5 shadow-bento backdrop-blur-xl;
+  }
+
+  .auth-card {
+    @apply rounded-sm border border-border bg-surface p-6 shadow-bento sm:p-8;
+  }
+
+  .hero-band {
+    @apply relative overflow-hidden border-b border-border;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C3440;
+  border-radius: 3px;
 }

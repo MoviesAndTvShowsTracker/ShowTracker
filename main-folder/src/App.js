@@ -1,17 +1,15 @@
-import React, { Component } from 'react';
-import './App.css';
-import Main from './components/MainComponent';
 import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Main from './components/MainComponent';
 
-class App extends Component {
-  render() {
-    return(
-      <BrowserRouter>
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
         <Main />
-      </BrowserRouter>
-      
-    );
-  }
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
 
 export default App;

@@ -1,37 +1,25 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import { ArrowUp } from 'lucide-react';
 
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
-  // Show button when page is scorlled upto given distance
-  const toggleVisibility = () => {
-    if (window.pageYOffset > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  };
-
-  // Set the top cordinate to 0
-  // make scrolling smooth
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  };
-
   useEffect(() => {
-    window.addEventListener("scroll", toggleVisibility);
+    const toggle = () => setIsVisible(window.pageYOffset > 300);
+    window.addEventListener('scroll', toggle);
+    return () => window.removeEventListener('scroll', toggle);
   }, []);
 
+  if (!isVisible) return null;
+
   return (
-    <div className="scroll-to-top">
-      {isVisible && 
-        <div onClick={scrollToTop}>
-          {/* <img src='https://i.postimg.cc/44Ytsk8Z/top-arrow-emoj.png' alt='Go to top'/> */}
-          <button className="btn btn-primary"><span className="fa fa-arrow-circle-o-up fa-lg"></span></button>
-        </div>}
-    </div>
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Scroll to top"
+      className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-md transition-colors hover:border-accent hover:text-accent md:bottom-8 cursor-pointer"
+    >
+      <ArrowUp className="h-4 w-4" />
+    </button>
   );
 }

@@ -1,90 +1,169 @@
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
-import MainTvImage from './MainTvImage';
 import TvGridCard from './TvGridCard';
+import PageTitle from '../../utils/PageTitle';
+import HeroCarousel from '../ui/HeroCarousel';
+import PosterRail from '../ui/PosterRail';
+import GenreChips, { filterCuratedGenres } from '../ui/GenreChips';
+import MediaPosterTiles from '../browse/MediaPosterTiles';
+import { heroSlides, tmdbFetch, withPoster } from '../../utils/tmdb';
 
-function TvLandingPage() {
-    const [TvShows, setTvShows] = useState([]);
-    const [CurrentPage, setCurrentPage] = useState(0);
+export default function TvLandingPage() {
+  const [loading, setLoading] = useState(true);
+  const [hero, setHero] = useState([]);
+  const [trendingToday, setTrendingToday] = useState([]);
+  const [onTheAir, setOnTheAir] = useState([]);
+  const [airingToday, setAiringToday] = useState([]);
+  const [topRated, setTopRated] = useState([]);
+  const [popular, setPopular] = useState([]);
+  const [popularPage, setPopularPage] = useState(1);
+  const [genres, setGenres] = useState([]);
+  const [selectedGenre, setSelectedGenre] = useState(null);
+  const [genreResults, setGenreResults] = useState([]);
+  const [genreLoading, setGenreLoading] = useState(false);
 
-    useEffect(() => {
-        const endpoint = `${API_URL}tv/popular?api_key=${API_KEY}&language=en-US&page=1`;
-        fetchTvShows(endpoint);
-    }, [])
-    
-    const fetchTvShows = (path) => {
-        fetch(path)
-        .then(response => response.json())
-        .then(response => {
-            console.log(response);
-            setTvShows([...TvShows, ...response.results]);
-            setCurrentPage(response.page);
-        })
+  useEffect(() => {
+    Promise.all([
+      tmdbFetch('trending/tv/week'),
+      tmdbFetch('trending/tv/day'),
+      tmdbFetch('tv/on_the_air', { page: 1 }),
+      tmdbFetch('tv/airing_today', { page: 1 }),
+      tmdbFetch('tv/top_rated', { page: 1 }),
+      tmdbFetch('tv/popular', { page: 1 }),
+      tmdbFetch('genre/tv/list'),
+    ])
+      .then(([trendingWeek, trendingDay, onAir, today, rated, pop, genreList]) => {
+        const slides = heroSlides(trendingWeek.results, '/tv', 'name').map((s, i) =>
+          i === 0 ? { ...s, badge: 'Trending this week' } : s
+        );
+        setHero(slides);
+        setTrendingToday(withPoster(trendingDay.results).slice(0, 16));
+        setOnTheAir(withPoster(onAir.results).slice(0, 16));
+        setAiringToday(withPoster(today.results).slice(0, 16));
+        setTopRated(withPoster(rated.results).slice(0, 16));
+        setPopular(withPoster(pop.results));
+        setPopularPage(pop.page || 1);
+        setGenres(filterCuratedGenres(genreList.genres || [], 'tv'));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedGenre) {
+      setGenreResults([]);
+      return;
     }
+    setGenreLoading(true);
+    tmdbFetch('discover/tv', {
+      with_genres: selectedGenre,
+      sort_by: 'popularity.desc',
+      page: 1,
+    })
+      .then((data) => setGenreResults(withPoster(data.results).slice(0, 16)))
+      .catch(() => setGenreResults([]))
+      .finally(() => setGenreLoading(false));
+  }, [selectedGenre]);
 
-    const handleClick = () => {
-        const endpoint = `${API_URL}tv/popular?api_key=${API_KEY}&language=en-US&page=${CurrentPage + 1}`;
-        fetchTvShows(endpoint);
-    }
+  const loadMorePopular = useCallback(() => {
+    fetch(`${API_URL}tv/popular?api_key=${API_KEY}&language=en-US&page=${popularPage + 1}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPopular((prev) => [...prev, ...withPoster(data.results)]);
+        setPopularPage(data.page);
+      });
+  }, [popularPage]);
 
-    return (
-        <> 
-        {/* title of the page */}
-        <Helmet>
-            <title>Explore TV Shows</title>
-        </Helmet>
-            <div style={{ width: '100%', margin: 0 }}>
-                {TvShows[0] &&
-                    <MainTvImage 
-                        image={`${IMAGE_URL}w1280${TvShows[0].backdrop_path}`}
-                        title={TvShows[0].original_name} 
-                        text={TvShows[0].overview} 
-                        tvshowid={TvShows[0].id}
-                        
-                        image1={`${IMAGE_URL}w1280${TvShows[1].backdrop_path}`}
-                        title1={TvShows[1].original_name} 
-                        text1={TvShows[1].overview} 
-                        tvshowid1={TvShows[1].id}
+  const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name;
 
-                        image2={`${IMAGE_URL}w1280${TvShows[2].backdrop_path}`}
-                        title2={TvShows[2].original_name} 
-                        text2={TvShows[2].overview} 
-                        tvshowid2={TvShows[2].id}
-                    />}
-            </div>
+  return (
+    <>
+      <PageTitle title="Browse TV" />
 
-            <div style={{ width: '95%', margin: '1rem auto' }}>
-                {/* Breadcrumbs */}
-                <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb">
-                        <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
-                        <li className="breadcrumb-item active" aria-current="page">TV</li>
-                    </ol>
-                </nav>
-                <div className="font-weight-bold h2"> Latest TV Shows </div>
-                <hr style={{borderColor:'black'}}/>
+      {loading ? (
+        <div className="h-52 animate-pulse bg-surface sm:h-64 md:h-80" />
+      ) : (
+        <HeroCarousel slides={hero} />
+      )}
 
-                <div className="row">
-                    {TvShows && TvShows.map((tvshow, index) => (
-                        <React.Fragment key={index}>
-                            <TvGridCard 
-                                image={tvshow.poster_path && `${IMAGE_URL}w500${tvshow.poster_path}`}
-                                tvShowId={tvshow.id} tvShowTitle={tvshow.name} name={tvshow.original_name}
-                            />
-                        </React.Fragment>
-                    ))}
-                </div>
+      <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
+        <header>
+          <p className="section-title">Discover</p>
+          <h1 className="page-title mt-1">TV shows</h1>
+          <p className="mt-2 max-w-lg text-sm text-muted">
+            Trending series, what&apos;s on the air, airing today, and the highest rated — explore by genre.
+          </p>
+        </header>
 
-                <br />
-                <div className="text-center">
-                    <button className="btn btn-primary" onClick={handleClick}> Load More </button>
-                </div>
+        <GenreChips
+          genres={genres}
+          selectedId={selectedGenre}
+          onSelect={setSelectedGenre}
+        />
 
-            </div>
-        </>
-    )
+        {selectedGenre && (
+          <section className="space-y-3">
+            <h2 className="section-title">
+              {genreLoading ? `${selectedGenreName}…` : selectedGenreName}
+            </h2>
+            {genreLoading ? (
+              <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-[3px] bg-surface-raised sm:w-[100px]" />
+                ))}
+              </div>
+            ) : genreResults.length > 0 ? (
+              <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+                <MediaPosterTiles items={genreResults} basePath="/tv" titleKey="name" />
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No shows found for this genre.</p>
+            )}
+          </section>
+        )}
+
+        <PosterRail title="Trending today">
+          <MediaPosterTiles items={trendingToday} basePath="/tv" titleKey="name" />
+        </PosterRail>
+
+        {onTheAir.length > 0 && (
+          <PosterRail title="On the air">
+            <MediaPosterTiles items={onTheAir} basePath="/tv" titleKey="name" />
+          </PosterRail>
+        )}
+
+        {airingToday.length > 0 && (
+          <PosterRail title="Airing today">
+            <MediaPosterTiles items={airingToday} basePath="/tv" titleKey="name" />
+          </PosterRail>
+        )}
+
+        <PosterRail title="Top rated">
+          <MediaPosterTiles items={topRated} basePath="/tv" titleKey="name" />
+        </PosterRail>
+
+        <section className="space-y-4 border-t border-border pt-8">
+          <div>
+            <h2 className="section-title">All popular</h2>
+            <p className="mt-1 text-sm text-muted">The full catalog — load more as you scroll.</p>
+          </div>
+          <div className="poster-grid">
+            {popular.map((show) => (
+              <TvGridCard
+                key={show.id}
+                image={show.poster_path ? `${IMAGE_URL}w342${show.poster_path}` : ''}
+                tvShowId={show.id}
+                tvShowTitle={show.name}
+              />
+            ))}
+          </div>
+          <div className="text-center">
+            <button type="button" className="btn-secondary" onClick={loadMorePopular}>
+              Load more
+            </button>
+          </div>
+        </section>
+      </div>
+    </>
+  );
 }
-
-export default TvLandingPage;

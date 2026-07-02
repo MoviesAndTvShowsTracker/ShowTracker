@@ -1,8 +1,7 @@
-import React, { Component } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Header from './HeaderComponent';
 import Footer from './FooterComponent';
 import Home from './HomeComponent';
-import { Switch, Route, Redirect, BrowserRouter, withRouter } from 'react-router-dom';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
@@ -13,71 +12,48 @@ import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
 import ScrollToTop from './ScrollToTop';
+import { useAuth } from '../context/AuthContext';
 
-const isLoggedIn = () => {
-    return localStorage.getItem('user') != null;
-  };
-
-const SecuredRoute = ({ component: Component, ...rest }) => (
-    <Route
-        {...rest}
-        render={props =>
-        
-        isLoggedIn() === true ? (
-            <Component {...props} />
-        ) : (
-            <Redirect to="/login" />
-        )
-        }
-    />
-)
-
-const LoginContainer = () => (
-    <div>
-      <Route path="/login" component={Signin} />
-    </div>
-  );
-
-const SignupContainer = () => (
-    <div>
-        <Route path="/signup" component={Signup} />
-    </div>
-);
-
-const DefaultContainer = () => (
-    <div>
-        <Header />
-        <Switch>
-            <Route exact path='/' component={Home} />
-            <SecuredRoute exact path='/profile' component={Profile} />
-            <SecuredRoute exact path='/movies/:Id' component={withRouter(MovieDetail)} />
-            <SecuredRoute exact path='/movies' component={LandingPage} />
-            <Route path='/search' component={SearchBox} />
-            <SecuredRoute exact path='/tv' component={TvLandingPage} />
-            <SecuredRoute exact path='/tv/:Id' component={withRouter(TvDetail)} />
-            <SecuredRoute exact path='/tv/:Id/:seasonNumber/episodes' component={withRouter(SeasonEpisodes)} />
-            <Redirect to={Home}/>
-        </Switch>
-    </div>
-);
-
-class Main extends Component {
-
-    render() {
-        return(
-            <div>
-                <BrowserRouter>
-                <Switch>
-                    <Route exact path="/login" component={LoginContainer}/>
-                    <Route exact path="/signup" component={SignupContainer}/>
-                    <Route component={DefaultContainer}/>  
-                </Switch>
-                <ScrollToTop />
-                <Footer />
-                </BrowserRouter>
-            </div>
-        );
-    }
+function ProtectedRoute() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-export default Main;
+function AppLayout() {
+  return (
+    <>
+      <Header />
+      <main className="min-h-[calc(100vh-3.5rem)] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-screen md:pb-0">
+        <Outlet />
+      </main>
+      <Footer />
+    </>
+  );
+}
+
+export default function Main() {
+  return (
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Signin />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/search" element={<SearchBox />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/movies" element={<LandingPage />} />
+            <Route path="/movies/:Id" element={<MovieDetail />} />
+            <Route path="/tv" element={<TvLandingPage />} />
+            <Route path="/tv/:Id" element={<TvDetail />} />
+            <Route path="/tv/:Id/:seasonNumber/episodes" element={SeasonEpisodes} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </>
+  );
+}

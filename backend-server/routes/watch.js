@@ -3,59 +3,57 @@ const bodyParser = require('body-parser');
 var router = express.Router();
 var Watch = require('../models/watch');
 const moviewatchlist = require('../models/moviewatchlist');
+var authenticate = require('../authenticate');
 
 router.use(bodyParser.json());
 
-router.get('/', function(req, res, next) {
-    res.send('respond with a resource');
-  });
-
-router.post('/watched', (req, res) => {
-    Watch.find({"movieId": req.body.movieId, "userFrom": req.body.userFrom})
-    .exec((err, watch) => {
-        if(err) return res.status(400).send(err);
-        
-        let result = false;
-        if(watch.length !== 0)
-        {
-            result = true;
-        }
-        res.status(200).json({success: true, watched: result })
-    })
+router.get('/', function (req, res) {
+  res.send('respond with a resource');
 });
 
-router.post('/addToWatch', (req, res) => {
-    //we can't have watchlist of watched movies, so it'll find the movie in watchlist if it exist, we delete and add movie to watched.
-    moviewatchlist.findOneAndDelete({ movieId: req.body.movieId, userFrom: req.body.userFrom }, function (err, docs) {
-        if (err){
-            console.log(err)
-        }
-        else{
-            console.log("Deleted movie from watchlist if found : ", docs);
-        }
-    })
-
-    const watch = new Watch(req.body);
-    watch.save((err, doc) => {
-        if(err) return res.json({success: false, err })
-        return res.status(200).json({ success: true })
-    })
+router.post('/watched', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const watch = await Watch.find({ movieId: req.body.movieId, userFrom: req.user._id });
+    res.status(200).json({ success: true, watched: watch.length !== 0 });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post('/removeFromWatched', (req, res) => {
-    Watch.findOneAndDelete({ movieId: req.body.movieId, userFrom: req.body.userFrom })
-    .exec((err, doc) => {
-        if(err) return res.status(400).json({success: false, err })
-        res.status(200).json({success: true, doc});
-    })
+router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    await moviewatchlist.findOneAndDelete({
+      movieId: req.body.movieId,
+      userFrom: req.user._id,
+    });
+
+    const watch = new Watch({ ...req.body, userFrom: req.user._id });
+    await watch.save();
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(400).json({ success: false, err });
+  }
 });
 
-router.post('/getWatchMovie', (req, res) => {
-    Watch.find({'userFrom': req.body.userFrom})
-    .exec((err, watch) => {
-        if(err) return res.status(400).send(err);
-        return res.status(200).json({ success: true, watch });
-    })
+router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const doc = await Watch.findOneAndDelete({
+      movieId: req.body.movieId,
+      userFrom: req.user._id,
+    });
+    res.status(200).json({ success: true, doc });
+  } catch (err) {
+    res.status(400).json({ success: false, err });
+  }
+});
+
+router.post('/getWatchMovie', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const watch = await Watch.find({ userFrom: req.user._id });
+    res.status(200).json({ success: true, watch });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

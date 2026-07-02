@@ -1,46 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
-import Fade from 'react-reveal/Fade';
+import PosterTile from '../ui/PosterTile';
 
-function SimilarTvShows(props) {
+export default function SimilarTvShows({ showId }) {
+  const [similarShows, setSimilarShows] = useState([]);
 
-    const [SimilarShows, setSimilarShows] = useState([]);
+  useEffect(() => {
+    fetch(`${API_URL}tv/${showId}/recommendations?api_key=${API_KEY}&language=en-US&page=1`)
+      .then((r) => r.json())
+      .then((data) => setSimilarShows(data.results || []));
+  }, [showId]);
 
-    useEffect(() => {
+  if (!similarShows.length) return null;
 
-            fetch(`${API_URL}tv/${props.showId}/recommendations?api_key=${API_KEY}&language=en-US&page=1`)
-            .then(response => response.json())
-            .then(response => {
-                console.log(response);
-                setSimilarShows(response.results);
-            })
-    }, [])
-    
-    return (
-        <>
-            <div className="h2 mt-4">More Like This</div>
-            <div className="container-fluid scrollbar-custom">
-                <div className="row flex-row flex-nowrap">
-                {SimilarShows && SimilarShows.map((shows, index) => (
-                    <React.Fragment key={index}>
-                        {shows.poster_path &&
-                        <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                            <Fade>
-                            <div>
-                                <Link to={`/tv/${shows.id}`} className="text-decoration-none" >
-                                    <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={shows.poster_path && `${IMAGE_URL}w500${shows.poster_path}`} loading="lazy" />
-                                    <div className="font-weight-bold" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{shows.name}</div>
-                                </Link>
-                            </div>
-                            </Fade>
-                        </div>}
-                    </React.Fragment>
-                ))}
-                </div>
-            </div>
-        </>
-    )
+  return (
+    <section className="mt-8">
+      <h2 className="section-title mb-3">More like this</h2>
+      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+        {similarShows.map(
+          (show) =>
+            show.poster_path && (
+              <PosterTile
+                key={show.id}
+                to={`/tv/${show.id}`}
+                poster={show.poster_path}
+                title={show.name}
+                imageUrlPrefix={`${IMAGE_URL}w342`}
+                size="sm"
+              />
+            )
+        )}
+      </div>
+    </section>
+  );
 }
-
-export default SimilarTvShows

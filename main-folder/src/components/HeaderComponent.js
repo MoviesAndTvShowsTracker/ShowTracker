@@ -1,109 +1,155 @@
-import React, { Component } from 'react';
-import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem} from 'reactstrap';
-import { NavLink } from 'react-router-dom';
-import swal from 'sweetalert';
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Film, Home, LogIn, LogOut, Search, Tv, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import Dialog from './ui/Dialog';
 import logo from '../logo.png';
 
-function logout() {
-    swal("Do you want to Logout?", "", "warning", {
-      buttons: {
-        cancel: true,
-        sure: {
-          text: "I'm, Sure",
-          value: "logout",
-          className: "swal-confirm"
-        }
-      }
-    }).then(value => {
-      switch (value) {
-        case "logout":
-          swal("", "", 'success', {
-            buttons: {
-                Done: {
-                  className: "swal-confirm"
-                }
-            }
-          })
-          .then(val => {
-            localStorage.clear();
-            return window.history.go('/');
-          });
-          break;
-      }
-    });
+const desktopLink = ({ isActive }) =>
+  `nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
+    isActive ? 'text-accent' : 'text-muted hover:text-ink-bright'
+  }`;
+
+const mobileLink = ({ isActive }) =>
+  `flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[9px] font-bold uppercase tracking-wide transition-colors cursor-pointer min-h-[44px] ${
+    isActive ? 'bg-accent/15 text-accent' : 'text-muted active:bg-surface-raised'
+  }`;
+
+export default function Header() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showLogout, setShowLogout] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    setShowLogout(false);
+    navigate('/');
   };
 
-class Header extends Component {
+  return (
+    <>
+      <header className="app-header">
+        <div className="mx-auto flex max-w-content items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <NavLink to="/" className="inline-flex shrink-0 items-center gap-2.5 cursor-pointer">
+            <img src={logo} alt="" className="h-7 w-auto" />
+            <span className="text-sm font-bold uppercase tracking-[0.08em] text-ink-bright">ShowTracker</span>
+          </NavLink>
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            isNavOpen: false,
-        };
-        this.toggleNav = this.toggleNav.bind(this);
-    }
+          {/* Desktop navigation */}
+          <nav className="hidden items-center md:flex" aria-label="Main">
+            <NavLink to="/" end className={desktopLink}>
+              <Home className="h-4 w-4" aria-hidden="true" />
+              Home
+            </NavLink>
+            <NavLink to="/movies" className={desktopLink}>
+              <Film className="h-4 w-4" aria-hidden="true" />
+              Films
+            </NavLink>
+            <NavLink to="/tv" className={desktopLink}>
+              <Tv className="h-4 w-4" aria-hidden="true" />
+              TV
+            </NavLink>
+            <NavLink to="/search" className={desktopLink}>
+              <Search className="h-4 w-4" aria-hidden="true" />
+              Search
+            </NavLink>
 
-    toggleNav() {
-        this.setState({
-            isNavOpen: !this.state.isNavOpen
-        });
-    }
-
-    mobileToggle = () => {
-        if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
-         this.toggleNav()
-        };
-    };
-
-    render() {
-        
-        return(
-            <React.Fragment>
-                <Navbar dark expand="md" color="primary" sticky="top">
-                    <div className="container">
-                        <NavbarBrand href="/" className="mr-auto" >
-                            <img src={logo} height="30" width="41" alt="Show Tracker" />  Show Tracker
-                        </NavbarBrand>
-                        <NavbarToggler onClick={this.toggleNav} className="ml-auto" />
-                        
-                        <Collapse isOpen={this.state.isNavOpen} navbar>
-                            <Nav navbar className="ml-auto">
-                                <NavItem>
-                                    <NavLink className="nav-link" to='/tv' onClick={() => this.mobileToggle()}><span className="fa fa-tv fa-lg"></span> TV</NavLink>
-                                </NavItem>
-                                <NavItem>
-                                    <NavLink className="nav-link" to='/movies' onClick={() => this.mobileToggle()}><span className="fa fa-film fa-lg"></span> Movies</NavLink>
-                                </NavItem>
-                                <NavItem>
-                                    <NavLink className="nav-link" to='/search' onClick={() => this.mobileToggle()}><span className="fa fa-search fa-lg"></span> Search</NavLink>
-                                </NavItem>
-                                {!localStorage.getItem('user') &&
-                                    <NavItem>
-                                        <NavLink className="nav-link" to='/login' onClick={() => this.mobileToggle()}><span className="fa fa-sign-in fa-lg"></span>  Login</NavLink>
-                                    </NavItem>
-                                }
-                                {!localStorage.getItem('user') ||
-                                    <UncontrolledDropdown nav inNavbar>
-                                        <DropdownToggle nav caret>
-                                            {localStorage.getItem('myuser')}
-                                        </DropdownToggle>
-                                        <DropdownMenu right>
-                                            <NavItem>
-                                                <NavLink to='/profile' className="text-decoration-none" style={{color: 'black'}} onClick={() => this.mobileToggle()}>
-                                                    <DropdownItem> <span className="fa fa-user-circle-o"></span> Profile</DropdownItem>
-                                                </NavLink>
-                                            </NavItem>
-                                            <DropdownItem onClick={logout}> <span className="fa fa-sign-out"></span> Logout</DropdownItem>
-                                        </DropdownMenu>
-                                  </UncontrolledDropdown>
-                                }
-                            </Nav>
-                        </Collapse>
+            {!isAuthenticated ? (
+              <>
+                <NavLink to="/login" className={desktopLink}>
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  Sign in
+                </NavLink>
+                <NavLink to="/signup" className="btn-primary !min-h-[36px] !px-4 !py-2 !text-xs ml-2">
+                  Join
+                </NavLink>
+              </>
+            ) : (
+              <div className="relative ml-2">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="btn-ghost gap-1.5 !text-ink"
+                  aria-expanded={menuOpen}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[120px] truncate">{user?.username}</span>
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+                    <div className="absolute right-0 z-50 mt-1 w-44 rounded-sm border border-border bg-surface py-1 shadow-bento">
+                      <NavLink
+                        to="/profile"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                      >
+                        Profile
+                      </NavLink>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setShowLogout(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </button>
                     </div>
-                </Navbar>
-                </React.Fragment>
-        );
-    }
-}
+                  </>
+                )}
+              </div>
+            )}
+          </nav>
+        </div>
+      </header>
 
-export default Header;
+      {/* Mobile bottom nav — iOS-style floating pill */}
+      <div className="mobile-nav-shell" aria-hidden={false}>
+        <nav className="mobile-nav-pill" aria-label="Mobile">
+          <NavLink to="/" end className={mobileLink}>
+            <Home className="h-[18px] w-[18px]" aria-hidden="true" />
+            Home
+          </NavLink>
+          <NavLink to="/movies" className={mobileLink}>
+            <Film className="h-[18px] w-[18px]" aria-hidden="true" />
+            Films
+          </NavLink>
+          <NavLink to="/tv" className={mobileLink}>
+            <Tv className="h-[18px] w-[18px]" aria-hidden="true" />
+            TV
+          </NavLink>
+          <NavLink to="/search" className={mobileLink}>
+            <Search className="h-[18px] w-[18px]" aria-hidden="true" />
+            Search
+          </NavLink>
+          <NavLink to={isAuthenticated ? '/profile' : '/login'} className={mobileLink}>
+            <User className="h-[18px] w-[18px]" aria-hidden="true" />
+            {isAuthenticated ? 'You' : 'Sign in'}
+          </NavLink>
+        </nav>
+      </div>
+
+      <Dialog
+        open={showLogout}
+        onClose={() => setShowLogout(false)}
+        title="Sign out?"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowLogout(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="button" onClick={handleLogout} className="btn-primary">
+              Sign out
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">Your lists and history will be here when you return.</p>
+      </Dialog>
+    </>
+  );
+}

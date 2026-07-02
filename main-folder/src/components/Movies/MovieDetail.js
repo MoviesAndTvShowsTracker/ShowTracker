@@ -1,211 +1,179 @@
-import React, { useEffect, useState } from 'react'
-import {API_URL, API_KEY, IMAGE_URL} from '../../config/keys';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Star } from 'lucide-react';
+import { API_URL, API_KEY, IMAGE_URL } from '../../config/keys';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
-import { Link } from 'react-router-dom';
 import SimilarMoviesData from './ShowSimilarMovies';
-import Fade from 'react-reveal/Fade';
-import { Helmet } from 'react-helmet';
+import PageTitle from '../../utils/PageTitle';
+import DetailInfoGrid from '../ui/DetailInfoGrid';
 
-function MovieDetail(props) {
+export default function MovieDetail() {
+  const { Id: movieId } = useParams();
+  const [movie, setMovie] = useState({});
+  const [actors, setActors] = useState([]);
+  const [crews, setCrews] = useState([]);
+  const [watchProviders, setWatchProviders] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [actorToggle, setActorToggle] = useState(false);
 
-    const movieId = props.match.params.Id;
-    const [Movie, setMovie] = useState([]);
-    const [Actors, setActors] = useState([]);
-    const [Crews, setCrews] = useState([]);
-    const [WatchProviders, setWatchProviders] = useState([]);
-    const [Genres, setGenres] = useState([]);
-    const [ActorToggle, setActorToggle] = useState(false);
+  useEffect(() => {
+    fetch(`${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`)
+      .then((r) => r.json())
+      .then((response) => {
+        setMovie(response);
+        setGenres(response.genres || []);
+        return fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`);
+      })
+      .then((r) => r.json())
+      .then((response) => {
+        setActors(response.cast || []);
+        setCrews(response.crew || []);
+      });
 
-    useEffect(() => {
+    fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`)
+      .then((r) => r.json())
+      .then((response) => {
+        const india = response.results?.IN;
+        if (india) setWatchProviders(india.flatrate || india.buy || india.rent || []);
+      })
+      .catch(() => {});
 
-        fetch(`${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`)
-        .then(response => response.json())
-        .then(response => {
-            console.log(response);
-            setMovie(response);
-            setGenres(response.genres);
+    window.scrollTo(0, 0);
+  }, [movieId]);
 
-            fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`)
-            .then(response => response.json())
-            .then(response => {
-                console.log(response);
-                setActors(response.cast);
-                setCrews(response.crew)
-            })
-        })
+  const convertToReadable = (n) => {
+    const v = Math.abs(Number(n));
+    if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+    return v;
+  };
 
-        fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`)
-            .then(response => response.json())
-            .then(response => {
-                console.log(response.results);
-                const ott = response.results.IN.flatrate;
-                const rent = response.results.IN.rent;
-                setWatchProviders(ott ? ott : response.results.IN.buy || rent)
-            })
-            .catch(() => console.log('error in fetching providers, do nothing'))
+  const timeConvert = (num) => {
+    const h = Math.floor(num / 60);
+    const m = num % 60;
+    return `${h}h ${m}m`;
+  };
 
-        window.scrollTo(0, 0);
-    }, [])
+  const airdate = (prop) =>
+    new Date(prop).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-    const handleClick = () => {
-        setActorToggle(!ActorToggle);
-    }
+  const infoItems = [
+    ['Title', movie.title],
+    ['Released', movie.release_date && airdate(movie.release_date)],
+    ['Director', crews.filter((v) => v.job === 'Director').map((v) => v.name).join(', ')],
+    ['Genre', genres.map((g) => g.name).join(', ')],
+    ['Runtime', movie.runtime ? timeConvert(movie.runtime) : null],
+    ['Revenue', movie.revenue ? `$${convertToReadable(movie.revenue)}` : null],
+  ];
 
-    function convertToReadable (labelValue) {
+  return (
+    <>
+      <PageTitle title={movie.title || 'Loading…'} />
 
-        // Nine Zeroes for Billions
-        return Math.abs(Number(labelValue)) >= 1.0e+9
-    
-        ? (Math.abs(Number(labelValue)) / 1.0e+9).toFixed(2) + " Billion"
-        // Six Zeroes for Millions 
-        : Math.abs(Number(labelValue)) >= 1.0e+6
-    
-        ? (Math.abs(Number(labelValue)) / 1.0e+6).toFixed(2) + " Million"
-        // Three Zeroes for Thousands
-        : Math.abs(Number(labelValue)) >= 1.0e+3
-    
-        ? (Math.abs(Number(labelValue)) / 1.0e+3).toFixed(2) + " Thousand"
-    
-        : Math.abs(Number(labelValue));
-    
-    }
+      {movie.backdrop_path && (
+        <MainImageforDetail
+          image={`${IMAGE_URL}w1280${movie.backdrop_path}`}
+          title={movie.title}
+          text={movie.overview}
+        />
+      )}
 
-    function time_convert(num) {
-        var hours = Math.floor(num / 60);  
-        var minutes = num % 60;
-        return `${hours}h ${minutes}m`; 
-    }
-
-    function airdate(prop) {
-        const date = new Date(prop);
-        const month = date.toLocaleString('default', { month: 'long' });
-        return `${month} ${date.getFullYear()}`;
-    }
-    
-    return (
-        <>
-        <Helmet>
-            <title> {Movie.title ? Movie.title : "Loading..."}</title>
-        </Helmet>
-            <div>
-                {Movie &&
-                    <MainImageforDetail image={`${IMAGE_URL}w1280${Movie.backdrop_path && Movie.backdrop_path}`}
-                    title={Movie.title} text={Movie.overview} />
-                }
+      <div className="mx-auto max-w-content px-4 py-5 sm:px-6 md:py-8">
+        {/* Mobile: poster + rating strip */}
+        {movie.poster_path && (
+          <div className="mb-4 flex gap-3 md:hidden">
+            <img
+              src={`${IMAGE_URL}w342${movie.poster_path}`}
+              alt=""
+              className="h-28 w-[4.5rem] shrink-0 rounded-[3px] object-cover shadow-poster"
+            />
+            <div className="flex min-w-0 flex-col justify-center">
+              <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">{movie.title}</p>
+              <div className="mt-2 flex items-center gap-1.5 text-sm">
+                <Star className="h-4 w-4 fill-accent text-accent" />
+                <span className="font-bold text-accent">{movie.vote_average?.toFixed(1)}</span>
+                <span className="text-muted">/ 10</span>
+              </div>
+              {movie.release_date && (
+                <p className="mt-1 text-xs text-muted">{airdate(movie.release_date)}</p>
+              )}
             </div>
+          </div>
+        )}
 
-            <div style={{ width: '95%', margin: '1rem auto'}}>
-                {/* Breadcrumbs */}
-                <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb">
-                        <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
-                        <li className="breadcrumb-item"><Link to='/movies'>Movies</Link></li>
-                        <li className="breadcrumb-item active" aria-current="page">{Movie.title}</li>
-                    </ol>
-                </nav>
-                {/* basic info */}
-                <div className="row mb-4">
-                    <div className="d-none d-sm-block col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <div className="h2"> Movie Information</div>
-                    </div>
-                    <div className="d-block d-sm-none col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <div className="h2"> Movie Information</div>
-                    </div>
-                    <div className="col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <div className="float-right">
-                            <Favorite userFrom= {localStorage.getItem('userId')} movieId={movieId} movieInfo={Movie} />
-                        </div>
-                    </div>
-                    <div className="text-center card-footer col-12 mt-4 d-block d-sm-none"><span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div>
+        <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs text-muted md:mb-6 md:block">
+          <Link to="/" className="hover:text-ink-bright cursor-pointer">Home</Link>
+          <span className="mx-1.5">/</span>
+          <Link to="/movies" className="hover:text-ink-bright cursor-pointer">Films</Link>
+          <span className="mx-1.5">/</span>
+          <span className="text-ink">{movie.title}</span>
+        </nav>
+
+        {/* Actions — full width grid on mobile */}
+        {movie.title && (
+          <section className="mb-5 md:mb-8">
+            <h2 className="section-title mb-3 md:hidden">Your diary</h2>
+            <Favorite movieId={movieId} movieInfo={movie} />
+          </section>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-12 md:gap-8">
+          <div className="hidden md:col-span-3 md:block">
+            {movie.poster_path && (
+              <div className="overflow-hidden rounded-sm border border-border bg-surface">
+                <img src={`${IMAGE_URL}w500${movie.poster_path}`} alt="" className="w-full" />
+                <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-sm">
+                  <Star className="h-4 w-4 text-accent" />
+                  <span className="font-bold text-accent">{movie.vote_average}</span>
+                  <span className="text-muted">/ 10</span>
                 </div>
+              </div>
+            )}
+          </div>
 
-                {/* movie info part */}
-                <div className="row">
-                    <div className="d-none d-sm-block col-3 text-center">
-                    <div className="d-none d-sm-block">
-                        <Fade><img className="img-responsive card" style={{height:'295px', width:'100%'}} src={Movie.poster_path && `${IMAGE_URL}w500${Movie.poster_path}`} alt="movie poster"/>
-                        <div className="card-footer"> <span className="fa fa-imdb fa-lg"></span>{Movie.vote_average}/10 ({Movie.vote_count} Votes)</div></Fade>
-                    </div>
-                    </div>
-                    
-                    <table className="col table table-hover table-responsive-xs">
-                        <tbody>
-                        <tr>
-                            <td className="font-weight-bolder">Title</td>
-                            <td className="">{Movie.title}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Release Date</td>
-                            <td className="">{airdate(Movie.release_date)}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Director</td>
-                            <td className="">{Crews.filter(value => value.job === 'Director').map((val, index) => (val.name + " "))}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Genre</td>
-                            <td className="">{Genres.map((item, index) => (
-                                <React.Fragment key={index}>
-                                    {item.name + " "}
-                                </React.Fragment>
-                            ))}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Revenue</td>
-                            <td className="">${convertToReadable(Movie.revenue)}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-weight-bolder">Runtime</td>
-                            <td className="">{time_convert(Movie.runtime)}</td>
-                        </tr>
-                        {WatchProviders.length > 0 &&
-                            <tr>
-                                <td className="font-weight-bolder">Where to watch</td>
-                                <td className="">{WatchProviders.map((result, index) => (
-                                    <React.Fragment key={index}>
-                                        <img style={{height:"30px", width:"30px"}} className="img-responsive mr-2" src={`${IMAGE_URL}w500${result.logo_path}`} />
-                                    </React.Fragment>
-                                ))}
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
+          <div className="md:col-span-9">
+            <h2 className="section-title mb-3 hidden md:block">Details</h2>
+            <DetailInfoGrid
+              items={infoItems}
+              providers={watchProviders}
+              imageUrlPrefix={`${IMAGE_URL}w500`}
+            />
+          </div>
+        </div>
 
-                {/* actor button */}
-                <div className="text-center mt-2">
-                    <button className={ActorToggle ? "btn btn-danger" : "btn btn-primary"} onClick={handleClick}> { ActorToggle ? "Hide Cast" : "Show Cast" } </button>
-                </div>
+        <div className="mt-6 text-center md:mt-8">
+          <button type="button" onClick={() => setActorToggle(!actorToggle)} className="btn-secondary w-full sm:w-auto">
+            {actorToggle ? 'Hide cast' : 'Show cast'}
+          </button>
+        </div>
 
-                {/* actors grid shown only if button clicked*/}
-                {ActorToggle &&
-                <>
-                    <div className="h2">Cast</div>
-                    <div className="container-fluid scrollbar-custom mt-3">
-                        <div className="row flex-row flex-nowrap">
-                            {Actors && Actors.map((crew, index) => (
-                                <React.Fragment key={index}>
-                                    {crew.profile_path &&
-                                        <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                                            <img className="card card-img border-0" style={{ width: '100%', height: '300px' }} alt="img" src={`${IMAGE_URL}original${crew.profile_path}`} loading="lazy"/>
-                                            <div className="text-center text-dark font-weight-bold card-footer">
-                                                <div>{crew.name} as {crew.character}</div>
-                                            </div>
-                                        </div>
-                                    }
-                                </React.Fragment>
-                            ))}
-                        </div>
-                    </div>
-                </>
-                }
-                {/* Similar movies */}
-                <SimilarMoviesData movieId={movieId} />
+        {actorToggle && (
+          <div className="mt-6">
+            <h3 className="section-title mb-3">Cast</h3>
+            <div className="poster-rail -mx-4 px-4 sm:mx-0 sm:px-0">
+              {actors.map(
+                (crew) =>
+                  crew.profile_path && (
+                    <article key={crew.id} className="w-[88px] shrink-0 sm:w-[100px]">
+                      <img
+                        className="aspect-[2/3] w-full rounded-[3px] object-cover"
+                        alt={crew.name}
+                        src={`${IMAGE_URL}original${crew.profile_path}`}
+                        loading="lazy"
+                      />
+                      <p className="mt-1.5 line-clamp-1 text-xs font-medium">{crew.name}</p>
+                      <p className="line-clamp-1 text-[10px] text-muted">as {crew.character}</p>
+                    </article>
+                  )
+              )}
             </div>
-        </>
-    )
+          </div>
+        )}
+
+        <SimilarMoviesData movieId={movieId} />
+      </div>
+    </>
+  );
 }
-
-export default MovieDetail;

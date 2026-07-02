@@ -2,61 +2,61 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Favorite = require('../models/favorite');
-var passport = require('passport');
-
 var authenticate = require('../authenticate');
 
 router.use(bodyParser.json());
 
-router.get('/', function(req, res, next) {
-    res.send('respond with a resource');
-  });
-
-router.post('/favoriteNumber', (req, res) => {
-    Favorite.find({"movieId": req.body.movieId })
-    .exec((err, favorite) => {
-        if(err) return res.status(400).send(err);
-        res.status(200).json({ success: true, favoriteNumber: favorite.length });
-    })
+router.get('/', function (req, res) {
+  res.send('respond with a resource');
 });
 
-router.post('/favorited', (req, res) => {
-    Favorite.find({"movieId": req.body.movieId, "userFrom": req.body.userFrom})
-    .exec((err, favorite) => {
-        if(err) return res.status(400).send(err);
-        
-        let result = false;
-        if(favorite.length !== 0)
-        {
-            result = true;
-        }
-        res.status(200).json({success: true, favorited: result })
-    })
+router.post('/favoriteNumber', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const favorite = await Favorite.find({ movieId: req.body.movieId });
+    res.status(200).json({ success: true, favoriteNumber: favorite.length });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post('/addToFavorite', (req, res) => {
-    //save the info of movie
-    const favorite = new Favorite(req.body);
-    favorite.save((err, doc) => {
-        if(err) return res.json({success: false, err })
-        return res.status(200).json({ success: true })
-    })
+router.post('/favorited', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const favorite = await Favorite.find({ movieId: req.body.movieId, userFrom: req.user._id });
+    res.status(200).json({ success: true, favorited: favorite.length !== 0 });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post('/removeFromFavorite', (req, res) => {
-    Favorite.findOneAndDelete({ movieId: req.body.movieId, userFrom: req.body.userFrom })
-    .exec((err, doc) => {
-        if(err) return res.status(400).json({success: false, err })
-        res.status(200).json({success: true, doc});
-    })
+router.post('/addToFavorite', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const favorite = new Favorite({ ...req.body, userFrom: req.user._id });
+    await favorite.save();
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(400).json({ success: false, err });
+  }
 });
 
-router.post('/getFavoriteMovie', (req, res) => {
-    Favorite.find({'userFrom': req.body.userFrom})
-    .exec((err, favorites) => {
-        if(err) return res.status(400).send(err);
-        return res.status(200).json({ success: true, favorites });
-    })
+router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const doc = await Favorite.findOneAndDelete({
+      movieId: req.body.movieId,
+      userFrom: req.user._id,
+    });
+    res.status(200).json({ success: true, doc });
+  } catch (err) {
+    res.status(400).json({ success: false, err });
+  }
+});
+
+router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const favorites = await Favorite.find({ userFrom: req.user._id });
+    res.status(200).json({ success: true, favorites });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
