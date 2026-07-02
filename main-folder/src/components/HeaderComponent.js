@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Film, Home, LogIn, LogOut, Search, Tv, User } from 'lucide-react';
+import { Film, Home, LogIn, LogOut, Moon, Search, Sun, Tv, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import Dialog from './ui/Dialog';
 import logo from '../logo.png';
 
@@ -17,6 +18,7 @@ const mobileLink = ({ isActive }) =>
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [showLogout, setShowLogout] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,6 +37,16 @@ export default function Header() {
             <img src={logo} alt="" className="h-7 w-auto" />
             <span className="text-sm font-bold uppercase tracking-[0.08em] text-ink-bright">ShowTracker</span>
           </NavLink>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="theme-toggle md:hidden"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
 
           {/* Desktop navigation */}
           <nav className="hidden items-center md:flex" aria-label="Main">
@@ -79,7 +91,7 @@ export default function Header() {
                 {menuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                    <div className="absolute right-0 z-50 mt-1 w-44 rounded-sm border border-border bg-surface py-1 shadow-bento">
+                    <div className="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass backdrop-blur-xl">
                       <NavLink
                         to="/profile"
                         onClick={() => setMenuOpen(false)}
@@ -103,7 +115,16 @@ export default function Header() {
                 )}
               </div>
             )}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="theme-toggle ml-2 hidden md:inline-flex"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
           </nav>
+          </div>
         </div>
       </header>
 

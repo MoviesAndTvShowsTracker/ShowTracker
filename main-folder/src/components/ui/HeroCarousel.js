@@ -20,15 +20,15 @@ export default function HeroCarousel({ slides = [] }) {
     <section className="relative h-52 overflow-hidden sm:h-64 md:h-80">
       <Link to={slide.to} className="block h-full cursor-pointer">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${slide.image}')` }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
         <div className="relative flex h-full flex-col justify-end px-4 pb-6 sm:px-6">
           {slide.badge && (
-            <span className="mb-2 inline-flex w-fit rounded-sm bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-canvas">
+            <span className="mb-2 inline-flex w-fit rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-on-accent backdrop-blur-sm">
               {slide.badge}
             </span>
           )}
-          <h2 className="font-serif text-xl text-ink-bright sm:text-3xl">{slide.title}</h2>
-          <p className="mt-1 line-clamp-2 max-w-xl text-xs text-muted sm:text-sm">{slide.text}</p>
+          <h2 className="font-serif text-xl text-white sm:text-3xl">{slide.title}</h2>
+          <p className="mt-1 line-clamp-2 max-w-xl text-xs text-white/75 sm:text-sm">{slide.text}</p>
         </div>
       </Link>
       {valid.length > 1 && (

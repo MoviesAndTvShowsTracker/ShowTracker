@@ -6,7 +6,7 @@ export default function BentoCard({ to, icon: Icon, title, description, delay = 
   const inner = (
     <>
       {Icon && (
-        <div className="mb-2 inline-flex rounded-sm bg-accent/10 p-2 text-accent sm:mb-4 sm:p-2.5">
+        <div className="mb-2 inline-flex rounded-xl bg-accent/10 p-2 text-accent sm:mb-4 sm:p-2.5">
           <Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
         </div>
       )}

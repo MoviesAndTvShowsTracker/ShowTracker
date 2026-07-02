@@ -23,7 +23,7 @@ function AppLayout() {
   return (
     <>
       <Header />
-      <main className="min-h-[calc(100vh-3.5rem)] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-screen md:pb-0">
+      <main className="page-content min-h-[calc(100vh-3.5rem)] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-screen md:pb-0">
         <Outlet />
       </main>
       <Footer />
@@ -48,7 +48,7 @@ export default function Main() {
             <Route path="/movies/:Id" element={<MovieDetail />} />
             <Route path="/tv" element={<TvLandingPage />} />
             <Route path="/tv/:Id" element={<TvDetail />} />
-            <Route path="/tv/:Id/:seasonNumber/episodes" element={SeasonEpisodes} />
+            <Route path="/tv/:Id/:seasonNumber/episodes" element={<SeasonEpisodes />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

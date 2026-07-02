@@ -20,7 +20,7 @@ export default function PosterTile({
   const widthClass = sizes[size] || sizes.sm;
 
   const posterImage = (
-    <div className={`group relative shrink-0 overflow-hidden rounded-[3px] bg-surface-raised shadow-poster transition-all duration-300 hover:shadow-poster-hover hover:scale-[1.03] ${widthClass}`}>
+    <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:shadow-poster-hover hover:scale-[1.04] hover:-translate-y-0.5 ${widthClass}`}>
       <img
         src={src}
         alt={title || 'Poster'}

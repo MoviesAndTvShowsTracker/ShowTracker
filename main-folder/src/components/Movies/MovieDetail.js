@@ -87,7 +87,7 @@ export default function MovieDetail() {
             <img
               src={`${IMAGE_URL}w342${movie.poster_path}`}
               alt=""
-              className="h-28 w-[4.5rem] shrink-0 rounded-[3px] object-cover shadow-poster"
+              className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover shadow-poster"
             />
             <div className="flex min-w-0 flex-col justify-center">
               <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">{movie.title}</p>
@@ -122,7 +122,7 @@ export default function MovieDetail() {
         <div className="grid gap-6 md:grid-cols-12 md:gap-8">
           <div className="hidden md:col-span-3 md:block">
             {movie.poster_path && (
-              <div className="overflow-hidden rounded-sm border border-border bg-surface">
+              <div className="glass-card overflow-hidden">
                 <img src={`${IMAGE_URL}w500${movie.poster_path}`} alt="" className="w-full" />
                 <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-sm">
                   <Star className="h-4 w-4 text-accent" />
@@ -158,7 +158,7 @@ export default function MovieDetail() {
                   crew.profile_path && (
                     <article key={crew.id} className="w-[88px] shrink-0 sm:w-[100px]">
                       <img
-                        className="aspect-[2/3] w-full rounded-[3px] object-cover"
+                        className="aspect-[2/3] w-full rounded-xl object-cover"
                         alt={crew.name}
                         src={`${IMAGE_URL}original${crew.profile_path}`}
                         loading="lazy"

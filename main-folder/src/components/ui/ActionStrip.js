@@ -5,10 +5,10 @@ export function ActionButton({ active, onClick, icon: Icon, label, badge, compac
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      className={`flex flex-col items-center justify-center gap-1.5 rounded-sm border px-2 py-3 transition-all duration-200 cursor-pointer min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:rounded-sm md:px-4 md:py-2 ${
+      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 transition-all duration-300 cursor-pointer min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
         active
-          ? 'border-accent bg-accent/15 text-accent'
-          : 'border-border bg-surface text-ink hover:border-muted md:hover:bg-surface-raised'
+          ? 'border-accent/60 bg-accent/15 text-accent shadow-glass backdrop-blur-md'
+          : 'border-border bg-surface/80 text-ink shadow-glass backdrop-blur-md hover:border-accent/30 hover:bg-surface md:hover:scale-[1.02]'
       }`}
     >
       {Icon && <Icon className="h-5 w-5 shrink-0 md:h-4 md:w-4" aria-hidden="true" />}

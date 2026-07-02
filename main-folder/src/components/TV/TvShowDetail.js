@@ -75,7 +75,7 @@ export default function TvDetail() {
             <img
               src={`${IMAGE_URL}w342${tvShow.poster_path}`}
               alt=""
-              className="h-28 w-[4.5rem] shrink-0 rounded-[3px] object-cover shadow-poster"
+              className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover shadow-poster"
             />
             <div className="flex min-w-0 flex-col justify-center">
               <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">{tvShow.name}</p>
@@ -109,7 +109,7 @@ export default function TvDetail() {
         <div className="grid gap-6 md:grid-cols-12 md:gap-8">
           <div className="hidden md:col-span-3 md:block">
             {tvShow.poster_path && (
-              <div className="overflow-hidden rounded-sm border border-border bg-surface">
+              <div className="glass-card overflow-hidden">
                 <img
                   src={`${IMAGE_URL}w500${tvShow.poster_path}`}
                   alt={`${tvShow.name} poster`}
@@ -149,7 +149,7 @@ export default function TvDetail() {
                   crew.profile_path && (
                     <article key={crew.id} className="w-[88px] shrink-0 sm:w-[100px]">
                       <img
-                        className="aspect-[2/3] w-full rounded-[3px] object-cover"
+                        className="aspect-[2/3] w-full rounded-xl object-cover"
                         alt={crew.name}
                         src={`${IMAGE_URL}original${crew.profile_path}`}
                         loading="lazy"
@@ -168,7 +168,7 @@ export default function TvDetail() {
           {[...seasons].reverse().map(
             (season) =>
               season.poster_path && (
-                <article key={season.id} className="overflow-hidden rounded-sm border border-border bg-surface">
+                <article key={season.id} className="glass-card overflow-hidden">
                   <div className="border-b border-border px-4 py-3 md:px-5 md:py-4">
                     <Link
                       to={`/tv/${tvShowId}/${season.season_number}/episodes`}
@@ -184,7 +184,7 @@ export default function TvDetail() {
                     <img
                       src={`${IMAGE_URL}w500${season.poster_path}`}
                       alt={season.name}
-                      className="h-28 w-[4.5rem] shrink-0 rounded-[3px] object-cover md:h-40 md:w-28"
+                      className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover md:h-40 md:w-28"
                     />
                     <p className="line-clamp-4 text-sm text-muted">
                       {season.overview || 'No information available.'}

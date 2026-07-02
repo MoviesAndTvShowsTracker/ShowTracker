@@ -93,7 +93,7 @@ export default function Profile() {
         {userInfo && (
           <header className="mb-8 flex flex-col gap-6 border-b border-border pb-8 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-sm bg-accent text-2xl font-bold text-canvas">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl font-bold text-canvas">
                 {userInfo.username?.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -129,13 +129,13 @@ export default function Profile() {
                     key={label}
                     type="button"
                     onClick={action}
-                    className="rounded-sm border border-border bg-surface px-3 py-3 text-center transition-colors hover:border-muted cursor-pointer"
+                    className="glass-card px-3 py-3 text-center transition-all duration-300 hover:border-accent/30 hover:scale-[1.02] cursor-pointer"
                   >
                     <span className="block text-xl font-bold text-ink-bright">{value}</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
                   </button>
                 ) : (
-                  <div key={label} className="rounded-sm border border-border bg-surface px-3 py-3 text-center">
+                  <div key={label} className="glass-card px-3 py-3 text-center">
                     <span className="block text-xl font-bold text-ink-bright">{value}</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
                   </div>

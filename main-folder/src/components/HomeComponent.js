@@ -176,7 +176,7 @@ export default function Home() {
         </div>
 
         {!isAuthenticated && (
-          <section className="mt-16 rounded-sm border border-border bg-surface p-8 text-center md:p-12">
+          <section className="glass-card mt-16 p-8 text-center md:p-12">
             <h2 className="font-serif text-2xl text-ink-bright">Ready to start tracking?</h2>
             <p className="mx-auto mt-3 max-w-md text-muted">
               Join ShowTracker and turn your watch habits into a beautiful, organized diary.

@@ -65,7 +65,7 @@ export default function SearchBox() {
           </div>
 
           <div className="flex gap-4">
-            <label className="flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-sm border border-border bg-surface text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10">
+            <label className="flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10">
               <input
                 type="radio"
                 name="type"
@@ -76,7 +76,7 @@ export default function SearchBox() {
               />
               <span className={selectedOption === 'movie' ? 'font-semibold text-accent' : 'text-muted'}>Films</span>
             </label>
-            <label className="flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-sm border border-border bg-surface text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10">
+            <label className="flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10">
               <input
                 type="radio"
                 name="type"
@@ -90,7 +90,7 @@ export default function SearchBox() {
           </div>
 
           {error && (
-            <p className="rounded-sm border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+            <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
               {error}
             </p>
           )}

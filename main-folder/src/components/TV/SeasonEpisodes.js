@@ -51,7 +51,7 @@ export default function SeasonEpisodes() {
         <div className="mb-6 flex gap-3 md:mb-8 md:gap-4">
           {season.poster_path && (
             <img
-              className="h-28 w-[4.5rem] shrink-0 rounded-[3px] object-cover shadow-poster md:h-48 md:w-32"
+              className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover shadow-poster md:h-48 md:w-32"
               src={`${IMAGE_URL}w500${season.poster_path}`}
               alt={season.name}
             />
@@ -65,7 +65,7 @@ export default function SeasonEpisodes() {
 
         <div className="space-y-3 md:space-y-4">
           {episodes.map((episode) => (
-            <article key={episode.id} className="overflow-hidden rounded-sm border border-border bg-surface">
+            <article key={episode.id} className="glass-card animate-soft-rise overflow-hidden opacity-0" style={{ animationDelay: `${Math.min(episode.episode_number * 40, 400)}ms`, animationFillMode: 'forwards' }}>
               <div className="border-b border-border px-4 py-3 md:px-5 md:py-4">
                 <h2 className="text-sm font-semibold leading-snug md:text-base">
                   <span className="text-accent">{episode.episode_number}.</span> {episode.name}

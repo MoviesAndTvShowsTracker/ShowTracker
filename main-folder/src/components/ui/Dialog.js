@@ -15,7 +15,7 @@ export default function Dialog({ open, onClose, title, children, footer }) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="fixed inset-0 z-50 m-auto w-[min(100%,24rem)] rounded-sm border border-border bg-surface p-0 text-ink shadow-bento backdrop:bg-black/60"
+      className="fixed inset-0 z-50 m-auto w-[min(100%,24rem)] rounded-2xl border border-border bg-surface p-0 text-ink shadow-glass backdrop:bg-black/50 backdrop:backdrop-blur-sm"
     >
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ink-bright">{title}</h2>
