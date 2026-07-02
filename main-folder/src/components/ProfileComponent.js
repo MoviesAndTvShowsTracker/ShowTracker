@@ -155,6 +155,28 @@ export default function Profile() {
     ? new Date(userInfo.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : '';
 
+  const profileDisplay = useMemo(() => {
+    if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };
+    const isGoogleUser = Boolean(userInfo.googleId);
+    const firstName = userInfo.firstName?.trim() || '';
+    const lastName = userInfo.lastName?.trim() || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+    if (isGoogleUser && firstName) {
+      return {
+        title: firstName,
+        subtitle: `@${userInfo.username} · Member since ${joinDate}`,
+        avatarLetter: firstName.charAt(0).toUpperCase(),
+      };
+    }
+
+    return {
+      title: userInfo.username,
+      subtitle: `${fullName ? `${fullName} · ` : ''}Member since ${joinDate}`,
+      avatarLetter: userInfo.username?.charAt(0).toUpperCase() || '?',
+    };
+  }, [userInfo, joinDate]);
+
   const watchedMins = useMemo(
     () => watchedMovies.reduce((sum, m) => sum + (parseInt(m.movieRuntime, 10) || 0), 0),
     [watchedMovies]
@@ -227,7 +249,7 @@ export default function Profile() {
 
   return (
     <>
-      <PageTitle title={userInfo?.username ? `${userInfo.username}'s diary` : 'Profile'} />
+      <PageTitle title={profileDisplay.title ? `${profileDisplay.title}'s diary` : 'Profile'} />
 
       <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
         <BackNav fallback="/" label="Back to home" className="mb-4 md:hidden" />
@@ -247,11 +269,11 @@ export default function Profile() {
               )}
               <header className="flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-xl font-bold text-on-accent sm:h-16 sm:w-16 sm:text-2xl">
-                  {userInfo.username?.charAt(0).toUpperCase()}
+                  {profileDisplay.avatarLetter}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
-                    <h1 className="page-title">{userInfo.username}</h1>
+                    <h1 className="page-title">{profileDisplay.title}</h1>
                     <Link
                       to="/settings"
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
@@ -260,10 +282,7 @@ export default function Profile() {
                       <Settings className="h-4 w-4" />
                     </Link>
                   </div>
-                  <p className="mt-1 text-sm text-muted">
-                    {userInfo.firstName && `${userInfo.firstName} ${userInfo.lastName} · `}
-                    Member since {joinDate}
-                  </p>
+                  <p className="mt-1 text-sm text-muted">{profileDisplay.subtitle}</p>
                   <div className="mt-2 flex items-center gap-2 text-sm text-muted">
                     <Phone className="h-3.5 w-3.5 shrink-0" />
                     <span>{userInfo.phonenumber || 'No phone'}</span>
