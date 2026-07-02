@@ -21,6 +21,8 @@ var Watchlist = new Schema({
     movieRuntime: {
         type: String
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Watchlist', Watchlist);

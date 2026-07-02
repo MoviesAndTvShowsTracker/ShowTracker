@@ -107,13 +107,13 @@ export default function TvLandingPage() {
               {genreLoading ? `${selectedGenreName}…` : selectedGenreName}
             </h2>
             {genreLoading ? (
-              <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+              <div className="poster-rail">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]" />
                 ))}
               </div>
             ) : genreResults.length > 0 ? (
-              <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+              <div className="poster-rail">
                 <MediaPosterTiles items={genreResults} basePath="/tv" titleKey="name" />
               </div>
             ) : (

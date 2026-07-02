@@ -28,7 +28,11 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
       userFrom: req.user._id,
     });
 
-    const watch = new Watch({ ...req.body, userFrom: req.user._id });
+    const watch = new Watch({
+      ...req.body,
+      userFrom: req.user._id,
+      watchedAt: req.body.watchedAt || new Date(),
+    });
     await watch.save();
     res.status(200).json({ success: true });
   } catch (err) {
@@ -50,27 +54,11 @@ router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next
 
 router.post('/getWatchMovie', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const favorites = await Favorite.find({ userFrom: userId });
-
-    await Promise.all(
-      favorites.map((fav) =>
-        Watch.findOneAndUpdate(
-          { movieId: fav.movieId, userFrom: userId },
-          {
-            userFrom: userId,
-            movieId: fav.movieId,
-            movieTitle: fav.movieTitle,
-            movieImage: fav.movieImage,
-            moviePosterImage: fav.moviePosterImage,
-            movieRuntime: fav.movieRuntime,
-          },
-          { upsert: true }
-        )
-      )
-    );
-
-    const watch = await Watch.find({ userFrom: userId });
+    const watch = await Watch.find({ userFrom: req.user._id }).sort({
+      watchedAt: -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
     res.status(200).json({ success: true, watch });
   } catch (err) {
     next(err);

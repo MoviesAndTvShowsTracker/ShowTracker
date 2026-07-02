@@ -20,7 +20,12 @@ var Favorite = new Schema({
     },
     movieRuntime: {
         type: String
+    },
+    favoritedAt: {
+        type: Date
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Favorite', Favorite);

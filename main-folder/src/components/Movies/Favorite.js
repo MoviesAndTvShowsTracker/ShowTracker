@@ -21,14 +21,11 @@ export default function Favorite({ movieId, movieInfo }) {
     api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {
       if (r.data.success) setFavoriteNumber(r.data.favoriteNumber);
     });
-    Promise.all([
-      api.post('/api/favorite/favorited', { movieId }),
-      api.post('/api/watch/watched', { movieId }),
-    ]).then(([fav, watch]) => {
-      const isFav = fav.data.success && fav.data.favorited;
-      const isWatched = watch.data.success && watch.data.watched;
-      setFavorited(isFav);
-      setWatched(isFav || isWatched);
+    api.post('/api/favorite/favorited', { movieId }).then((fav) => {
+      if (fav.data.success) setFavorited(fav.data.favorited);
+    });
+    api.post('/api/watch/watched', { movieId }).then((watch) => {
+      if (watch.data.success) setWatched(watch.data.watched);
     });
     api.post('/api/watchlist/watchlisted', { movieId }).then((r) => {
       if (r.data.success) setWatchlisted(r.data.watchlisted);
@@ -41,7 +38,6 @@ export default function Favorite({ movieId, movieInfo }) {
       if (r.data.success) {
         setFavoriteNumber(favorited ? favoriteNumber - 1 : favoriteNumber + 1);
         setFavorited(!favorited);
-        setWatched(!favorited);
       }
     });
   };

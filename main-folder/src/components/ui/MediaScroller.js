@@ -6,7 +6,7 @@ export default function MediaScroller({ title, icon: Icon, emptyMessage, emptyLi
         <h2 className="font-heading text-xl font-bold md:text-2xl">{title}</h2>
       </div>
       {children ? (
-        <div className="media-scroll -mx-4 px-4 md:-mx-0 md:px-0">{children}</div>
+        <div className="media-scroll">{children}</div>
       ) : (
         <p className="text-text-muted">
           {emptyMessage}{' '}

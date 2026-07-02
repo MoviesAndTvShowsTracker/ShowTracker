@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Pencil, Phone } from 'lucide-react';
+import { Pencil, Phone, Settings } from 'lucide-react';
 import api from '../api/axios';
 import { IMAGE_URL } from '../config/keys';
+import { profileListPath } from '../config/profileLists';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
 import Dialog from './ui/Dialog';
@@ -192,19 +193,13 @@ export default function Profile() {
     api.post('/api/favorite/removeFromFavorite', { movieId }).then(fetchFavoriteMovies);
 
   const removeFavoriteShow = (tvId) =>
-    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(() => {
-      fetchFavoriteShows();
-      fetchWatchedShows();
-    });
+    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(fetchFavoriteShows);
 
   const removeWatchedFilm = (movieId) =>
     api.post('/api/watch/removeFromWatched', { movieId }).then(fetchWatchedMovies);
 
   const removeWatchedShow = (tvId) =>
-    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(() => {
-      fetchFavoriteShows();
-      fetchWatchedShows();
-    });
+    api.post('/api/tv/watch/removeFromWatched', { tvId }).then(fetchWatchedShows);
 
   const filmTile = (m, onRemove) => (
     <PosterTile
@@ -255,7 +250,16 @@ export default function Profile() {
                   {userInfo.username?.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="page-title">{userInfo.username}</h1>
+                  <div className="flex items-start justify-between gap-3">
+                    <h1 className="page-title">{userInfo.username}</h1>
+                    <Link
+                      to="/settings"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                      aria-label="Settings"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Link>
+                  </div>
                   <p className="mt-1 text-sm text-muted">
                     {userInfo.firstName && `${userInfo.firstName} ${userInfo.lastName} · `}
                     Member since {joinDate}
@@ -288,27 +292,57 @@ export default function Profile() {
                 <ProfileEmptyState username={userInfo.username} />
               ) : (
                 <div className="space-y-10 md:space-y-12">
-                  <PosterRail title="Favorite films" actionTo="/movies" empty={emptyFilm('Browse films')}>
+                  <PosterRail
+                    title="Favorite films"
+                    actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Browse films')}
+                  >
                     {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
                   </PosterRail>
 
-                  <PosterRail title="Favorite TV" actionTo="/tv" empty={emptyTv('Browse TV')}>
+                  <PosterRail
+                    title="Favorite TV"
+                    actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Browse TV')}
+                  >
                     {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
                   </PosterRail>
 
-                  <PosterRail title="Watched films" actionTo="/movies" empty={emptyFilm('Find a film')}>
-                    {[...watchedMovies].reverse().map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
+                  <PosterRail
+                    title="Watched films"
+                    actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Find a film')}
+                  >
+                    {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
                   </PosterRail>
 
-                  <PosterRail title="Watched TV" actionTo="/tv" empty={emptyTv('Browse TV')}>
+                  <PosterRail
+                    title="Watched TV"
+                    actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Browse TV')}
+                  >
                     {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
                   </PosterRail>
 
-                  <PosterRail title="Film watchlist" actionTo="/movies" empty={emptyFilm('Add films')}>
+                  <PosterRail
+                    title="Film watchlist"
+                    actionTo={movieWatchlist.length ? profileListPath('film-watchlist') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Add films')}
+                  >
                     {movieWatchlist.map((m) => filmTile(m))}
                   </PosterRail>
 
-                  <PosterRail title="TV watchlist" actionTo="/tv" empty={emptyTv('Add shows')}>
+                  <PosterRail
+                    title="TV watchlist"
+                    actionTo={tvWatchlist.length ? profileListPath('tv-watchlist') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Add shows')}
+                  >
                     {tvWatchlist.map((s) => tvTile(s))}
                   </PosterRail>
                 </div>

@@ -26,7 +26,7 @@ export default function PosterRail({ title, actionLabel, actionTo, children, emp
           </Link>
         )}
       </div>
-      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">{items}</div>
+      <div className="poster-rail">{items}</div>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Film, Home, LogIn, LogOut, Moon, Search, Sun, Tv, User } from 'lucide-react';
+import { Film, Home, LogIn, LogOut, Moon, Search, Settings, Sun, Tv, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Dialog from './ui/Dialog';
@@ -101,6 +101,14 @@ export default function Header() {
                         className="block px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
                       >
                         Profile
+                      </NavLink>
+                      <NavLink
+                        to="/settings"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
                       </NavLink>
                       <button
                         type="button"

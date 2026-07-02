@@ -16,7 +16,7 @@ export default function SimilarTvShows({ showId }) {
   return (
     <section className="mt-8">
       <h2 className="section-title mb-3">More like this</h2>
-      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+      <div className="poster-rail">
         {similarShows.map(
           (show) =>
             show.poster_path && (

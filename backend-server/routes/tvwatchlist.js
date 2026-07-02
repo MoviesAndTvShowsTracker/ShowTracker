@@ -43,7 +43,11 @@ router.post('/removeFromWatchlist', authenticate.verifyUser, async (req, res, ne
 
 router.post('/getTvWatchlist', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const watchlist = await tvwatchlist.find({ userFrom: req.user._id });
+    const watchlist = await tvwatchlist.find({ userFrom: req.user._id }).sort({
+      updatedAt: -1,
+      createdAt: -1,
+      _id: -1,
+    });
     res.status(200).json({ success: true, watchlist });
   } catch (err) {
     next(err);

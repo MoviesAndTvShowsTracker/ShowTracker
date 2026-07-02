@@ -4,23 +4,43 @@ import { Tv } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_URL } from '../config/keys';
-import { tmdbFetch, withPoster } from '../utils/tmdb';
+import { profileListPath } from '../config/profileLists';
 import {
   buildMarkPayload,
   fetchShowEpisodeIndex,
   watchedSetFromEpisodes,
 } from '../utils/tvProgress';
 import PageTitle from '../utils/PageTitle';
-import ContinueWatchingCard from './TV/ContinueWatchingCard';
+import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
+
+const emptyFilm = (
+  <>
+    Nothing queued.{' '}
+    <Link to="/movies" className="text-link hover:text-ink-bright cursor-pointer">
+      Browse films
+    </Link>
+  </>
+);
+
+const emptyTv = (
+  <>
+    Nothing queued.{' '}
+    <Link to="/tv" className="text-link hover:text-ink-bright cursor-pointer">
+      Browse TV
+    </Link>
+  </>
+);
 
 export default function HomeDashboard() {
   const { user } = useAuth();
   const [tracks, setTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState(null);
-  const [trendingTv, setTrendingTv] = useState([]);
+  const [movieWatchlist, setMovieWatchlist] = useState([]);
+  const [tvWatchlist, setTvWatchlist] = useState([]);
+  const [watchlistsLoading, setWatchlistsLoading] = useState(true);
 
   const loadTracks = useCallback(() => {
     setLoading(true);
@@ -35,7 +55,16 @@ export default function HomeDashboard() {
 
   useEffect(() => {
     loadTracks();
-    tmdbFetch('trending/tv/week').then((d) => setTrendingTv(withPoster(d.results).slice(0, 12)));
+    setWatchlistsLoading(true);
+    Promise.all([
+      api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
+      api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+    ])
+      .then(([movies, tv]) => {
+        if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
+        if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
+      })
+      .finally(() => setWatchlistsLoading(false));
   }, [loadTracks]);
 
   const markNextFromHome = async (track) => {
@@ -81,18 +110,30 @@ export default function HomeDashboard() {
         </header>
 
         <section aria-label="Continue watching" className="mb-10 md:mb-12">
-          <h2 className="section-title mb-4">Continue watching</h2>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="section-title">Continue watching</h2>
+              {!loading && tracks.length > 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  {tracks.length} in progress · tap poster to resume, check to log episode
+                </p>
+              )}
+            </div>
+          </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-32 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="poster-rail">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="h-[180px] w-[108px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[120px]"
+                />
               ))}
             </div>
           ) : tracks.length > 0 ? (
-            <div className="space-y-3">
+            <div className="poster-rail">
               {tracks.map((track) => (
-                <ContinueWatchingCard
+                <ContinueWatchingTile
                   key={track.tvId}
                   track={track}
                   onMark={markNextFromHome}
@@ -114,18 +155,57 @@ export default function HomeDashboard() {
           )}
         </section>
 
-        <PosterRail title="Trending TV" actionTo="/tv" actionLabel="All TV">
-          {trendingTv.map((s) => (
-            <PosterTile
-              key={s.id}
-              to={`/tv/${s.id}`}
-              poster={s.poster_path}
-              title={s.name}
-              imageUrlPrefix={`${IMAGE_URL}w342`}
-              size="sm"
-            />
-          ))}
-        </PosterRail>
+        <div className="space-y-10 md:space-y-12">
+          <PosterRail
+            title="Film watchlist"
+            actionTo={movieWatchlist.length ? profileListPath('film-watchlist') : undefined}
+            actionLabel="View all"
+            empty={watchlistsLoading ? null : emptyFilm}
+          >
+            {watchlistsLoading
+              ? [1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                  />
+                ))
+              : movieWatchlist.map((m) => (
+                  <PosterTile
+                    key={m.movieId}
+                    to={`/movies/${m.movieId}`}
+                    poster={m.moviePosterImage}
+                    title={m.movieTitle}
+                    imageUrlPrefix={`${IMAGE_URL}w342`}
+                    size="sm"
+                  />
+                ))}
+          </PosterRail>
+
+          <PosterRail
+            title="TV watchlist"
+            actionTo={tvWatchlist.length ? profileListPath('tv-watchlist') : undefined}
+            actionLabel="View all"
+            empty={watchlistsLoading ? null : emptyTv}
+          >
+            {watchlistsLoading
+              ? [1, 2, 3, 4].map((i) => (
+                  <div
+                    key={`tv-${i}`}
+                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                  />
+                ))
+              : tvWatchlist.map((s) => (
+                  <PosterTile
+                    key={s.tvId}
+                    to={`/tv/${s.tvId}`}
+                    poster={s.tvPosterImage}
+                    title={s.tvTitle}
+                    imageUrlPrefix={`${IMAGE_URL}w342`}
+                    size="sm"
+                  />
+                ))}
+          </PosterRail>
+        </div>
       </div>
     </>
   );

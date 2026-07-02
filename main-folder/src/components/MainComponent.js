@@ -6,6 +6,8 @@ import HomeDashboard from './HomeDashboard';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
+import ProfileListPage from './profile/ProfileListPage';
+import Settings from './SettingsComponent';
 import LandingPage from './Movies/LandingComponent';
 import MovieDetail from './Movies/MovieDetail';
 import TvDetail from './TV/TvShowDetail';
@@ -47,6 +49,8 @@ export default function Main() {
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<HomeDashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/lists/:listKey" element={<ProfileListPage />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/movies" element={<LandingPage />} />
             <Route path="/movies/:Id" element={<MovieDetail />} />
             <Route path="/tv" element={<TvLandingPage />} />

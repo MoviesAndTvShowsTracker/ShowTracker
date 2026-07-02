@@ -21,6 +21,8 @@ var TvWatchlist = new Schema({
     tvRuntime: {
         type: Array
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('TvWatchlist', TvWatchlist);

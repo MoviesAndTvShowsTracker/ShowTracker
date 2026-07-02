@@ -159,7 +159,7 @@ export default function TvDetail() {
         {actorToggle && (
           <div className="mt-6">
             <h3 className="section-title mb-3">Cast</h3>
-            <div className="poster-rail -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="poster-rail">
               {crews.map(
                 (crew) =>
                   crew.profile_path && (

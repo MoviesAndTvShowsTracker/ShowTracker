@@ -125,13 +125,19 @@
 
   .poster-rail {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     overflow-x: auto;
     padding-bottom: 4px;
     scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     overscroll-behavior-x: contain;
+  }
+
+  .poster-rail::after {
+    content: '';
+    flex: 0 0 2px;
   }
 
   .poster-rail::-webkit-scrollbar {

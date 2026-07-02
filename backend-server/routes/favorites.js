@@ -2,7 +2,6 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Favorite = require('../models/favorite');
-var Watch = require('../models/watch');
 const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
 
@@ -37,15 +36,11 @@ router.post('/addToFavorite', authenticate.verifyUser, async (req, res, next) =>
 
     await moviewatchlist.findOneAndDelete({ movieId: req.body.movieId, userFrom: userId });
 
-    await Favorite.findOneAndUpdate({ movieId: req.body.movieId, userFrom: userId }, data, {
-      upsert: true,
-      new: true,
-    });
-
-    await Watch.findOneAndUpdate({ movieId: req.body.movieId, userFrom: userId }, data, {
-      upsert: true,
-      new: true,
-    });
+    await Favorite.findOneAndUpdate(
+      { movieId: req.body.movieId, userFrom: userId },
+      { ...data, favoritedAt: data.favoritedAt || new Date() },
+      { upsert: true, new: true }
+    );
 
     res.status(200).json({ success: true });
   } catch (err) {
@@ -59,7 +54,6 @@ router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, nex
     const query = { movieId: req.body.movieId, userFrom: userId };
 
     const doc = await Favorite.findOneAndDelete(query);
-    await Watch.findOneAndDelete(query);
 
     res.status(200).json({ success: true, doc });
   } catch (err) {
@@ -69,7 +63,11 @@ router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, nex
 
 router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const favorites = await Favorite.find({ userFrom: req.user._id });
+    const favorites = await Favorite.find({ userFrom: req.user._id }).sort({
+      favoritedAt: -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
     res.status(200).json({ success: true, favorites });
   } catch (err) {
     next(err);

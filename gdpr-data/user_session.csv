@@ -1,0 +1,34 @@
+platform,deeplink,created_at,medium,campaign,content,id,user_id,source,updated_at
+android,tvst://show/321239/episode/6680177/comment/13168440,2018-07-06 16:53:47,,,,18193378,21667900,notification-episode-comment-liked,2018-07-06 16:53:47
+android,tvst://show/322971/episode/5936523/comment/13200186,2018-07-20 13:36:22,,,,18572654,21667900,notification-episode-comment-liked,2018-07-20 13:36:22
+android,tvst://user/21667900/badges?badge_id=346602-quick-watcher-3-bd,2018-07-23 16:21:02,,,,18651494,21667900,notification-badge-unlocked,2018-07-23 16:21:02
+android,tvst://show/346602/episode/6704933/comment/13379382,2018-07-24 01:05:22,,,,18666894,21667900,notification-episode-comment-liked,2018-07-24 01:05:22
+android,tvst://user/21667900/badges?badge_id=serial-watcher-30-bd    ,2018-08-04 04:44:25,,,,19026982,21667900,notification-badge-unlocked,2018-08-04 04:44:25
+android,tvst://show/311714/episode/6732018/comment/14184627,2018-09-26 14:34:35,,,,20410718,21667900,notification-episode-comment-liked,2018-09-26 14:34:35
+android,tvst://show/346602/episode/6833043/comment/14109931,2018-10-28 16:57:00,,,,21747540,21667900,notification-episode-reply-liked,2018-10-28 16:57:00
+android,tvst://show/346602/episode/6833043/comment/14109931,2018-10-28 16:57:15,,,,21747548,21667900,notification-episode-reply-liked,2018-10-28 16:57:15
+android,tvst://user/6545403/detail,2018-11-14 11:02:23,,,,22398667,21667900,notification-follow-request-accepted,2018-11-14 11:02:23
+android,tvst://show/345246/episode/6623554/comment/14697386,2019-02-11 10:24:09,,,,25125205,21667900,notification-episode-comment-liked,2019-02-11 10:24:09
+android,tvst://show/350123/episode/6827109/comment/14185235,2019-05-10 01:52:37,,,,28182613,21667900,notification-episode-comment-liked,2019-05-10 01:52:37
+android,tvst://show/336924/episode/6461784/comment/14901254,2019-07-04 14:16:56,,,,29935395,21667900,notification-episode-comment-liked,2019-07-04 14:16:56
+android,tvst://show/336924/episode/6461786/comment/14910699,2019-07-05 12:23:58,,,,29956103,21667900,notification-episode-comment-liked,2019-07-05 12:23:58
+android,tvst://show/319861/episode/7075645/comment/17923110,2019-07-14 02:13:24,,,,30172098,21667900,notification-episode-comment-liked,2019-07-14 02:13:24
+android,tvst://show/305288/episode/6933998/comment/17845670,2019-07-17 12:59:03,,,,30233597,21667900,notification-episode-comment-liked,2019-07-17 12:59:03
+android,tvst://show/266883/episode/4660855/comment/13688131,2019-09-21 03:12:48,,,,31656148,21667900,notification-episode-comment-liked,2019-09-21 03:12:48
+android,tvst://show/328708/episode/7314583/comment/18341593,2019-10-22 01:31:35,,,,32549627,21667900,notification-episode-comment-liked,2019-10-22 01:31:35
+android,tvst://show/361753/episode/7410437/detail?af_deeplink=true&af_web_id=f5065dd9-3cfa-48b8-a66d-42233d11283f&campaign=auto-share&campaign_id=361753&channel=Twitter&media_source=tvshowtimeapi&referrer_id=22188257&source=auto-tweet,2019-11-16 09:17:42,,,,33123637,21667900,auto-tweet,2019-11-16 09:17:42
+android,tvst://show/311714/episode/7509621/comment/19708531,2020-01-23 02:47:25,,,,34593732,21667900,notification-episode-reply-liked,2020-01-23 02:47:25
+android,tvst://show/270408/episode/4919990/comment/14474963,2020-04-04 12:20:14,,,,36211095,21667900,deeplink,2020-04-04 12:20:14
+android,tvst://user/39470402/profile,2020-04-09 06:15:06,,,,36334774,21667900,deeplink,2020-04-09 06:15:06
+android,tvst://show/329089/episode/6778626/comment/18116281,2020-04-17 01:06:47,,,,36497230,21667900,deeplink,2020-04-17 01:06:47
+android,tvst://show/298566/episode/6910006/comment/15054510,2020-04-19 01:33:32,,,,36538353,21667900,deeplink,2020-04-19 01:33:32
+android,tvst://show/311714/episode/7459925/comment/19641255,2020-05-05 10:14:04,,,,36860477,21667900,deeplink,2020-05-05 10:14:04
+android,tvst://show/311714/episode/7597569/comment/20200311,2020-05-05 10:24:44,,,,36860573,21667900,deeplink,2020-05-05 10:24:44
+android,tvst://show/295829/episode/5722838/comment/15316425,2020-05-24 07:04:04,,,,37209479,21667900,deeplink,2020-05-24 07:04:04
+android,tvst://show/270439/episode/5833345/comment/14422249,2022-02-23 19:57:44,,,,45527537,21667900,deeplink,2022-02-23 19:57:44
+android,tvst://show/344626/episode/6605060/comment/15040949,2022-03-22 02:37:46,,,,45884353,21667900,deeplink,2022-03-22 02:37:46
+android,tvst://show/295829/episode/5722838/comment/15316425,2022-04-18 21:49:07,,,,46259150,21667900,deeplink,2022-04-18 21:49:07
+android,tvst://show/344626/episode/6605062/comment/15122335,2022-05-20 02:15:49,,,,46718967,21667900,deeplink,2022-05-20 02:15:49
+android,tvst://show/295829/episode/5722838/comment/15316425,2022-08-01 20:48:02,,,,47756372,21667900,deeplink,2022-08-01 20:48:02
+android,tvst://show/73508/episode/323644/comment/15213012,2022-08-07 14:33:06,,,,47833264,21667900,deeplink,2022-08-07 14:33:06
+android,tvst://show/371572/episode/9082148/comment/31063053,2022-09-05 14:27:01,,,,48255255,21667900,deeplink,2022-09-05 14:27:01

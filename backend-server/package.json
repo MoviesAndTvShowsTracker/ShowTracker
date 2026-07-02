@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "main-folder": "cd ../ && npm start --prefix main-folder",
-    "start": "concurrently \"node ./bin/www\" \"npm run main-folder\""
+    "start": "concurrently \"node ./bin/www\" \"npm run main-folder\"",
+    "import-tvtime": "node scripts/import-tvtime.js"
   },
   "dependencies": {
     "body-parser": "^1.19.0",

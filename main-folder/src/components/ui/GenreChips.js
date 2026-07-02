@@ -13,7 +13,7 @@ export default function GenreChips({ genres, selectedId, onSelect, label = 'Brow
   return (
     <section className="space-y-3">
       <h2 className="section-title">{label}</h2>
-      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">
+      <div className="poster-rail">
         <button
           type="button"
           onClick={() => onSelect(null)}

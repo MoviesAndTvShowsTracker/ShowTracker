@@ -20,9 +20,9 @@ import PosterTile from './ui/PosterTile';
 import SearchResultTile from './search/SearchResultTile';
 
 const TABS = [
+  { id: 'multi', label: 'All', icon: Search },
   { id: 'movie', label: 'Films', icon: Film },
   { id: 'tv', label: 'TV', icon: Tv },
-  { id: 'multi', label: 'All', icon: Search },
 ];
 
 const MIN_QUERY = 2;
@@ -37,7 +37,7 @@ export default function SearchBox() {
   const inputRef = useRef(null);
 
   const urlQuery = searchParams.get('q') || '';
-  const urlType = searchParams.get('type') || 'movie';
+  const urlType = searchParams.get('type') || 'multi';
 
   const [query, setQuery] = useState(urlQuery);
   const [type, setType] = useState(urlType);
