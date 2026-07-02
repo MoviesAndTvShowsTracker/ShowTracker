@@ -1,0 +1,17 @@
+# Pings the Render API so the free tier stays awake (~15 min idle sleep otherwise).
+# Requires: repo on GitHub. Disable by deleting this file or disabling the workflow.
+name: Render keep-alive
+
+on:
+  schedule:
+    # Every 10 minutes (GitHub may delay scheduled runs by a few minutes)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -fsS --max-time 120 "https://marquee-4kjw.onrender.com/health" || exit 1
