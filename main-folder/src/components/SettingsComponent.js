@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
 import BackNav from './ui/BackNav';
+import TvTimeImportSection from './settings/TvTimeImportSection';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -246,6 +247,8 @@ export default function Settings() {
               </button>
             </form>
           </section>
+
+          <TvTimeImportSection />
 
           <p className="text-center text-sm text-muted">
             <Link to="/profile" className="text-link hover:text-ink-bright cursor-pointer">
