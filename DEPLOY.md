@@ -32,6 +32,23 @@ Free-tier setup for sharing with friends: **React on Vercel**, **API on Render**
 
 **Free tier:** service sleeps after ~15 min idle; first request may take **30–60 seconds** to wake.
 
+### Keep the API awake (optional)
+
+Render free tier sleeps after ~15 minutes with no traffic. Ping `/health` every **10 minutes** from outside Render:
+
+**Option A — [cron-job.org](https://cron-job.org)** (easiest, no code)
+
+1. Create a free account → **Create cron job**
+2. **URL:** `https://marquee-4kjw.onrender.com/health`
+3. **Schedule:** every 10 minutes
+4. Save
+
+**Option B — GitHub Actions**
+
+This repo includes `.github/workflows/render-keepalive.yml`. Push to GitHub and enable **Actions** on the repo; it pings every 10 minutes.
+
+Replace the URL in that file if your Render service name changes.
+
 ## 3. Vercel (frontend)
 
 1. [vercel.com](https://vercel.com) → **Import** GitHub repo.
