@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import PageTitle from '../utils/PageTitle';
 import { useAuth } from '../context/AuthContext';
+import { BRAND_NAME } from '../config/brand';
+import BackNav from './ui/BackNav';
+import MarqueeLogo from './brand/MarqueeLogo';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -52,7 +55,12 @@ export default function Signup() {
     <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
       <PageTitle title="Create account" />
       <div className="mx-auto max-w-md">
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Join ShowTracker</p>
+        <BackNav fallback="/" label="Back to home" className="mb-6" />
+        <div className="mb-5 flex items-center gap-2.5">
+          <MarqueeLogo className="h-9 w-9 text-ink-bright" />
+          <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Join {BRAND_NAME}</p>
         <h1 className="page-title mt-2">Start your watch diary</h1>
         <p className="mt-2 text-sm text-muted">
           Track films, save favorites, and build watchlists — free forever.

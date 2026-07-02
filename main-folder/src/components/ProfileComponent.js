@@ -1,67 +1,134 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Phone } from 'lucide-react';
 import api from '../api/axios';
-import { IMAGE_URL } from '../config/keys';
+import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
 import Dialog from './ui/Dialog';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
+import ProfileEmptyState from './profile/ProfileEmptyState';
+import ProfileStats from './profile/ProfileStats';
+import BackNav from './ui/BackNav';
+
+const emptyFilm = (browse) => (
+  <>
+    Nothing here yet.{' '}
+    <Link to="/movies" className="text-link hover:text-ink-bright cursor-pointer">
+      {browse}
+    </Link>
+  </>
+);
+
+const emptyTv = (browse) => (
+  <>
+    Nothing here yet.{' '}
+    <Link to="/tv" className="text-link hover:text-ink-bright cursor-pointer">
+      {browse}
+    </Link>
+  </>
+);
 
 export default function Profile() {
   const { user } = useAuth();
   const [favoritedMovies, setFavoritedMovies] = useState([]);
   const [favoritedShows, setFavoritedShows] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
+  const [watchedShows, setWatchedShows] = useState([]);
+  const [movieWatchlist, setMovieWatchlist] = useState([]);
+  const [tvWatchlist, setTvWatchlist] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
   const [phoneDialog, setPhoneDialog] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [showWatchlists, setShowWatchlists] = useState(false);
-  const [movieWatchlist, setMovieWatchlist] = useState([]);
-  const [tvWatchlist, setTvWatchlist] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0 });
+  const [tvStatsLoading, setTvStatsLoading] = useState(false);
 
-  const fetchFavoriteMovies = () => {
-    api.post('/api/favorite/getFavoriteMovie', {}).then((r) => {
-      if (r.data.success) setFavoritedMovies(r.data.favorites);
-    });
-  };
+  const fetchFavoriteMovies = () =>
+    api
+      .post('/api/favorite/getFavoriteMovie', {})
+      .then((r) => {
+        if (r.data.success) setFavoritedMovies(r.data.favorites || []);
+      })
+      .catch(() => setFavoritedMovies([]));
 
-  const fetchFavoriteShows = () => {
-    api.post('/api/tv/favorite/getFavoriteMovie', {}).then((r) => {
-      if (r.data.success) setFavoritedShows(r.data.favorites);
-    });
-  };
+  const fetchFavoriteShows = () =>
+    api
+      .post('/api/tv/favorite/getFavoriteMovie', {})
+      .then((r) => {
+        if (r.data.success) setFavoritedShows(r.data.favorites || []);
+      })
+      .catch(() => setFavoritedShows([]));
 
-  const fetchUserInfo = () => {
-    api.get(`/users/getUser/${user.id}`).then((r) => {
-      if (r.data.success) setUserInfo(r.data.found);
-    });
-  };
+  const fetchWatchedMovies = () =>
+    api
+      .post('/api/watch/getWatchMovie', {})
+      .then((r) => {
+        if (r.data.success) setWatchedMovies(r.data.watch || []);
+      })
+      .catch(() =>
+        api
+          .post('/api/favorite/getFavoriteMovie', {})
+          .then((r) => {
+            if (r.data.success) setWatchedMovies(r.data.favorites || []);
+          })
+          .catch(() => setWatchedMovies([]))
+      );
 
-  const fetchWatchedMovies = () => {
-    api.post('/api/watch/getWatchMovie', {}).then((r) => {
-      if (r.data.success) setWatchedMovies(r.data.watch);
-    });
-  };
+  const fetchWatchedShows = () =>
+    api
+      .post('/api/tv/watch/getWatchTv', {})
+      .then((r) => {
+        if (r.data.success) setWatchedShows(r.data.watch || []);
+      })
+      .catch(() =>
+        api
+          .post('/api/tv/favorite/getFavoriteMovie', {})
+          .then((r) => {
+            if (r.data.success) setWatchedShows(r.data.favorites || []);
+          })
+          .catch(() => setWatchedShows([]))
+      );
 
-  const fetchWatchlists = () => {
-    api.post('/api/watchlist/getMovieWatchlist', {}).then((r) => {
-      if (r.data.success) setMovieWatchlist(r.data.watchlist);
+  const fetchWatchlists = () =>
+    Promise.all([
+      api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
+      api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+    ]).then(([movies, tv]) => {
+      if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
+      if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
     });
-    api.post('/api/tv/watchlist/getTvWatchlist', {}).then((r) => {
-      if (r.data.success) setTvWatchlist(r.data.watchlist);
-    });
-  };
 
   useEffect(() => {
     if (!user?.id) return;
-    fetchUserInfo();
-    fetchFavoriteMovies();
-    fetchWatchedMovies();
-    fetchFavoriteShows();
-    window.scrollTo(0, 0);
+    setLoading(true);
+    setLoadError('');
+
+    api
+      .get(`/users/getUser/${user.id}`)
+      .then((r) => {
+        if (r.data.success) setUserInfo(r.data.found);
+        else setUserInfo({ username: user.username, firstName: '', lastName: '' });
+      })
+      .catch(() => {
+        setLoadError('Could not reach the server. Run npm start from backend-server, then log in again.');
+        setUserInfo({ username: user.username, firstName: '', lastName: '' });
+      })
+      .finally(() => {
+        Promise.all([
+          fetchFavoriteMovies(),
+          fetchFavoriteShows(),
+          fetchWatchedMovies(),
+          fetchWatchedShows(),
+          fetchWatchlists(),
+        ]).finally(() => {
+          setLoading(false);
+          window.scrollTo(0, 0);
+        });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -76,7 +143,9 @@ export default function Profile() {
         setInputValue('');
         setPhoneDialog(false);
         setPhoneError('');
-        fetchUserInfo();
+        api.get(`/users/getUser/${user.id}`).then((res) => {
+          if (res.data.success) setUserInfo(res.data.found);
+        });
       }
     });
   };
@@ -85,166 +154,200 @@ export default function Profile() {
     ? new Date(userInfo.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : '';
 
+  const watchedMins = useMemo(
+    () => watchedMovies.reduce((sum, m) => sum + (parseInt(m.movieRuntime, 10) || 0), 0),
+    [watchedMovies]
+  );
+
+  useEffect(() => {
+    if (!watchedShows.length) {
+      setTvStats({ episodes: 0, tvMins: 0 });
+      setTvStatsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTvStatsLoading(true);
+
+    Promise.all(
+      watchedShows.map((show) =>
+        fetch(`${API_URL}tv/${show.tvId}?api_key=${API_KEY}&language=en-US`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      )
+    )
+      .then((results) => {
+        if (cancelled) return;
+
+        let episodes = 0;
+        let tvMins = 0;
+
+        results.forEach((data, i) => {
+          if (!data) return;
+          const epCount = data.number_of_episodes || 0;
+          episodes += epCount;
+
+          const storedRuntime = watchedShows[i]?.tvRuntime;
+          const runtimes =
+            data.episode_run_time?.length > 0
+              ? data.episode_run_time
+              : Array.isArray(storedRuntime) && storedRuntime.length
+                ? storedRuntime
+                : [45];
+          const avgEp = runtimes.reduce((a, b) => a + Number(b), 0) / runtimes.length;
+          tvMins += epCount * avgEp;
+        });
+
+        setTvStats({ episodes, tvMins });
+      })
+      .finally(() => {
+        if (!cancelled) setTvStatsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [watchedShows]);
+
+  const isProfileEmpty = useMemo(
+    () =>
+      favoritedMovies.length === 0 &&
+      favoritedShows.length === 0 &&
+      watchedMovies.length === 0 &&
+      watchedShows.length === 0 &&
+      movieWatchlist.length === 0 &&
+      tvWatchlist.length === 0,
+    [favoritedMovies, favoritedShows, watchedMovies, watchedShows, movieWatchlist, tvWatchlist]
+  );
+
+  const removeFavoriteFilm = (movieId) =>
+    api.post('/api/favorite/removeFromFavorite', { movieId }).then(fetchFavoriteMovies);
+
+  const removeFavoriteShow = (tvId) =>
+    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(() => {
+      fetchFavoriteShows();
+      fetchWatchedShows();
+    });
+
+  const removeWatchedFilm = (movieId) =>
+    api.post('/api/watch/removeFromWatched', { movieId }).then(fetchWatchedMovies);
+
+  const removeWatchedShow = (tvId) =>
+    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(() => {
+      fetchFavoriteShows();
+      fetchWatchedShows();
+    });
+
+  const filmTile = (m, onRemove) => (
+    <PosterTile
+      key={m.movieId}
+      to={`/movies/${m.movieId}`}
+      poster={m.moviePosterImage}
+      title={m.movieTitle}
+      imageUrlPrefix={`${IMAGE_URL}w342`}
+      size="sm"
+      onRemove={onRemove}
+    />
+  );
+
+  const tvTile = (s, onRemove) => (
+    <PosterTile
+      key={s.tvId}
+      to={`/tv/${s.tvId}`}
+      poster={s.tvPosterImage}
+      title={s.tvTitle}
+      imageUrlPrefix={`${IMAGE_URL}w342`}
+      size="sm"
+      onRemove={onRemove}
+    />
+  );
+
   return (
     <>
       <PageTitle title={userInfo?.username ? `${userInfo.username}'s diary` : 'Profile'} />
 
-      <div className="mx-auto max-w-content px-4 py-8 sm:px-6 md:py-12">
-        {userInfo && (
-          <header className="mb-8 flex flex-col gap-6 border-b border-border pb-8 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl font-bold text-canvas">
-                {userInfo.username?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 className="page-title">{userInfo.username}</h1>
-                <p className="text-sm text-muted">
-                  Member since {joinDate} · {userInfo.firstName} {userInfo.lastName}
-                </p>
-                <div className="mt-1 flex items-center gap-2 text-sm text-muted">
-                  <Phone className="h-3.5 w-3.5" />
-                  {userInfo.phonenumber || 'No phone'}
-                  <button type="button" onClick={() => setPhoneDialog(true)} className="text-link hover:text-ink-bright cursor-pointer">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
+      <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
+        <BackNav fallback="/" label="Back to home" className="mb-4 md:hidden" />
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[
-                { label: 'Watched', value: watchedMovies.length },
-                { label: 'Favorites', value: favoritedMovies.length + favoritedShows.length },
-                {
-                  label: showWatchlists ? 'Lists' : 'Lists',
-                  value: showWatchlists ? movieWatchlist.length + tvWatchlist.length : '—',
-                  action: () => {
-                    if (!showWatchlists) fetchWatchlists();
-                    setShowWatchlists(!showWatchlists);
-                  },
-                },
-              ].map(({ label, value, action }) =>
-                action ? (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={action}
-                    className="glass-card px-3 py-3 text-center transition-all duration-300 hover:border-accent/30 hover:scale-[1.02] cursor-pointer"
-                  >
-                    <span className="block text-xl font-bold text-ink-bright">{value}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
-                  </button>
-                ) : (
-                  <div key={label} className="glass-card px-3 py-3 text-center">
-                    <span className="block text-xl font-bold text-ink-bright">{value}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
+        {loading && !userInfo ? (
+          <div className="space-y-6">
+            <div className="h-24 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />
+          </div>
+        ) : (
+          userInfo && (
+            <div className="space-y-8 md:space-y-10">
+              {loadError && (
+                <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+                  {loadError}
+                </p>
+              )}
+              <header className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-xl font-bold text-on-accent sm:h-16 sm:w-16 sm:text-2xl">
+                  {userInfo.username?.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="page-title">{userInfo.username}</h1>
+                  <p className="mt-1 text-sm text-muted">
+                    {userInfo.firstName && `${userInfo.firstName} ${userInfo.lastName} · `}
+                    Member since {joinDate}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-muted">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span>{userInfo.phonenumber || 'No phone'}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPhoneDialog(true)}
+                      className="text-link hover:text-ink-bright cursor-pointer"
+                      aria-label="Edit phone"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                )
+                </div>
+              </header>
+
+              <ProfileStats
+                filmCount={watchedMovies.length}
+                tvCount={watchedShows.length}
+                episodeCount={tvStats.episodes}
+                filmMins={watchedMins}
+                tvMins={tvStats.tvMins}
+                tvStatsLoading={tvStatsLoading}
+              />
+
+              {isProfileEmpty ? (
+                <ProfileEmptyState username={userInfo.username} />
+              ) : (
+                <div className="space-y-10 md:space-y-12">
+                  <PosterRail title="Favorite films" actionTo="/movies" empty={emptyFilm('Browse films')}>
+                    {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
+                  </PosterRail>
+
+                  <PosterRail title="Favorite TV" actionTo="/tv" empty={emptyTv('Browse TV')}>
+                    {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
+                  </PosterRail>
+
+                  <PosterRail title="Watched films" actionTo="/movies" empty={emptyFilm('Find a film')}>
+                    {[...watchedMovies].reverse().map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
+                  </PosterRail>
+
+                  <PosterRail title="Watched TV" actionTo="/tv" empty={emptyTv('Browse TV')}>
+                    {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
+                  </PosterRail>
+
+                  <PosterRail title="Film watchlist" actionTo="/movies" empty={emptyFilm('Add films')}>
+                    {movieWatchlist.map((m) => filmTile(m))}
+                  </PosterRail>
+
+                  <PosterRail title="TV watchlist" actionTo="/tv" empty={emptyTv('Add shows')}>
+                    {tvWatchlist.map((s) => tvTile(s))}
+                  </PosterRail>
+                </div>
               )}
             </div>
-          </header>
+          )
         )}
-
-        <div className="space-y-12">
-          <PosterRail
-            title="Favorite films"
-            actionTo="/movies"
-            empty={
-              <>
-                No favorites yet.{' '}
-                <Link to="/movies" className="text-link hover:text-ink-bright cursor-pointer">Browse films</Link>
-              </>
-            }
-          >
-            {favoritedMovies.map((m) => (
-              <PosterTile
-                key={m.movieId}
-                to={`/movies/${m.movieId}`}
-                poster={m.moviePosterImage}
-                title={m.movieTitle}
-                imageUrlPrefix={`${IMAGE_URL}w342`}
-                onRemove={() =>
-                  api.post('/api/favorite/removeFromFavorite', { movieId: m.movieId }).then(() => fetchFavoriteMovies())
-                }
-              />
-            ))}
-          </PosterRail>
-
-          <PosterRail
-            title="Watched"
-            actionTo="/movies"
-            empty={
-              <>
-                Nothing logged.{' '}
-                <Link to="/movies" className="text-link hover:text-ink-bright cursor-pointer">Find a film</Link>
-              </>
-            }
-          >
-            {[...watchedMovies].reverse().map((m) => (
-              <PosterTile
-                key={m.movieId}
-                to={`/movies/${m.movieId}`}
-                poster={m.moviePosterImage}
-                title={m.movieTitle}
-                imageUrlPrefix={`${IMAGE_URL}w342`}
-                onRemove={() =>
-                  api.post('/api/watch/removeFromWatched', { movieId: m.movieId }).then(() => fetchWatchedMovies())
-                }
-              />
-            ))}
-          </PosterRail>
-
-          <PosterRail
-            title="Favorite TV"
-            actionTo="/tv"
-            empty={
-              <>
-                No shows saved.{' '}
-                <Link to="/tv" className="text-link hover:text-ink-bright cursor-pointer">Browse TV</Link>
-              </>
-            }
-          >
-            {favoritedShows.map((s) => (
-              <PosterTile
-                key={s.tvId}
-                to={`/tv/${s.tvId}`}
-                poster={s.tvPosterImage}
-                title={s.tvTitle}
-                imageUrlPrefix={`${IMAGE_URL}w342`}
-                onRemove={() =>
-                  api.post('/api/tv/favorite/removeFromFavorite', { tvId: s.tvId }).then(() => fetchFavoriteShows())
-                }
-              />
-            ))}
-          </PosterRail>
-
-          {showWatchlists && (
-            <>
-              <PosterRail title="Film watchlist">
-                {movieWatchlist.map((m) => (
-                  <PosterTile
-                    key={m.movieId}
-                    to={`/movies/${m.movieId}`}
-                    poster={m.moviePosterImage}
-                    title={m.movieTitle}
-                    imageUrlPrefix={`${IMAGE_URL}w342`}
-                  />
-                ))}
-              </PosterRail>
-              <PosterRail title="TV watchlist">
-                {tvWatchlist.map((s) => (
-                  <PosterTile
-                    key={s.tvId}
-                    to={`/tv/${s.tvId}`}
-                    poster={s.tvPosterImage}
-                    title={s.tvTitle}
-                    imageUrlPrefix={`${IMAGE_URL}w342`}
-                  />
-                ))}
-              </PosterRail>
-            </>
-          )}
-        </div>
       </div>
 
       <Dialog
@@ -256,13 +359,27 @@ export default function Profile() {
         title="Phone number"
         footer={
           <>
-            <button type="button" onClick={() => setPhoneDialog(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" form="phone-form" className="btn-primary">Save</button>
+            <button type="button" onClick={() => setPhoneDialog(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" form="phone-form" className="btn-primary">
+              Save
+            </button>
           </>
         }
       >
         <form id="phone-form" onSubmit={submitPhone}>
-          <input className="input-field" type="tel" placeholder="10-digit number" maxLength={10} value={inputValue} onChange={(e) => { setInputValue(e.target.value); setPhoneError(''); }} />
+          <input
+            className="input-field"
+            type="tel"
+            placeholder="10-digit number"
+            maxLength={10}
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setPhoneError('');
+            }}
+          />
           {phoneError && <p className="mt-2 text-sm text-red-400">{phoneError}</p>}
         </form>
       </Dialog>

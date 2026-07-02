@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import PageTitle from '../../utils/PageTitle';
+import BackNav from '../ui/BackNav';
 
 export default function SeasonEpisodes() {
   const { Id: tvShowId, seasonNumber } = useParams();
@@ -36,6 +37,12 @@ export default function SeasonEpisodes() {
       />
 
       <div className="mx-auto max-w-content px-4 py-5 sm:px-6 md:py-8">
+        <BackNav
+          fallback={`/tv/${tvShowId}`}
+          label={tvShow.name ? `Back to ${tvShow.name}` : 'Back to show'}
+          className="mb-4 md:hidden"
+        />
+
         <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs text-muted md:mb-6 md:block">
           <Link to="/" className="hover:text-ink-bright cursor-pointer">Home</Link>
           <span className="mx-1.5">/</span>

@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from '../config/brand';
 
 const ThemeContext = createContext(null);
-const STORAGE_KEY = 'showtracker-theme';
+
+function getStoredTheme() {
+  const stored =
+    localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+  return stored === 'light' || stored === 'dark' ? stored : null;
+}
 
 function getSystemTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -17,21 +23,17 @@ function applyTheme(resolved) {
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'light' || stored === 'dark' ? stored : getSystemTheme();
-  });
+  const [theme, setTheme] = useState(() => getStoredTheme() || getSystemTheme());
 
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) setTheme(getSystemTheme());
+      if (!getStoredTheme()) setTheme(getSystemTheme());
     };
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);

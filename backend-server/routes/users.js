@@ -39,16 +39,27 @@ router.post('/signup', (req, res, next) => {
   );
 });
 
-router.post('/login', passport.authenticate('local', { session: false }), (req, res) => {
-  var token = authenticate.getToken({ _id: req.user._id });
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({
-    status: 200,
-    success: true,
-    token: token,
-    userId: req.user._id,
-    message: 'You are successfully logged in!',
-  });
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', { session: false }, (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
+    }
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: info?.message || 'Invalid username or password',
+      });
+    }
+
+    const token = authenticate.getToken({ _id: user._id });
+    return res.status(200).json({
+      status: 200,
+      success: true,
+      token,
+      userId: user._id,
+      message: 'You are successfully logged in!',
+    });
+  })(req, res, next);
 });
 
 router.get('/getUser/:id', authenticate.verifyUser, (req, res) => {

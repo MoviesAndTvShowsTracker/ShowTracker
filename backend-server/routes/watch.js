@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Watch = require('../models/watch');
+var Favorite = require('../models/favorite');
 const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
 
@@ -49,7 +50,27 @@ router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next
 
 router.post('/getWatchMovie', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const watch = await Watch.find({ userFrom: req.user._id });
+    const userId = req.user._id;
+    const favorites = await Favorite.find({ userFrom: userId });
+
+    await Promise.all(
+      favorites.map((fav) =>
+        Watch.findOneAndUpdate(
+          { movieId: fav.movieId, userFrom: userId },
+          {
+            userFrom: userId,
+            movieId: fav.movieId,
+            movieTitle: fav.movieTitle,
+            movieImage: fav.movieImage,
+            moviePosterImage: fav.moviePosterImage,
+            movieRuntime: fav.movieRuntime,
+          },
+          { upsert: true }
+        )
+      )
+    );
+
+    const watch = await Watch.find({ userFrom: userId });
     res.status(200).json({ success: true, watch });
   } catch (err) {
     next(err);

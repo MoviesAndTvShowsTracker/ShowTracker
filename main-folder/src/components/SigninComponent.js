@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import PageTitle from '../utils/PageTitle';
 import { useAuth } from '../context/AuthContext';
+import BackNav from './ui/BackNav';
+import MarqueeLogo from './brand/MarqueeLogo';
+import { BRAND_NAME } from '../config/brand';
 
 export default function Signin() {
   const { login, isAuthenticated } = useAuth();
@@ -30,6 +33,11 @@ export default function Signin() {
     <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
       <PageTitle title="Sign in" />
       <div className="mx-auto max-w-md">
+        <BackNav fallback="/" label="Back to home" className="mb-6" />
+        <div className="mb-5 flex items-center gap-2.5">
+          <MarqueeLogo className="h-9 w-9 text-ink-bright" />
+          <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
+        </div>
         <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Welcome back</p>
         <h1 className="page-title mt-2">Sign in to your diary</h1>
         <p className="mt-2 text-sm text-muted">

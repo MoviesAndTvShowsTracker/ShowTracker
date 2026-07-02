@@ -2,6 +2,8 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Favorite = require('../models/favorite');
+var Watch = require('../models/watch');
+const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
 
 router.use(bodyParser.json());
@@ -30,8 +32,21 @@ router.post('/favorited', authenticate.verifyUser, async (req, res, next) => {
 
 router.post('/addToFavorite', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const favorite = new Favorite({ ...req.body, userFrom: req.user._id });
-    await favorite.save();
+    const userId = req.user._id;
+    const data = { ...req.body, userFrom: userId };
+
+    await moviewatchlist.findOneAndDelete({ movieId: req.body.movieId, userFrom: userId });
+
+    await Favorite.findOneAndUpdate({ movieId: req.body.movieId, userFrom: userId }, data, {
+      upsert: true,
+      new: true,
+    });
+
+    await Watch.findOneAndUpdate({ movieId: req.body.movieId, userFrom: userId }, data, {
+      upsert: true,
+      new: true,
+    });
+
     res.status(200).json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, err });
@@ -40,10 +55,12 @@ router.post('/addToFavorite', authenticate.verifyUser, async (req, res, next) =>
 
 router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const doc = await Favorite.findOneAndDelete({
-      movieId: req.body.movieId,
-      userFrom: req.user._id,
-    });
+    const userId = req.user._id;
+    const query = { movieId: req.body.movieId, userFrom: userId };
+
+    const doc = await Favorite.findOneAndDelete(query);
+    await Watch.findOneAndDelete(query);
+
     res.status(200).json({ success: true, doc });
   } catch (err) {
     res.status(400).json({ success: false, err });

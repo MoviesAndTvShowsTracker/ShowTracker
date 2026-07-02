@@ -7,6 +7,7 @@ import MainImageforDetail from './MainImageforDetail';
 import SimilarMoviesData from './ShowSimilarMovies';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
+import BackNav from '../ui/BackNav';
 
 export default function MovieDetail() {
   const { Id: movieId } = useParams();
@@ -81,6 +82,8 @@ export default function MovieDetail() {
       )}
 
       <div className="mx-auto max-w-content px-4 py-5 sm:px-6 md:py-8">
+        <BackNav fallback="/movies" label="Back to films" className="mb-4 md:hidden" />
+
         {/* Mobile: poster + rating strip */}
         {movie.poster_path && (
           <div className="mb-4 flex gap-3 md:hidden">

@@ -4,6 +4,7 @@ import { Bookmark, CheckCircle2, Heart, List, Search, Sparkles } from 'lucide-re
 import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import PageTitle from '../utils/PageTitle';
 import { useAuth } from '../context/AuthContext';
+import { BRAND_NAME } from '../config/brand';
 import BentoCard from './ui/BentoCard';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
@@ -39,7 +40,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/95 to-canvas/70" />
         <div className="relative mx-auto max-w-content px-4 py-12 sm:px-6 sm:py-16 md:py-20">
           <p className="animate-fade-up text-xs font-bold uppercase tracking-[0.2em] text-accent opacity-0" style={{ animationDelay: '0ms' }}>
-            Your cinema diary
+            Marquee — your watch diary
           </p>
           <h1
             className="animate-fade-up mt-3 max-w-2xl font-serif text-3xl leading-tight text-ink-bright opacity-0 sm:text-4xl md:text-5xl"
@@ -51,7 +52,7 @@ export default function Home() {
             className="animate-fade-up mt-4 max-w-lg text-base leading-relaxed text-muted opacity-0"
             style={{ animationDelay: '160ms' }}
           >
-            ShowTracker is where you track every film and show — mark watched, save favorites, curate watchlists, and discover what&apos;s trending.
+            {BRAND_NAME} is where you track every film and show — mark watched, save favorites, curate watchlists, and discover what&apos;s trending.
           </p>
           {!isAuthenticated ? (
             <div className="animate-fade-up mt-8 flex flex-wrap gap-3 opacity-0" style={{ animationDelay: '240ms' }}>
@@ -179,7 +180,7 @@ export default function Home() {
           <section className="glass-card mt-16 p-8 text-center md:p-12">
             <h2 className="font-serif text-2xl text-ink-bright">Ready to start tracking?</h2>
             <p className="mx-auto mt-3 max-w-md text-muted">
-              Join ShowTracker and turn your watch habits into a beautiful, organized diary.
+              Join {BRAND_NAME} and turn your watch habits into a beautiful, organized diary.
             </p>
             <Link to="/signup" className="btn-primary mt-6">
               Create free account

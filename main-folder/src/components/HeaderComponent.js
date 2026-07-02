@@ -4,7 +4,8 @@ import { Film, Home, LogIn, LogOut, Moon, Search, Sun, Tv, User } from 'lucide-r
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Dialog from './ui/Dialog';
-import logo from '../logo.png';
+import MarqueeLogo from './brand/MarqueeLogo';
+import { BRAND_NAME } from '../config/brand';
 
 const desktopLink = ({ isActive }) =>
   `nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
@@ -33,9 +34,9 @@ export default function Header() {
     <>
       <header className="app-header">
         <div className="mx-auto flex max-w-content items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <NavLink to="/" className="inline-flex shrink-0 items-center gap-2.5 cursor-pointer">
-            <img src={logo} alt="" className="h-7 w-auto" />
-            <span className="text-sm font-bold uppercase tracking-[0.08em] text-ink-bright">ShowTracker</span>
+          <NavLink to="/" className="inline-flex shrink-0 items-center gap-2 cursor-pointer">
+            <MarqueeLogo className="h-8 w-8 shrink-0 text-ink-bright" />
+            <span className="font-serif text-xl font-semibold tracking-tight text-ink-bright">{BRAND_NAME}</span>
           </NavLink>
 
           <div className="flex items-center gap-2">

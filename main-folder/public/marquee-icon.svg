@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <path
     d="M6 15c0-4.8 4.2-8.5 10-8.5s10 3.7 10 8.5v8.5c0 0-4.2-1.8-10-1.8S6 23.5 6 23.5V15z"
-    stroke="currentColor"
+    stroke="#1c1917"
     stroke-width="1.75"
     stroke-linejoin="round"
   />
   <path
     d="M7 15c3.5-3 7-4 9-4s5.5 1 9 4"
-    stroke="currentColor"
+    stroke="#1c1917"
     stroke-width="1.75"
     stroke-linecap="round"
   />

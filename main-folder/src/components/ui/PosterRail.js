@@ -1,17 +1,19 @@
+import { Children } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 export default function PosterRail({ title, actionLabel, actionTo, children, empty }) {
-  if (empty) {
+  const items = Children.toArray(children).filter(Boolean);
+  const isEmpty = items.length === 0;
+
+  if (isEmpty) {
     return (
       <section className="space-y-3">
         <h2 className="section-title">{title}</h2>
-        <p className="text-sm text-muted">{empty}</p>
+        <p className="text-sm text-muted">{empty || 'Nothing here yet.'}</p>
       </section>
     );
   }
-
-  if (!children) return null;
 
   return (
     <section className="space-y-3">
@@ -24,7 +26,7 @@ export default function PosterRail({ title, actionLabel, actionTo, children, emp
           </Link>
         )}
       </div>
-      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">{children}</div>
+      <div className="poster-rail -mx-4 px-4 sm:-mx-0 sm:px-0">{items}</div>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
+import BackNav from '../ui/BackNav';
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
@@ -70,6 +71,8 @@ export default function TvDetail() {
       )}
 
       <div className="mx-auto max-w-content px-4 py-5 sm:px-6 md:py-8">
+        <BackNav fallback="/tv" label="Back to TV" className="mb-4 md:hidden" />
+
         {tvShow.poster_path && (
           <div className="mb-4 flex gap-3 md:hidden">
             <img

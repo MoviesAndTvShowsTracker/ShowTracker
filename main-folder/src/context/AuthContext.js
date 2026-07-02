@@ -23,15 +23,31 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    const onSessionExpired = () => setUser(null);
+    window.addEventListener('auth:session-expired', onSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', onSessionExpired);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('userId');
     const username = localStorage.getItem('username');
 
-    if (token && userId) {
-      setUser({ id: userId, token, username: username || '' });
+    if (!token || !userId) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  }, []);
+
+    api
+      .get(`/users/getUser/${userId}`)
+      .then(() => {
+        setUser({ id: userId, token, username: username || '' });
+      })
+      .catch(() => {
+        clearSession();
+      })
+      .finally(() => setLoading(false));
+  }, [clearSession]);
 
   const login = async (credentials) => {
     try {
@@ -51,7 +67,10 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.err?.message || error.message || 'Login failed',
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.err?.message ||
+          'Invalid username or password',
       };
     }
   };
