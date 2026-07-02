@@ -4,27 +4,45 @@ var router = express.Router();
 var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
+const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
 
 router.use(bodyParser.json());
+
+function signupErrorMessage(err) {
+  if (err?.name === 'UserExistsError') {
+    return 'That username is already taken.';
+  }
+  if (err?.code === 11000) {
+    if (err.keyPattern?.email) return 'That email is already registered.';
+    if (err.keyPattern?.username) return 'That username is already taken.';
+  }
+  return err?.message || 'Registration failed.';
+}
 
 router.get('/', function(req, res, next) {
   res.send('respond with a resource');
 });
 
 router.post('/signup', (req, res, next) => {
+  const { username, email, password } = req.body;
+  if (!username?.trim() || !email?.trim() || !password) {
+    return res.status(400).json({ success: false, message: 'Username, email, and password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+  }
+
   User.register(
     new User({
-      username: req.body.username,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email,
+      username: username.trim(),
+      email: email.trim(),
     }),
-    req.body.password,
+    password,
     (err, user) => {
       if (err) {
-        res.statusCode = 500;
+        res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
-        return res.json({ err: err });
+        return res.json({ success: false, err: signupErrorMessage(err) });
       }
 
       passport.authenticate('local')(req, res, () => {
@@ -37,6 +55,32 @@ router.post('/signup', (req, res, next) => {
       });
     }
   );
+});
+
+router.post('/google', async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'Missing Google sign-in token.' });
+    }
+
+    const payload = await verifyGoogleIdToken(idToken);
+    const user = await findOrCreateGoogleUser(payload);
+    const token = authenticate.getToken({ _id: user._id });
+
+    return res.status(200).json({
+      success: true,
+      token,
+      userId: user._id,
+      username: user.username,
+      message: 'Signed in with Google.',
+    });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ success: false, message: err.message });
+    }
+    return next(err);
+  }
 });
 
 router.post('/login', (req, res, next) => {
@@ -97,8 +141,8 @@ router.post('/updateOrAddPhone', authenticate.verifyUser, async (req, res, next)
 router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) => {
   try {
     const { firstName, lastName, email, phonenumber } = req.body;
-    if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
-      return res.status(400).json({ success: false, message: 'First name, last name, and email are required.' });
+    if (!email?.trim()) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
     const emailTaken = await User.findOne({
@@ -117,8 +161,8 @@ router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) =>
     const updated = await User.findByIdAndUpdate(
       req.user._id,
       {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || '',
         email: email.trim(),
         phonenumber: phone || '',
       },

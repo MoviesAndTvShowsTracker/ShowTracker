@@ -10,7 +10,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const url = config.url || '';
-    const isAuthRoute = url.includes('/users/login') || url.includes('/users/signup');
+    const isAuthRoute =
+      url.includes('/users/login') ||
+      url.includes('/users/signup') ||
+      url.includes('/users/google');
     const token = localStorage.getItem('token');
     if (token && !isAuthRoute) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -29,7 +32,10 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = error.config?.url || '';
     const hadToken = Boolean(localStorage.getItem('token'));
-    const isAuthRoute = url.includes('/users/login') || url.includes('/users/signup');
+    const isAuthRoute =
+      url.includes('/users/login') ||
+      url.includes('/users/signup') ||
+      url.includes('/users/google');
 
     if (status === 401 && hadToken && !isAuthRoute) {
       localStorage.removeItem('token');

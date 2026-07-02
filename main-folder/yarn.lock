@@ -1619,6 +1619,11 @@
     schema-utils "^4.2.0"
     source-map "^0.7.3"
 
+"@react-oauth/google@^0.13.5":
+  version "0.13.5"
+  resolved "https://registry.npmjs.org/@react-oauth/google/-/google-0.13.5.tgz"
+  integrity sha512-xQWri2s/3nNekZJ4uuov2aAfQYu83bN3864KcFqw2pK1nNbFurQIjPFDXhWaKH3IjYJ2r/9yyIIpsn5lMqrheQ==
+
 "@remix-run/router@1.23.3":
   version "1.23.3"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.23.3.tgz"
@@ -8019,7 +8024,7 @@ react-dev-utils@^12.0.1:
     strip-ansi "^6.0.1"
     text-table "^0.2.0"
 
-react-dom@*, react-dom@^18.3.1, react-dom@>=16.8:
+react-dom@*, react-dom@^18.3.1, react-dom@>=16.8, react-dom@>=16.8.0:
   version "18.3.1"
   resolved "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
   integrity sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==
@@ -8127,7 +8132,7 @@ react-scripts@^5.0.1:
   optionalDependencies:
     fsevents "^2.3.2"
 
-react@*, "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", react@^18.3.1, "react@>= 16", react@>=16.8:
+react@*, "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", react@^18.3.1, "react@>= 16", react@>=16.8, react@>=16.8.0:
   version "18.3.1"
   resolved "https://registry.npmjs.org/react/-/react-18.3.1.tgz"
   integrity sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==

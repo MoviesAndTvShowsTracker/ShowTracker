@@ -51,8 +51,8 @@ export default function Settings() {
     setProfileError('');
     setProfileMessage('');
 
-    if (!profile.firstName.trim() || !profile.lastName.trim() || !profile.email.trim()) {
-      setProfileError('First name, last name, and email are required.');
+    if (!profile.email.trim()) {
+      setProfileError('Email is required.');
       return;
     }
     if (profile.phonenumber && !/^\d{10}$/.test(profile.phonenumber)) {

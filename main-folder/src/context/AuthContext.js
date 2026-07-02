@@ -81,11 +81,16 @@ export const AuthProvider = ({ children }) => {
       if (response.data.status === 200) {
         return { success: true };
       }
-      return { success: false, message: response.data.err || 'Registration failed' };
+      return { success: false, message: response.data.err || response.data.message || 'Registration failed' };
     } catch (error) {
+      const data = error.response?.data;
       return {
         success: false,
-        message: error.response?.data?.err?.message || error.message || 'Registration failed',
+        message:
+          (typeof data?.err === 'string' ? data.err : data?.err?.message) ||
+          data?.message ||
+          error.message ||
+          'Registration failed',
       };
     }
   };
@@ -100,11 +105,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const response = await api.post('/users/google', { idToken });
+      if (response.data.success && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userId', response.data.userId);
+        localStorage.setItem('username', response.data.username);
+        setUser({
+          id: response.data.userId,
+          token: response.data.token,
+          username: response.data.username,
+        });
+        return { success: true };
+      }
+      return { success: false, message: response.data.message || 'Google sign-in failed' };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Google sign-in failed',
+      };
+    }
+  };
+
   const value = {
     user,
     loading,
     isAuthenticated: Boolean(user),
     login,
+    loginWithGoogle,
     register,
     logout,
   };

@@ -5,16 +5,31 @@ import { useAuth } from '../context/AuthContext';
 import BackNav from './ui/BackNav';
 import MarqueeLogo from './brand/MarqueeLogo';
 import { BRAND_NAME } from '../config/brand';
+import GoogleSignInButton from './auth/GoogleSignInButton';
 
 export default function Signin() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/home" replace />;
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('Google sign-in failed. Try again.');
+      return;
+    }
+    setError('');
+    setGoogleSubmitting(true);
+    const result = await loginWithGoogle(credentialResponse.credential);
+    setGoogleSubmitting(false);
+    if (result.success) navigate('/home');
+    else setError(result.message || 'Google sign-in failed');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +60,12 @@ export default function Signin() {
         </p>
 
         <div className="auth-card mt-8">
+          <GoogleSignInButton
+            mode="signin"
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in failed. Try again.')}
+          />
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="username" className="section-title mb-2 block normal-case tracking-wide">
@@ -56,6 +77,7 @@ export default function Signin() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                disabled={googleSubmitting}
               />
             </div>
             <div>
@@ -69,10 +91,15 @@ export default function Signin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                disabled={googleSubmitting}
               />
             </div>
             {error && <p className="text-sm text-red-400">{error}</p>}
-            <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={submitting || googleSubmitting}
+              className="btn-primary w-full disabled:opacity-50"
+            >
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
