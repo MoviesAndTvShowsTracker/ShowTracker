@@ -20,7 +20,12 @@ var FavoriteTv = new Schema({
     },
     tvRuntime: {
         type: Array
+    },
+    favoritedAt: {
+        type: Date
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('FavoriteTv', FavoriteTv);

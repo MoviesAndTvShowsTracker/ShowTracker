@@ -1,149 +1,89 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { Bookmark, Check, Heart } from 'lucide-react';
+import api from '../../api/axios';
+import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 
-function Favorite(props) {
+export default function Favorite({ movieId, movieInfo }) {
+  const [favoriteNumber, setFavoriteNumber] = useState(0);
+  const [favorited, setFavorited] = useState(false);
+  const [watched, setWatched] = useState(false);
+  const [watchlisted, setWatchlisted] = useState(false);
 
-    const [FavoriteNumber, setFavoriteNumber] = useState(0);
-    const [Favorited, setFavorited] = useState(false);
-    const [Watched, setWatched] = useState(false);
-    const [Watchlisted, setWatchlisted] = useState(false)
+  const payload = {
+    movieId,
+    movieTitle: movieInfo.title,
+    movieImage: movieInfo.backdrop_path,
+    moviePosterImage: movieInfo.poster_path,
+    movieRuntime: movieInfo.runtime,
+  };
 
-    const variable = {
-        userFrom: props.userFrom,
-        movieId: props.movieId,
-        movieTitle: props.movieInfo.title,
-        movieImage: props.movieInfo.backdrop_path,
-        moviePosterImage: props.movieInfo.poster_path,
-        movieRuntime: props.movieInfo.runtime
-    }
+  useEffect(() => {
+    api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {
+      if (r.data.success) setFavoriteNumber(r.data.favoriteNumber);
+    });
+    api.post('/api/favorite/favorited', { movieId }).then((fav) => {
+      if (fav.data.success) setFavorited(fav.data.favorited);
+    });
+    api.post('/api/watch/watched', { movieId }).then((watch) => {
+      if (watch.data.success) setWatched(watch.data.watched);
+    });
+    api.post('/api/watchlist/watchlisted', { movieId }).then((r) => {
+      if (r.data.success) setWatchlisted(r.data.watchlisted);
+    });
+  }, [movieId]);
 
-    useEffect(() => {
+  const toggleFavorite = () => {
+    const endpoint = favorited ? '/api/favorite/removeFromFavorite' : '/api/favorite/addToFavorite';
+    api.post(endpoint, payload).then((r) => {
+      if (r.data.success) {
+        setFavoriteNumber(favorited ? favoriteNumber - 1 : favoriteNumber + 1);
+        setFavorited(!favorited);
+      }
+    });
+  };
 
-        axios.post('http://localhost:5000/api/favorite/favoriteNumber', variable)
-        .then(response => {
-            if(response.data.success) {
-                setFavoriteNumber(response.data.favoriteNumber);
-            }
-            else {
-                alert('Failed to perform operation')
-            }
-        })
+  const toggleWatched = () => {
+    const endpoint = watched ? '/api/watch/removeFromWatched' : '/api/watch/addToWatch';
+    api.post(endpoint, payload).then((r) => {
+      if (r.data.success) setWatched(!watched);
+    });
+  };
 
-        axios.post('http://localhost:5000/api/favorite/favorited', variable)
-        .then(response => {
-            if(response.data.success) {
-                setFavorited(response.data.favorited);
-            }
-            else {
-                alert('Failed to perform operation');
-            }
-        })
+  const toggleWatchlist = () => {
+    const endpoint = watchlisted
+      ? '/api/watchlist/removeFromWatchlist'
+      : '/api/watchlist/addToWatchlist';
+    api.post(endpoint, payload).then((r) => {
+      if (r.data.success) setWatchlisted(!watchlisted);
+    });
+  };
 
-        axios.post('http://localhost:5000/api/watch/watched', variable)
-        .then(response => {
-            if(response.data.success) {
-                setWatched(response.data.watched);
-            }
-            else {
-                alert('Failed to perform operation');
-            }
-        })
-
-        axios.post('http://localhost:5000/api/watchlist/watchlisted', variable)
-        .then(response => {
-            if(response.data.success) {
-                setWatchlisted(response.data.watchlisted);
-            }
-            else {
-                alert('Failed to perform operation');
-            }
-        })
-    }, [Watched])
-
-    const onClickFavorite = () => {
-        if(Favorited) {
-            axios.post('http://localhost:5000/api/favorite/removeFromFavorite', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setFavoriteNumber(FavoriteNumber - 1);
-                    setFavorited(!Favorited);
-                }
-                else {
-                    alert('Failed to remove from Favorites');
-                }
-            })
-        }
-        else {
-            axios.post('http://localhost:5000/api/favorite/addToFavorite', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setFavoriteNumber(FavoriteNumber + 1);
-                    setFavorited(!Favorited);
-                }
-                else {
-                    alert('Failed to add to Favorites');
-                }
-            })
-        }
-    }
-
-    const onClickWatched = () => {
-        if(Watched) {
-            axios.post('http://localhost:5000/api/watch/removeFromWatched', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatched(!Watched);
-                }
-                else {
-                    alert('Failed to remove from Watched');
-                }
-            })
-        }
-        else {
-            axios.post('http://localhost:5000/api/watch/addToWatch', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatched(!Watched);
-                }
-                else {
-                    alert('Failed to add to Watched');
-                }
-            })
-        }
-    }
-
-    const onClickWatchlist = () => {
-        if(Watchlisted) {
-            axios.post('http://localhost:5000/api/watchlist/removeFromWatchlist', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatchlisted(!Watchlisted);
-                }
-                else {
-                    alert('Failed to remove from Watchlist');
-                }
-            })
-        }
-        else {
-            axios.post('http://localhost:5000/api/watchlist/addToWatchlist', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatchlisted(!Watchlisted);
-                }
-                else {
-                    alert('Failed to add to Watchlisted');
-                }
-            })
-        }
-    }
-
-    return (
-        <div>
-            <button className="btn btn-primary" onClick={onClickFavorite}> {Favorited ? "Remove from Favorites" : "Add to Favorites"} <span className="badge badge-light"> {FavoriteNumber} </span></button>
-            <button className={Watched ? "btn btn-success ml-3" : "btn btn-primary ml-3"}  onClick={onClickWatched}> {Watched ? "Watched!" : "Watched?"} </button>
-            {!Watched && <button className={Watchlisted ? "btn btn-danger ml-3" : "btn btn-primary ml-3"} onClick={onClickWatchlist}>{Watchlisted ? 'Remove from Watchlist' : 'Add to Watchlist'}</button>}
-        </div>
-    )
+  return (
+    <ActionStrip columns={watched ? 2 : 3}>
+      <ActionButton
+        active={favorited}
+        onClick={toggleFavorite}
+        icon={Heart}
+        label={favorited ? 'Favorited' : 'Favorite'}
+        compactLabel="Favorite"
+        badge={favoriteNumber}
+      />
+      <ActionButton
+        active={watched}
+        onClick={toggleWatched}
+        icon={Check}
+        label={watched ? 'Watched' : 'Mark watched'}
+        compactLabel="Watched"
+      />
+      {!watched && (
+        <ActionButton
+          active={watchlisted}
+          onClick={toggleWatchlist}
+          icon={Bookmark}
+          label={watchlisted ? 'On watchlist' : 'Watchlist'}
+          compactLabel="List"
+        />
+      )}
+    </ActionStrip>
+  );
 }
-
-export default Favorite;

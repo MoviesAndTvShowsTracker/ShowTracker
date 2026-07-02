@@ -1,90 +1,90 @@
+require('dotenv').config();
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const mongoose = require('mongoose');
-var session = require('express-session');
-var FileStore = require('session-file-store')(session);
 var passport = require('passport');
-var authenticate = require('./authenticate');
+require('./authenticate');
 const favorite = require('./routes/favorites');
 const watch = require('./routes/watch');
 const favoritefortv = require('./routes/favoritefortv');
 const moviewatchlist = require('./routes/moviewatchlist');
 const tvwatchlist = require('./routes/tvwatchlist');
+const tvwatch = require('./routes/tvwatch');
+const tvtracking = require('./routes/tvtracking');
+const tvepisodes = require('./routes/tvepisodes');
+const importRouter = require('./routes/import');
 
 const url = config.mongoURL;
-const connect = mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true});
-mongoose.set('useCreateIndex', true);
-
-connect.then( (db) => {
-  console.log("mongo connection successful");
-}, (err) => { console.log("no connection to mongodb"); });
+mongoose
+  .connect(url)
+  .then(() => console.log('mongo connection successful'))
+  .catch((err) => console.log('no connection to mongodb', err.message));
 
 var app = express();
 
 var cors = require('cors');
-var bodyParser = require('body-parser');
 
-app.use(bodyParser.json());
+function parseCorsOrigins() {
+  const raw = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '';
+  const fromEnv = raw
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (fromEnv.length) return fromEnv;
+  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
+}
 
-app.use(cors({
-    origin      : 'http://localhost:3000',
-    credentials : true
-}));
-app.use(function(req,res,next){
-    res.setHeader('Access-Control-Allow-Origin','http://localhost:3000'),
-    res.setHeader('Access-Control-Allow-Credentials', 'true'),
-    res.setHeader('Access-Control-Allow-Methods','GET,HEAD,OPTIONS,POST,PUT,DELETE'),
-    res.setHeader('Access-Control-Allow-Headers','Access-Control-Allow-Headers,Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers'),
-    res.setHeader('Cache-Control','no-cache'), 
-    
-    next()
-});
+const corsOptions = {
+  origin: parseCorsOrigins(),
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+};
 
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
+// CORS must run before any routes or body parsers so preflight OPTIONS succeeds
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-
 app.use(passport.initialize());
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, service: 'marquee-api' });
+});
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/api/tv/favorite', favoritefortv);
-app.use('/api/tv/watchlist', tvwatchlist)
+app.use('/api/tv/watchlist', tvwatchlist);
+app.use('/api/tv/watch', tvwatch);
+app.use('/api/tv/tracking', tvtracking);
+app.use('/api/tv/episodes', tvepisodes);
 app.use('/api/favorite', favorite);
 app.use('/api/watch', watch);
-app.use('/api/watchlist', moviewatchlist)
+app.use('/api/watchlist', moviewatchlist);
+app.use('/api/import', importRouter);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
+app.use(function (err, req, res, next) {
   res.status(err.status || 500);
-  res.render('error');
+  if (req.path.startsWith('/users') || req.path.startsWith('/api')) {
+    return res.json({ success: false, message: err.message });
+  }
+  res.json({ success: false, message: err.message });
 });
 
 module.exports = app;

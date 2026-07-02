@@ -1,194 +1,117 @@
-import React, { Component } from 'react';
-import { Link, Redirect } from 'react-router-dom';
-import Fade from 'react-reveal/Fade';
+import { useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import PageTitle from '../utils/PageTitle';
+import { useAuth } from '../context/AuthContext';
+import BackNav from './ui/BackNav';
+import MarqueeLogo from './brand/MarqueeLogo';
+import { BRAND_NAME } from '../config/brand';
+import GoogleSignInButton from './auth/GoogleSignInButton';
 
-import axios from 'axios';
-import swal from 'sweetalert';
-import { Helmet } from 'react-helmet';
+export default function Signin() {
+  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
-const formValid = ({ formErrors, ...rest }) => {
-  let valid = true;
+  if (isAuthenticated) return <Navigate to="/home" replace />;
 
-  // validate form errors being empty
-  Object.values(formErrors).forEach(val => {
-    val.length > 0 && (valid = false);
-  });
-
-  // validate the form was filled out
-  Object.values(rest).forEach(val => {
-    val === null && (valid = false);
-  });
-
-  return valid;
-};
-
-class Signin extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      username: "",
-      password: "",
-      successFlag : false ,
-      userName: "",
-      formErrors: {
-        username: "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: ""
-      }
-    };
-
-    this.handleChange = this.handleChange.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  componentDidMount() {
-    if (localStorage.getItem("user") !== null) {
-        return this.props.history.goBack();
-     }
-   }
-
-  handleSubmit = e => {
-    e.preventDefault();
-   
-    if (formValid(this.state) && this.state.username && this.state.password) {
-
-      var data = {
-        username : this.state.username,
-        password : this.state.password,
-      }
-
-      this.setState({
-        username: "",
-        password: "",
-        userName: this.state.username
-     });
-
-      axios.defaults.withCredentials = true;
-      axios.post('http://localhost:5000/users/login', data)
-      .then(res => {
-        console.log("Sent from back-end : " , res.data.status , "    "  , res.data.token);
-
-        if(res.data.status === 200) {
-          localStorage.setItem('myuser', this.state.userName);
-          localStorage.setItem("user",res.data.token);
-          localStorage.setItem('userId', res.data.userId);
-          alert("Successfully logged in");         
-          this.setState({
-            successFlag: true
-          });
-        }
-      })
-    } 
-    else {
-      swal("Fill up the detais first", "", "warning",  {
-        buttons: {
-            sure: {
-              text: "Okay",
-              className: "swal-confirm"
-            }
-          }
-        });
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('Google sign-in failed. Try again.');
+      return;
     }
-  }
-
-  handleChange = e => {
-    e.preventDefault();
-    const { name, value } = e.target;
-    let formErrors = { ...this.state.formErrors };
-
-    switch (name) {
-      case "username":
-        formErrors.username =
-          value.length < 3 ? "minimum 3 characaters required" : "";
-        break;
-
-      case "password":
-        formErrors.password =
-          value.length < 6 ? "minimum 6 characaters required" : "";
-        break;
-      default:
-        break;
-    }
-
-    this.setState({ formErrors, [name]: value });
+    setError('');
+    setGoogleSubmitting(true);
+    const result = await loginWithGoogle(credentialResponse.credential);
+    setGoogleSubmitting(false);
+    if (result.success) navigate('/home');
+    else setError(result.message || 'Google sign-in failed');
   };
 
-    render() {
-        var redirectVar = null;
-
-        if(this.state.successFlag){
-            return(
-              <Redirect to="/profile" />
-              );  
-        }
-        
-        const { formErrors } = this.state;
-
-        return (
-          <>
-          <Helmet>
-            <title>Login</title>
-          </Helmet>
-          <div className="wrapper row m-0">
-            <div>
-              {/* Breadcrumbs */}
-              <nav aria-label="breadcrumb" className="position-absolute" style={{top: '2rem', right: '2rem'}}>
-                        <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
-                            <li className="breadcrumb-item active" aria-current="page">Sign-in</li>
-                        </ol>
-              </nav>
-            </div>
-          <div className="form-wrapper col-lg-4">
-            {redirectVar}
-
-            <h1 className="font-weight-lighter" style={{color: "black"}}> Login</h1>
-            <form onSubmit={this.handleSubmit} noValidate>
-              
-              <div className="email">
-                <label htmlFor="username">Username</label>
-                <input
-                  className={formErrors.username.length > 0 ? "error" : null}
-                  placeholder="Username"
-                  type="text"
-                  name="username"
-                  value={this.state.username}
-                  noValidate
-                  onChange={this.handleChange}
-                />
-                {formErrors.username.length > 0 && (
-                  <Fade bottom collapse><span className="errorMessage">{formErrors.username}</span></Fade>
-                )}
-              </div>
-              <div className="password">
-                <label htmlFor="password">Password</label>
-                <input
-                  className={formErrors.password.length > 0 ? "error" : null}
-                  placeholder="Password"
-                  type="password"
-                  name="password"
-                  value={this.state.password}
-                  noValidate
-                  onChange={this.handleChange}
-                  autoComplete= "on"
-                />
-                {formErrors.password.length > 0 && (
-                  <Fade bottom collapse><span className="errorMessage">{formErrors.password}</span></Fade>
-                )}
-              </div>
-              <div className="createAccount">
-                <button type="submit" onClick = { this.handleSubmit } >Login</button>
-                <small><Link to= '/signup'> Don't have an account? </Link></small>
-              </div>
-            </form>
-          </div>
-        </div>
-        </>
-        );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError('Please enter your username and password.');
+      return;
     }
-}
+    setSubmitting(true);
+    const result = await login({ username, password });
+    setSubmitting(false);
+    if (result.success) navigate('/home');
+    else setError(result.message || 'Sign in failed');
+  };
 
-export default Signin;
+  return (
+    <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
+      <PageTitle title="Sign in" />
+      <div className="mx-auto max-w-md">
+        <BackNav fallback="/" label="Back to home" className="mb-6" />
+        <div className="mb-5 flex items-center gap-2.5">
+          <MarqueeLogo className="h-9 w-9 text-ink-bright" />
+          <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Welcome back</p>
+        <h1 className="page-title mt-2">Sign in to your diary</h1>
+        <p className="mt-2 text-sm text-muted">
+          Access your watched list, favorites, and watchlists.
+        </p>
+
+        <div className="auth-card mt-8">
+          <GoogleSignInButton
+            mode="signin"
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in failed. Try again.')}
+          />
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="username" className="section-title mb-2 block normal-case tracking-wide">
+                Username
+              </label>
+              <input
+                id="username"
+                className="input-field"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                disabled={googleSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="section-title mb-2 block normal-case tracking-wide">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="input-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={googleSubmitting}
+              />
+            </div>
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting || googleSubmitting}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {submitting ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-muted">
+          New here?{' '}
+          <Link to="/signup" className="font-semibold text-link hover:text-ink-bright cursor-pointer">
+            Create a free account
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}

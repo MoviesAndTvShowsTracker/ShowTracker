@@ -1,255 +1,125 @@
-import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import PageTitle from '../utils/PageTitle';
+import { useAuth } from '../context/AuthContext';
+import { BRAND_NAME } from '../config/brand';
+import BackNav from './ui/BackNav';
+import MarqueeLogo from './brand/MarqueeLogo';
+import GoogleSignInButton from './auth/GoogleSignInButton';
 
-import axios from 'axios';
-import Signin from './SigninComponent';
-import swal from 'sweetalert';
-import { Helmet } from 'react-helmet';
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const emailRegex = RegExp(
-  /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-);
-
-const formValid = ({ formErrors, ...rest }) => {
-  let valid = true;
-
-  // validate form errors being empty
-  Object.values(formErrors).forEach(val => {
-    val.length > 0 && (valid = false);
+export default function Signup() {
+  const { register, loginWithGoogle, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
   });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
-  // validate the form was filled out
-  Object.values(rest).forEach(val => {
-    val === null && (valid = false);
-  });
+  if (isAuthenticated) return <Navigate to="/home" replace />;
+  if (success) return <Navigate to="/login" replace />;
 
-  return valid;
-};
-
-class Signup extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      username: "",
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      successFlag: false,
-      formErrors: {
-        username:"",
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: ""
-      }
-    };
-
-    this.handleChange = this.handleChange.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  handleSubmit = e => {
-    e.preventDefault();
-    {/* isempty checks if all field contain value */}
-    const isempty = this.state.username && this.state.firstName && this.state.lastName && this.state.email && this.state.password
-    if (formValid(this.state) && isempty) {
-
-      var data = {
-        username: this.state.username,
-        firstName: this.state.firstName,
-        lastName: this.state.lastName,
-        email: this.state.email,
-        password: this.state.password
-      }
-
-      this.setState({
-        username:"",
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "" 
-      });
-      
-      axios.defaults.withCredentials = true;
-        axios.post('http://localhost:5000/users/signup', data)
-         .then(res => {
-            console.log("From Back-end : " + res.data.status);
-            
-            if(res.data.status === 200){
-              this.setState({
-                  successFlag: true
-              })
-              alert("Registration Successful!");
-            }
-        })
-    } 
-    else {
-      swal("Fill up the detais first", "", "warning",  {
-        buttons: {
-            sure: {
-              text: "Okay",
-              className: "swal-confirm"
-            }
-          }
-        });
-      }
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('Google sign-in failed. Try again.');
+      return;
+    }
+    setError('');
+    setGoogleSubmitting(true);
+    const result = await loginWithGoogle(credentialResponse.credential);
+    setGoogleSubmitting(false);
+    if (result.success) navigate('/home');
+    else setError(result.message || 'Google sign-in failed');
   };
 
-  handleChange = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { name, value } = e.target;
-    let formErrors = { ...this.state.formErrors };
-
-    switch (name) {
-      case "username":
-        formErrors.username =
-          value.length < 3 ? "minimum 3 characaters required" : "";
-        break;
-      case "firstName":
-        formErrors.firstName =
-          value.length < 3 ? "minimum 3 characaters required" : "";
-        break;
-      case "lastName":
-        formErrors.lastName =
-          value.length < 3 ? "minimum 3 characaters required" : "";
-        break;
-      case "email":
-        formErrors.email = emailRegex.test(value)
-          ? ""
-          : "invalid email address";
-        break;
-      case "password":
-        formErrors.password =
-          value.length < 6 ? "minimum 6 characaters required" : "";
-        break;
-      default:
-        break;
+    if (!form.username.trim() || !emailRegex.test(form.email) || form.password.length < 6) {
+      setError('Enter a username, valid email, and password (min. 6 characters).');
+      return;
     }
-
-    this.setState({ formErrors, [name]: value });
+    setSubmitting(true);
+    const result = await register({
+      username: form.username.trim(),
+      email: form.email.trim(),
+      password: form.password,
+    });
+    setSubmitting(false);
+    if (result.success) setSuccess(true);
+    else setError(result.message || 'Registration failed');
   };
 
-  componentDidMount() {
-    if (localStorage.getItem("user") != null) {
-        return this.props.history.goBack();
-     }
-   }
+  const fields = [
+    { name: 'username', label: 'Username' },
+    { name: 'email', label: 'Email', type: 'email' },
+    { name: 'password', label: 'Password', type: 'password' },
+  ];
 
-  render() {
-    var redirectVar = null;
+  return (
+    <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
+      <PageTitle title="Create account" />
+      <div className="mx-auto max-w-md">
+        <BackNav fallback="/" label="Back to home" className="mb-6" />
+        <div className="mb-5 flex items-center gap-2.5">
+          <MarqueeLogo className="h-9 w-9 text-ink-bright" />
+          <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Join {BRAND_NAME}</p>
+        <h1 className="page-title mt-2">Start your watch diary</h1>
+        <p className="mt-2 text-sm text-muted">
+          Track films, save favorites, and build watchlists — free forever.
+        </p>
 
-    if(this.state.successFlag){
-      return <Signin />
-    }
-    const { formErrors } = this.state;
+        <div className="auth-card mt-8">
+          <GoogleSignInButton
+            mode="signup"
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in failed. Try again.')}
+          />
 
-    return (
-      <>
-      <Helmet>
-            <title>Create an account</title>
-      </Helmet>
-      <div className="wrapper">
-          {/* Breadcrumbs */}
-          <nav aria-label="breadcrumb" className="position-absolute" style={{top: '2rem', right: '2rem'}}>
-              <ol className="breadcrumb">
-                  <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
-                  <li className="breadcrumb-item active" aria-current="page">Sign-up</li>
-              </ol>
-          </nav>
-        <div className="form-wrapper col-sm-6 col-md-4">
-          {redirectVar}
-          
-          <h1 style={{color: "black"}}>Create Account</h1>
-
-          <form onSubmit={this.handleSubmit} noValidate>
-          <div className="email">
-              <label htmlFor="username">Username</label>
-              <input
-                className={formErrors.username.length > 0 ? "error" : null}
-                placeholder="Username"
-                type="text"
-                name="username"
-                value={this.state.username}
-                noValidate
-                onChange={this.handleChange}
-              />
-              {formErrors.username.length > 0 && (
-                <span className="errorMessage">{formErrors.username}</span>
-              )}
-            </div>
-            <div className="firstName">
-              <label htmlFor="firstName">First Name</label>
-              <input
-                className={formErrors.firstName.length > 0 ? "error" : null}
-                placeholder="First Name"
-                type="text"
-                name="firstName"
-                value={this.state.firstName}
-                noValidate
-                onChange={this.handleChange}
-              />
-              {formErrors.firstName.length > 0 && (
-                <span className="errorMessage">{formErrors.firstName}</span>
-              )}
-            </div>
-            <div className="email">
-              <label htmlFor="lastName">Last Name</label>
-              <input
-                className={formErrors.lastName.length > 0 ? "error" : null}
-                placeholder="Last Name"
-                type="text"
-                name="lastName"
-                value={this.state.lastName}
-                noValidate
-                onChange={this.handleChange}
-              />
-              {formErrors.lastName.length > 0 && (
-                <span className="errorMessage">{formErrors.lastName}</span>
-              )}
-            </div>
-            <div className="email">
-              <label htmlFor="email">Email</label>
-              <input
-                className={formErrors.email.length > 0 ? "error" : null}
-                placeholder="Email"
-                type="email"
-                name="email"
-                value={this.state.email}
-                noValidate
-                onChange={this.handleChange}
-              />
-              {formErrors.email.length > 0 && (
-                <span className="errorMessage">{formErrors.email}</span>
-              )}
-            </div>
-            <div className="password">
-              <label htmlFor="password">Password</label>
-              <input
-                className={formErrors.password.length > 0 ? "error" : null}
-                placeholder="Password"
-                type="password"
-                name="password"
-                value={this.state.password}
-                noValidate
-                onChange={this.handleChange}
-                autoComplete="on"
-              />
-              {formErrors.password.length > 0 && (
-                <span className="errorMessage">{formErrors.password}</span>
-              )}
-            </div>
-            <div className="createAccount">
-              <button type="submit" onClick = { this.handleSubmit } >Create Account</button>
-              <small><Link to= '/login'> Already Have an Account? </Link></small>
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {fields.map(({ name, label, type = 'text' }) => (
+              <div key={name}>
+                <label htmlFor={name} className="section-title mb-2 block normal-case tracking-wide">
+                  {label}
+                </label>
+                <input
+                  id={name}
+                  type={type}
+                  className="input-field"
+                  value={form[name]}
+                  onChange={(e) => setForm((p) => ({ ...p, [name]: e.target.value }))}
+                  autoComplete={
+                    name === 'username' ? 'username' : name === 'email' ? 'email' : 'new-password'
+                  }
+                  disabled={googleSubmitting}
+                />
+              </div>
+            ))}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting || googleSubmitting}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {submitting ? 'Creating account…' : 'Create account'}
+            </button>
           </form>
         </div>
-      </div>
-      </>
-    );
-  }
-}
 
-export default Signup;
+        <p className="mt-6 text-center text-sm text-muted">
+          Already tracking?{' '}
+          <Link to="/login" className="font-semibold text-link hover:text-ink-bright cursor-pointer">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}

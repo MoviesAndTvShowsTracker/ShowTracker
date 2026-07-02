@@ -4,7 +4,9 @@
 
 - To start the project just go to backend-server and do `npm start`. It'll run both `client(main-folder)` and `server(backend-server)`.
 
-- Client is on `localhost:3000` and server is at `localhost:5000`.
+- Client is on `localhost:3000` and the API on `localhost:5001` (set in `backend-server/.env` as `PORT=5001`).
+
+- macOS reserves port **5000** for AirPlay Receiver (`ControlCenter`) — that is not this app. If you want the API on 5000, disable AirPlay Receiver in System Settings → General → AirDrop & Handoff, set `PORT=5000` in `backend-server/.env`, and set `REACT_APP_API_URL=http://localhost:5000` in `main-folder/.env.development`.
 
 - Use Yarn if possible.
 ```

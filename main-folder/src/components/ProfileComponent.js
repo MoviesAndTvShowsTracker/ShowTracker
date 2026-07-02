@@ -1,479 +1,409 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { IMAGE_URL } from '../config/keys';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import swal from 'sweetalert';
-import Fade from 'react-reveal/Fade';
-import { Helmet } from 'react-helmet';
+import { Pencil, Phone, Settings } from 'lucide-react';
+import api from '../api/axios';
+import { IMAGE_URL } from '../config/keys';
+import { profileListPath } from '../config/profileLists';
+import { useAuth } from '../context/AuthContext';
+import PageTitle from '../utils/PageTitle';
+import Dialog from './ui/Dialog';
+import PosterRail from './ui/PosterRail';
+import PosterTile from './ui/PosterTile';
+import ProfileEmptyState from './profile/ProfileEmptyState';
+import ProfileStats from './profile/ProfileStats';
+import BackNav from './ui/BackNav';
 
-const Profile = (props) => {
+const emptyFilm = (browse) => (
+  <>
+    Nothing here yet.{' '}
+    <Link to="/movies" className="text-link hover:text-ink-bright cursor-pointer">
+      {browse}
+    </Link>
+  </>
+);
 
-  const variable = { userFrom: localStorage.getItem('userId') }
-  const [FavoritedMovies, setFavoritedMovies] = useState([]);
-  const [FavoritedShows, setFavoritedShows] = useState([]);
-  const [WatchedMovies, setWatchedMovies] = useState([]);
-  const [UserInfo, setUserInfo] = useState([]);
-  const [modal, setModal] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-  const [LoadMoreToggle, setLoadMoreToggle] = useState(false);
-  const [MovieWatchlist, setMovieWatchlist] = useState([]);
-  const [TvWatchlist, setTvWatchlist] = useState([]);
+const emptyTv = (browse) => (
+  <>
+    Nothing here yet.{' '}
+    <Link to="/tv" className="text-link hover:text-ink-bright cursor-pointer">
+      {browse}
+    </Link>
+  </>
+);
 
-  {/*adding or updating phone Number functions*/}
-  const onChangeHandler = event => {
-    setInputValue(event.target.value);
-  };
+export default function Profile() {
+  const { user } = useAuth();
+  const [favoritedMovies, setFavoritedMovies] = useState([]);
+  const [favoritedShows, setFavoritedShows] = useState([]);
+  const [watchedMovies, setWatchedMovies] = useState([]);
+  const [watchedShows, setWatchedShows] = useState([]);
+  const [movieWatchlist, setMovieWatchlist] = useState([]);
+  const [tvWatchlist, setTvWatchlist] = useState([]);
+  const [userInfo, setUserInfo] = useState(null);
+  const [phoneDialog, setPhoneDialog] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0, tvShowCount: 0 });
+  const [tvStatsLoading, setTvStatsLoading] = useState(false);
 
-  const submitValue = (e) => {
-    e.preventDefault();
-    {/*if condition checks length=10 and no alphabets or no alphanumeric chars*/}
-    if(!/^\d{10}$/.test(inputValue)) {
-      swal("Please enter the valid number", "", "warning")
-    }
-    else {
-    const data ={
-      inputValue: inputValue,
-      userId: localStorage.getItem('userId')
-    };
-    console.log(data);
-    axios.post("http://localhost:5000/users/updateOrAddPhone", data)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.docs);
-        setInputValue("");
-        toggle();
-        swal("", "", "success", {
-          buttons: {
-              sure: {
-                text: "Okay",
-                className: "swal-confirm"
-              }
-            }
-      });
-      fetchUserInfo();
-      }
-      else {
-        swal("failed to get user information");
-      }
+  const fetchFavoriteMovies = () =>
+    api
+      .post('/api/favorite/getFavoriteMovie', {})
+      .then((r) => {
+        if (r.data.success) setFavoritedMovies(r.data.favorites || []);
+      })
+      .catch(() => setFavoritedMovies([]));
+
+  const fetchFavoriteShows = () =>
+    api
+      .post('/api/tv/favorite/getFavoriteMovie', {})
+      .then((r) => {
+        if (r.data.success) setFavoritedShows(r.data.favorites || []);
+      })
+      .catch(() => setFavoritedShows([]));
+
+  const fetchWatchedMovies = () =>
+    api
+      .post('/api/watch/getWatchMovie', {})
+      .then((r) => {
+        if (r.data.success) setWatchedMovies(r.data.watch || []);
+      })
+      .catch(() =>
+        api
+          .post('/api/favorite/getFavoriteMovie', {})
+          .then((r) => {
+            if (r.data.success) setWatchedMovies(r.data.favorites || []);
+          })
+          .catch(() => setWatchedMovies([]))
+      );
+
+  const fetchWatchedShows = () =>
+    api
+      .post('/api/tv/watch/getWatchTv', {})
+      .then((r) => {
+        if (r.data.success) setWatchedShows(r.data.watch || []);
+      })
+      .catch(() =>
+        api
+          .post('/api/tv/favorite/getFavoriteMovie', {})
+          .then((r) => {
+            if (r.data.success) setWatchedShows(r.data.favorites || []);
+          })
+          .catch(() => setWatchedShows([]))
+      );
+
+  const fetchWatchlists = () =>
+    Promise.all([
+      api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
+      api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+    ]).then(([movies, tv]) => {
+      if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
+      if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
     });
-    }
-  }
-  {/*end of phone number functions*/}
-
-  const toggle = () => setModal(!modal);
-
-  const fetchFavoriteMovies = () => {
-    axios.post('http://localhost:5000/api/favorite/getFavoriteMovie', variable)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.favorites);
-        setFavoritedMovies(response.data.favorites);
-      }
-      else {
-        alert("failed to fetch favorites");
-      }
-    })
-  }
-
-  const fetchFavoriteShows = () => {
-    axios.post('http://localhost:5000/api/tv/favorite/getFavoriteMovie', variable)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.favorites);
-        setFavoritedShows(response.data.favorites);
-      }
-      else {
-        alert("failed to fetch favorites");
-      }
-    })
-  }
-
-  {/*below get request is require user to authenticate first. auth only shown in this request
-  just to show that it works you can apply this in all requests*/}
-  const fetchUserInfo = () => {
-    axios.get(`http://localhost:5000/users/getUser/${localStorage.getItem("userId")}`, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('user')
-      }
-    })
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.found);
-        setUserInfo(response.data.found);
-      }
-      else {
-        alert("failed to get user information");
-      }
-    })
-  }
-
-  const fetchWatchedMovies = () => {
-    
-    axios.post('http://localhost:5000/api/watch/getWatchMovie', variable)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.watch);
-        setWatchedMovies(response.data.watch);
-      }
-      else {
-        alert("failed to fetch Watched movies");
-      }
-    })
-  }
-
-  const onClickRemove = (movieId) => {
-
-    const variable = {
-      movieId: movieId,
-      userFrom: localStorage.getItem('userId')
-    }
-
-    axios.post('http://localhost:5000/api/favorite/removeFromFavorite', variable)
-          .then(response => {
-              if(response.data.success) {
-                  fetchFavoriteMovies();
-              }
-              else {
-                  alert('Failed to remove from Favorites');
-              }
-          })
-  }
-
-  const removeWatched = (movieId) => {
-
-    const variable = {
-      movieId: movieId,
-      userFrom: localStorage.getItem('userId')
-    }
-
-    axios.post('http://localhost:5000/api/watch/removeFromWatched', variable)
-          .then(response => {
-              if(response.data.success) {
-                  fetchWatchedMovies();
-              }
-              else {
-                  alert('Failed to remove from Watched movies');
-              }
-          })
-  }
-
-  const removeFavoriteShow = (tvId) => {
-
-    const variable = {
-      tvId: tvId,
-      userFrom: localStorage.getItem('userId')
-    }
-
-    axios.post('http://localhost:5000/api/tv/favorite/removeFromFavorite', variable)
-          .then(response => {
-              if(response.data.success) {
-                  fetchFavoriteShows();
-              }
-              else {
-                  alert('Failed to remove from Watched movies');
-              }
-          })
-  }
 
   useEffect(() => {
-    fetchUserInfo();
-    fetchFavoriteMovies();
-    fetchWatchedMovies();
-    fetchFavoriteShows();
+    if (!user?.id) return;
+    setLoading(true);
+    setLoadError('');
 
-    window.scrollTo(0,0);
-  }, []);
+    api
+      .get(`/users/getUser/${user.id}`)
+      .then((r) => {
+        if (r.data.success) setUserInfo(r.data.found);
+        else setUserInfo({ username: user.username, firstName: '', lastName: '' });
+      })
+      .catch(() => {
+        setLoadError('Could not reach the server. Run npm start from backend-server, then log in again.');
+        setUserInfo({ username: user.username, firstName: '', lastName: '' });
+      })
+      .finally(() => {
+        Promise.all([
+          fetchFavoriteMovies(),
+          fetchFavoriteShows(),
+          fetchWatchedMovies(),
+          fetchWatchedShows(),
+          fetchWatchlists(),
+        ]).finally(() => {
+          setLoading(false);
+          window.scrollTo(0, 0);
+        });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  const onClickLoadMore = () => {
-    axios.post('http://localhost:5000/api/watchlist/getMovieWatchlist', variable)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.watchlist);
-        setMovieWatchlist(response.data.watchlist);
+  const submitPhone = (e) => {
+    e.preventDefault();
+    if (!/^\d{10}$/.test(inputValue)) {
+      setPhoneError('Enter a valid 10-digit number.');
+      return;
+    }
+    api.post('/users/updateOrAddPhone', { inputValue, userId: user.id }).then((r) => {
+      if (r.data.success) {
+        setInputValue('');
+        setPhoneDialog(false);
+        setPhoneError('');
+        api.get(`/users/getUser/${user.id}`).then((res) => {
+          if (res.data.success) setUserInfo(res.data.found);
+        });
       }
-      else {
-        alert("failed to fetch movies watchlist");
-      }
-    })
-    axios.post('http://localhost:5000/api/tv/watchlist/getTvWatchlist', variable)
-    .then(response => {
-      if(response.data.success) {
-        console.log(response.data.watchlist);
-        setTvWatchlist(response.data.watchlist);
-      }
-      else {
-        alert("failed to fetch tv watchlist");
-      }
-    })
-    setLoadMoreToggle(!LoadMoreToggle);
-  }
-    
-  {/* Joined date of the account*/}
-  const date = new Date(`${UserInfo.createdAt}`);
-  const month = date.toLocaleString('default', { month: 'long' });
-  const joinDate = `${month} ${date.getFullYear()}`;
+    });
+  };
 
-  return( 
+  const joinDate = userInfo?.createdAt
+    ? new Date(userInfo.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : '';
+
+  const profileDisplay = useMemo(() => {
+    if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };
+    const isGoogleUser = Boolean(userInfo.googleId);
+    const firstName = userInfo.firstName?.trim() || '';
+    const lastName = userInfo.lastName?.trim() || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+    if (isGoogleUser && firstName) {
+      return {
+        title: firstName,
+        subtitle: `@${userInfo.username} · Member since ${joinDate}`,
+        avatarLetter: firstName.charAt(0).toUpperCase(),
+      };
+    }
+
+    return {
+      title: userInfo.username,
+      subtitle: `${fullName ? `${fullName} · ` : ''}Member since ${joinDate}`,
+      avatarLetter: userInfo.username?.charAt(0).toUpperCase() || '?',
+    };
+  }, [userInfo, joinDate]);
+
+  const watchedMins = useMemo(
+    () => watchedMovies.reduce((sum, m) => sum + (parseInt(m.movieRuntime, 10) || 0), 0),
+    [watchedMovies]
+  );
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setTvStatsLoading(true);
+    api
+      .get('/api/tv/episodes/stats')
+      .then((r) => {
+        if (r.data.success) {
+          setTvStats({
+            episodes: r.data.episodeCount || 0,
+            tvMins: r.data.tvMins || 0,
+            tvShowCount: r.data.tvShowCount || 0,
+          });
+        }
+      })
+      .catch(() => setTvStats({ episodes: 0, tvMins: 0, tvShowCount: 0 }))
+      .finally(() => setTvStatsLoading(false));
+  }, [user?.id]);
+
+  const isProfileEmpty = useMemo(
+    () =>
+      favoritedMovies.length === 0 &&
+      favoritedShows.length === 0 &&
+      watchedMovies.length === 0 &&
+      watchedShows.length === 0 &&
+      movieWatchlist.length === 0 &&
+      tvWatchlist.length === 0,
+    [favoritedMovies, favoritedShows, watchedMovies, watchedShows, movieWatchlist, tvWatchlist]
+  );
+
+  const removeFavoriteFilm = (movieId) =>
+    api.post('/api/favorite/removeFromFavorite', { movieId }).then(fetchFavoriteMovies);
+
+  const removeFavoriteShow = (tvId) =>
+    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(fetchFavoriteShows);
+
+  const removeWatchedFilm = (movieId) =>
+    api.post('/api/watch/removeFromWatched', { movieId }).then(fetchWatchedMovies);
+
+  const removeWatchedShow = (tvId) =>
+    api.post('/api/tv/watch/removeFromWatched', { tvId }).then(fetchWatchedShows);
+
+  const filmTile = (m, onRemove) => (
+    <PosterTile
+      key={m.movieId}
+      to={`/movies/${m.movieId}`}
+      poster={m.moviePosterImage}
+      title={m.movieTitle}
+      imageUrlPrefix={`${IMAGE_URL}w342`}
+      size="sm"
+      onRemove={onRemove}
+    />
+  );
+
+  const tvTile = (s, onRemove) => (
+    <PosterTile
+      key={s.tvId}
+      to={`/tv/${s.tvId}`}
+      poster={s.tvPosterImage}
+      title={s.tvTitle}
+      imageUrlPrefix={`${IMAGE_URL}w342`}
+      size="sm"
+      onRemove={onRemove}
+    />
+  );
+
+  return (
     <>
-      <Helmet>
-          <title>{UserInfo.username ? `Profile - ${UserInfo.username}` : "Profile"}</title>
-      </Helmet>
-      <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-          {/* Breadcrumbs */}
-          <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb">
-                        <li className="breadcrumb-item"><Link to='/'>Home</Link></li>
-                        <li className="breadcrumb-item active" aria-current="page">Profile</li>
-                    </ol>
-          </nav>
-      </div>
+      <PageTitle title={profileDisplay.title ? `${profileDisplay.title}'s diary` : 'Profile'} />
 
-        {/* Profile Info */}
-        {UserInfo && <div style={{width:'95%', margin:'3rem auto'}}>
-          <div className="row gutters-sm">
-            <div className="col-md-4 mb-3">
-              <div className="card">
-                <div className="card-body">
-                  <div className="d-flex flex-column align-items-center text-center">
-                    <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="User" className="rounded-circle" width="150" />
-                    <div>
-                      <h4>{UserInfo.username}</h4>
-                      {WatchedMovies.length < 20 ? <p className="mb-1 badge badge-danger badge-pill">Newbie</p>
-                        : <p className="mb-1 badge badge-primary badge-pill">Intermediate</p> }
-                      <p className="text-secondary mb-1">Joined since {joinDate}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/*  */}
-            <div className="col-md-8">
-              <div className="card mb-3">
-                <div className="card-body">
-                  <div className="row">
-                    <div className="col-sm-3">
-                      <h6 className="mb-0">Full Name</h6>
-                    </div>
-                    <div className="col-sm-9 text-secondary">
-                    {UserInfo.firstName + " " + UserInfo.lastName}
-                    </div>
-                  </div>
-                  <hr />
-                  <div className="row">
-                    <div className="col-sm-3">
-                      <h6 className="mb-0">Email</h6>
-                    </div>
-                    <div className="col-sm-9 text-secondary">
-                      {UserInfo.email}
-                    </div>
-                  </div>
-                  <hr />
-                  <div className="row">
-                    <div className="col-sm-3">
-                      <h6 className="mb-0">Phone</h6>
-                    </div>
-                    <div className="col-sm-9 text-secondary">
-                      {UserInfo.phonenumber 
-                      ?
-                      <div> {/*edit modal*/}
-                        {UserInfo.phonenumber}
-                        <div className="float-right">
-                          <button className="btn text-primary p-0" onClick={toggle}><span className="fa fa-edit fa-lg"></span> Edit</button>
-                          <Modal isOpen={modal} toggle={toggle} centered="true">
-                            <ModalHeader toggle={toggle}>Enter New Number</ModalHeader>
-                            <ModalBody>
-                              <input className="col-12" type="tel" placeholder="Phone" maxLength="10" onChange={onChangeHandler} value={inputValue}/>
-                            </ModalBody>
-                            <ModalFooter>
-                              <button className="btn btn-secondary" onClick={toggle}>Cancel</button>
-                              <button className="btn btn-primary" type="submit" onClick={submitValue}>Submit</button>{' '}
-                            </ModalFooter>
-                          </Modal>
-                        </div>
-                      </div>
-                      :
-                      <div> {/*Add number modal*/}
-                          <button className="btn btn-primary" onClick={toggle}><span className="fa fa-phone"></span> Add Phone</button>
-                          <Modal isOpen={modal} toggle={toggle} centered="true">
-                            <ModalHeader toggle={toggle}>Enter Number</ModalHeader>
-                            <ModalBody>
-                              <input className="col-12" type="tel" placeholder="Phone" maxLength="10" onChange={onChangeHandler} value={inputValue}/>
-                            </ModalBody>
-                            <ModalFooter>
-                              <button className="btn btn-secondary" onClick={toggle}>Cancel</button>
-                              <button className="btn btn-primary" type="submit" onClick={submitValue}>Submit</button>{' '}
-                            </ModalFooter>
-                          </Modal>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <hr />
-                  <div className="row">
-                    <div className="col-sm-3">
-                      <h6 className="mb-0">Country</h6>
-                    </div>
-                    <div className="col-sm-9 text-secondary">
-                      India
-                    </div>
-                  </div>
-                  <hr />
-                  <div className="row">
-                    <div className="col-sm-3">
-                      <h6 className="mb-0">Watched Movies</h6>
-                    </div>
-                    <div className="col-sm-9 text-secondary">
-                      {WatchedMovies.length}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/*  */}
+      <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
+        <BackNav fallback="/" label="Back to home" className="mb-4 md:hidden" />
+
+        {loading && !userInfo ? (
+          <div className="space-y-6">
+            <div className="h-24 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />
           </div>
-        </div>}
+        ) : (
+          userInfo && (
+            <div className="space-y-8 md:space-y-10">
+              {loadError && (
+                <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+                  {loadError}
+                </p>
+              )}
+              <header className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-xl font-bold text-on-accent sm:h-16 sm:w-16 sm:text-2xl">
+                  {profileDisplay.avatarLetter}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <h1 className="page-title">{profileDisplay.title}</h1>
+                    <Link
+                      to="/settings"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                      aria-label="Settings"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">{profileDisplay.subtitle}</p>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-muted">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span>{userInfo.phonenumber || 'No phone'}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPhoneDialog(true)}
+                      className="text-link hover:text-ink-bright cursor-pointer"
+                      aria-label="Edit phone"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </header>
 
-      {/* Favorites movies flexbox */}
-      <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Favorite Movies</div>
-        { FavoritedMovies.length === 0 
-        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
-          :
-          <div className="container-fluid scrollbar-custom">
-            <div className="row flex-row flex-nowrap">
-              {FavoritedMovies && FavoritedMovies.map((favoritemovie, index) => (
-                <React.Fragment key={index}>
-                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                      <Fade>
-                      <div className="position-relative">
-                        <Link to={`/movies/${favoritemovie.movieId}`} className="text-decoration-none">
-                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoritemovie.moviePosterImage}`} />
-                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoritemovie.movieTitle}</div>
-                        </Link>
-                        <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
-                          <button className="btn btn-danger" onClick={() => onClickRemove(favoritemovie.movieId)}> Remove </button>
-                        </div>
-                      </div>
-                      </Fade>
-                    </div>
-                </React.Fragment>
-              ))}
+              <ProfileStats
+                filmCount={watchedMovies.length}
+                tvCount={tvStats.tvShowCount || watchedShows.length}
+                episodeCount={tvStats.episodes}
+                filmMins={watchedMins}
+                tvMins={tvStats.tvMins}
+                tvStatsLoading={tvStatsLoading}
+              />
+
+              {isProfileEmpty ? (
+                <ProfileEmptyState username={userInfo.username} />
+              ) : (
+                <div className="space-y-10 md:space-y-12">
+                  <PosterRail
+                    title="Favorite films"
+                    actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Browse films')}
+                  >
+                    {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
+                  </PosterRail>
+
+                  <PosterRail
+                    title="Favorite TV"
+                    actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Browse TV')}
+                  >
+                    {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
+                  </PosterRail>
+
+                  <PosterRail
+                    title="Watched films"
+                    actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Find a film')}
+                  >
+                    {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
+                  </PosterRail>
+
+                  <PosterRail
+                    title="Watched TV"
+                    actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Browse TV')}
+                  >
+                    {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
+                  </PosterRail>
+
+                  <PosterRail
+                    title="Film watchlist"
+                    actionTo={movieWatchlist.length ? profileListPath('film-watchlist') : undefined}
+                    actionLabel="View all"
+                    empty={emptyFilm('Add films')}
+                  >
+                    {movieWatchlist.map((m) => filmTile(m))}
+                  </PosterRail>
+
+                  <PosterRail
+                    title="TV watchlist"
+                    actionTo={tvWatchlist.length ? profileListPath('tv-watchlist') : undefined}
+                    actionLabel="View all"
+                    empty={emptyTv('Add shows')}
+                  >
+                    {tvWatchlist.map((s) => tvTile(s))}
+                  </PosterRail>
+                </div>
+              )}
             </div>
-          </div>}
+          )
+        )}
       </div>
 
-      {/* watched movies flexbox */}
-      <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-history"></div> Watched Movies</div>
-        { WatchedMovies.length === 0 
-        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest movies</Link></div> 
-          :
-          <div className="container-fluid scrollbar-custom">
-            <div className="row flex-row flex-nowrap">
-              {/* the array is in reverse so user can find his latest watched movies */}
-              {WatchedMovies && WatchedMovies.slice(0).reverse().map((watchedmovie, index) => (
-                <React.Fragment key={index}>
-                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                    <Fade>
-                      <div className="position-relative">
-                        <Link to={`/movies/${watchedmovie.movieId}`} className="text-decoration-none">
-                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${watchedmovie.moviePosterImage}`} />
-                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{watchedmovie.movieTitle}</div>
-                        </Link>
-                        <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
-                          <button className="btn btn-danger" onClick={() => removeWatched(watchedmovie.movieId)}> Remove </button>
-                        </div>
-                      </div>
-                      </Fade>
-                    </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>}
-      </div>
-
-      {/* Favorite shows flexbox */}
-      <div className="mt-3" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Favorite Shows</div>
-        { FavoritedShows.length === 0 
-        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/tv" className="text-decoration-none">Find latest TV Shows</Link></div> 
-          :
-          <div className="container-fluid scrollbar-custom">
-            <div className="row flex-row flex-nowrap">
-              {/* the array is in reverse so user can find his latest watched movies */}
-              {FavoritedShows && FavoritedShows.map((favoriteshow, index) => (
-                <React.Fragment key={index}>
-                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                      <Fade>
-                      <div className="position-relative">
-                        <Link to={`/tv/${favoriteshow.tvId}`} className="text-decoration-none">
-                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
-                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.tvTitle}</div>
-                        </Link>
-                        <div style={{position: "absolute", top: '1rem', right: '1rem'}}>
-                          <button className="btn btn-danger" onClick={() => removeFavoriteShow(favoriteshow.tvId)}> Remove </button>
-                        </div>
-                      </div>
-                      </Fade>
-                    </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>}
-      </div>
-
-      {/* see more lists */}
-      <div className="text-center">
-        <button className={LoadMoreToggle ? "btn btn-danger mb-2" : "btn btn-primary mb-2"} onClick={onClickLoadMore  }>{LoadMoreToggle ? "Hide Lists" : "See More Lists"}</button>
-      </div>
-      {LoadMoreToggle && 
-        <div className="mt-2" style={{width:'95%', margin:'3rem auto'}}>
-        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> Movie Watchlist</div>
-        { MovieWatchlist.length === 0 
-        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/movies" className="text-decoration-none">Find latest Movies</Link></div> 
-          :
-          <div className="container-fluid scrollbar-custom mb-3">
-            <div className="row flex-row flex-nowrap">
-              {/* the array is in reverse so user can find his latest watched movies */}
-              {MovieWatchlist && MovieWatchlist.map((favoriteshow, index) => (
-                <React.Fragment key={index}>
-                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                      <Fade>
-                        <Link to={`/movies/${favoriteshow.movieId}`} className="text-decoration-none">
-                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.moviePosterImage}`} />
-                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.movieTitle}</div>
-                        </Link>
-                      </Fade>
-                    </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>}
-
-        <div className="h2 mb-3"><div className="fa fa-thumbs-o-up"></div> TV Watchlist</div>
-        { TvWatchlist.length === 0 
-        ? <div className="h3 font-weight-lighter ml-5 mt-4"><Link to="/tv" className="text-decoration-none">Find latest TV Shows</Link></div> 
-          :
-          <div className="container-fluid scrollbar-custom">
-            <div className="row flex-row flex-nowrap">
-              {/* the array is in reverse so user can find his latest watched movies */}
-              {TvWatchlist && TvWatchlist.map((favoriteshow, index) => (
-                <React.Fragment key={index}>
-                    <div className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                      <Fade>
-                        <Link to={`/movies/${favoriteshow.tvId}`} className="text-decoration-none">
-                          <img className="card border-0" style={{ width: '100%', height: '330px' }} alt="img" src={`${IMAGE_URL}w500${favoriteshow.tvPosterImage}`} />
-                          <div className="mt-1 font-weight-bold text-decoration-none" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{favoriteshow.tvTitle}</div>
-                        </Link>
-                      </Fade>
-                    </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>}
-      </div>}
+      <Dialog
+        open={phoneDialog}
+        onClose={() => {
+          setPhoneDialog(false);
+          setPhoneError('');
+        }}
+        title="Phone number"
+        footer={
+          <>
+            <button type="button" onClick={() => setPhoneDialog(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" form="phone-form" className="btn-primary">
+              Save
+            </button>
+          </>
+        }
+      >
+        <form id="phone-form" onSubmit={submitPhone}>
+          <input
+            className="input-field"
+            type="tel"
+            placeholder="10-digit number"
+            maxLength={10}
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setPhoneError('');
+            }}
+          />
+          {phoneError && <p className="mt-2 text-sm text-red-400">{phoneError}</p>}
+        </form>
+      </Dialog>
     </>
   );
 }
-export default Profile;

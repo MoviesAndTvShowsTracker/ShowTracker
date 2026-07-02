@@ -15,16 +15,21 @@ var User = new Schema({
     },
     firstName: {
         type: String,
-        required: true
+        default: ''
     },
     lastName: {
         type: String,
-        required: true
+        default: ''
     },
     email: {
         type: String,
         required: true,
         unique: true
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
     },
     admin: {
         type: Boolean,

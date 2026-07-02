@@ -20,7 +20,12 @@ var Watch = new Schema({
     },
     movieRuntime: {
         type: String
+    },
+    watchedAt: {
+        type: Date
     }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Watch', Watch);

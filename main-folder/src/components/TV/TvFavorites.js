@@ -1,112 +1,71 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Bookmark, Heart } from 'lucide-react';
+import api from '../../api/axios';
+import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 
-function TvFavorites(props) {
+export default function TvFavorites({ tvId, tvInfo }) {
+  const [favoriteNumber, setFavoriteNumber] = useState(0);
+  const [favorited, setFavorited] = useState(false);
+  const [watchlisted, setWatchlisted] = useState(false);
 
-    const [FavoriteNumber, setFavoriteNumber] = useState(0);
-    const [Favorited, setFavorited] = useState(false);
-    const [Watchlisted, setWatchlisted] = useState(false);
+  const payload = {
+    tvId,
+    tvTitle: tvInfo.name,
+    tvImage: tvInfo.backdrop_path,
+    tvPosterImage: tvInfo.poster_path,
+    tvRuntime: tvInfo.episode_run_time,
+  };
 
-    const variable = {
-        userFrom: props.userFrom,
-        tvId: props.tvId,
-        tvTitle: props.tvInfo.name,
-        tvImage: props.tvInfo.backdrop_path,
-        tvPosterImage: props.tvInfo.poster_path,
-        tvRuntime: props.tvInfo.episode_run_time
-    }
-    
-    useEffect(() => {
+  useEffect(() => {
+    api.post('/api/tv/favorite/favoriteNumber', { tvId }).then((r) => {
+      if (r.data.success) setFavoriteNumber(r.data.favoriteNumber);
+    });
+    api.post('/api/tv/favorite/favorited', { tvId }).then((r) => {
+      if (r.data.success) setFavorited(r.data.favorited);
+    });
+    api.post('/api/tv/watchlist/watchlisted', { tvId }).then((r) => {
+      if (r.data.success) setWatchlisted(r.data.watchlisted);
+    });
+  }, [tvId]);
 
-        axios.post('http://localhost:5000/api/tv/favorite/favoriteNumber', variable)
-        .then(response => {
-            if(response.data.success) {
-                setFavoriteNumber(response.data.favoriteNumber);
-            }
-            else {
-                alert('Failed to perform operation')
-            }
-        })
+  const toggleFavorite = () => {
+    const endpoint = favorited
+      ? '/api/tv/favorite/removeFromFavorite'
+      : '/api/tv/favorite/addToFavorite';
+    api.post(endpoint, payload).then((r) => {
+      if (r.data.success) {
+        setFavoriteNumber(favorited ? favoriteNumber - 1 : favoriteNumber + 1);
+        setFavorited(!favorited);
+      }
+    });
+  };
 
-        axios.post('http://localhost:5000/api/tv/favorite/favorited', variable)
-        .then(response => {
-            if(response.data.success) {
-                setFavorited(response.data.favorited);
-            }
-            else {
-                alert('Failed to perform operation');
-            }
-        })
+  const toggleWatchlist = () => {
+    const endpoint = watchlisted
+      ? '/api/tv/watchlist/removeFromWatchlist'
+      : '/api/tv/watchlist/addToWatchlist';
+    api.post(endpoint, payload).then((r) => {
+      if (r.data.success) setWatchlisted(!watchlisted);
+    });
+  };
 
-        axios.post('http://localhost:5000/api/tv/watchlist/watchlisted', variable)
-        .then(response => {
-            if(response.data.success) {
-                setWatchlisted(response.data.watchlisted);
-            }
-            else {
-                alert('Failed to perform operation');
-            }
-        })
-    }, [])
-
-    const onClickFavorite = () => {
-        if(Favorited) {
-            axios.post('http://localhost:5000/api/tv/favorite/removeFromFavorite', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setFavoriteNumber(FavoriteNumber - 1);
-                    setFavorited(!Favorited);
-                }
-                else {
-                    alert('Failed to remove from Favorites');
-                }
-            })
-        }
-        else {
-            axios.post('http://localhost:5000/api/tv/favorite/addToFavorite', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setFavoriteNumber(FavoriteNumber + 1);
-                    setFavorited(!Favorited);
-                }
-                else {
-                    alert('Failed to add to Favorites');
-                }
-            })
-        }
-    }
-
-    const onClickWatchlist = () => {
-        if(Watchlisted) {
-            axios.post('http://localhost:5000/api/tv/watchlist/removeFromWatchlist', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatchlisted(!Watchlisted);
-                }
-                else {
-                    alert('Failed to remove from Watchlist');
-                }
-            })
-        }
-        else {
-            axios.post('http://localhost:5000/api/tv/watchlist/addToWatchlist', variable)
-            .then(response => {
-                if(response.data.success) {
-                    setWatchlisted(!Watchlisted);
-                }
-                else {
-                    alert('Failed to add to Watchlisted');
-                }
-            })
-        }
-    }
-
-    return (
-        <div>
-            <button className={Favorited ? "btn btn-danger" : "btn btn-primary"} onClick={onClickFavorite}> {Favorited ? "Remove from Favorites" : "Add to Favorites"} <span className="badge badge-light"> {FavoriteNumber} </span></button>
-            <button className={Watchlisted ? "btn btn-danger ml-3" : "btn btn-primary ml-3"} onClick={onClickWatchlist}>{Watchlisted ? 'Remove from Watchlist' : 'Add to Watchlist'}</button>
-        </div>
-    )
+  return (
+    <ActionStrip columns={2}>
+      <ActionButton
+        active={favorited}
+        onClick={toggleFavorite}
+        icon={Heart}
+        label={favorited ? 'Favorited' : 'Favorite'}
+        compactLabel="Favorite"
+        badge={favoriteNumber}
+      />
+      <ActionButton
+        active={watchlisted}
+        onClick={toggleWatchlist}
+        icon={Bookmark}
+        label={watchlisted ? 'On watchlist' : 'Watchlist'}
+        compactLabel="List"
+      />
+    </ActionStrip>
+  );
 }
-
-export default TvFavorites;
