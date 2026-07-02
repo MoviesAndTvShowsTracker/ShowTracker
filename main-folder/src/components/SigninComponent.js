@@ -14,7 +14,7 @@ export default function Signin() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/profile" replace />;
+  if (isAuthenticated) return <Navigate to="/home" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export default function Signin() {
     setSubmitting(true);
     const result = await login({ username, password });
     setSubmitting(false);
-    if (result.success) navigate('/profile');
+    if (result.success) navigate('/home');
     else setError(result.message || 'Sign in failed');
   };
 

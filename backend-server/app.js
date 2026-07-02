@@ -16,6 +16,8 @@ const favoritefortv = require('./routes/favoritefortv');
 const moviewatchlist = require('./routes/moviewatchlist');
 const tvwatchlist = require('./routes/tvwatchlist');
 const tvwatch = require('./routes/tvwatch');
+const tvtracking = require('./routes/tvtracking');
+const tvepisodes = require('./routes/tvepisodes');
 
 const url = config.mongoURL;
 mongoose
@@ -49,6 +51,8 @@ app.use('/users', usersRouter);
 app.use('/api/tv/favorite', favoritefortv);
 app.use('/api/tv/watchlist', tvwatchlist);
 app.use('/api/tv/watch', tvwatch);
+app.use('/api/tv/tracking', tvtracking);
+app.use('/api/tv/episodes', tvepisodes);
 app.use('/api/favorite', favorite);
 app.use('/api/watch', watch);
 app.use('/api/watchlist', moviewatchlist);

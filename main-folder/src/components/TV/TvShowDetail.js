@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
+import TvTrackingBanner from './TvTrackingBanner';
+import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
+  const [searchParams] = useSearchParams();
+  const initialSeason = searchParams.get('season')
+    ? Number(searchParams.get('season'))
+    : undefined;
   const [tvShow, setTvShow] = useState({});
   const [createdBy, setCreatedBy] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -45,6 +51,12 @@ export default function TvDetail() {
 
     window.scrollTo(0, 0);
   }, [tvShowId]);
+
+  useEffect(() => {
+    if (initialSeason) {
+      document.getElementById('episodes')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialSeason, tvShow.name]);
 
   const airdate = (prop) =>
     new Date(prop).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -104,6 +116,7 @@ export default function TvDetail() {
 
         {tvShow.name && (
           <section className="mb-5 md:mb-8">
+            <TvTrackingBanner tvId={tvShowId} />
             <h2 className="section-title mb-3 md:hidden">Your diary</h2>
             <TvFavorites tvId={tvShowId} tvInfo={tvShow} />
           </section>
@@ -166,37 +179,14 @@ export default function TvDetail() {
           </div>
         )}
 
-        <section className="mt-8 space-y-3 md:mt-10 md:space-y-4">
-          <h3 className="section-title">Seasons</h3>
-          {[...seasons].reverse().map(
-            (season) =>
-              season.poster_path && (
-                <article key={season.id} className="glass-card overflow-hidden">
-                  <div className="border-b border-border px-4 py-3 md:px-5 md:py-4">
-                    <Link
-                      to={`/tv/${tvShowId}/${season.season_number}/episodes`}
-                      className="font-semibold text-accent hover:underline cursor-pointer"
-                    >
-                      {season.name}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted md:text-sm">
-                      {season.air_date ? new Date(season.air_date).getFullYear() : '—'} · {season.episode_count} episodes
-                    </p>
-                  </div>
-                  <div className="flex gap-3 p-4 md:gap-4 md:p-5">
-                    <img
-                      src={`${IMAGE_URL}w500${season.poster_path}`}
-                      alt={season.name}
-                      className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover md:h-40 md:w-28"
-                    />
-                    <p className="line-clamp-4 text-sm text-muted">
-                      {season.overview || 'No information available.'}
-                    </p>
-                  </div>
-                </article>
-              )
-          )}
-        </section>
+        {tvShow.name && (
+          <TvSeasonEpisodesPanel
+            tvShowId={tvShowId}
+            tvShow={tvShow}
+            seasons={seasons}
+            initialSeason={initialSeason}
+          />
+        )}
 
         <SimilarTvShows showId={tvShowId} />
       </div>

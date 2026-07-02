@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Header from './HeaderComponent';
 import Footer from './FooterComponent';
 import Home from './HomeComponent';
+import HomeDashboard from './HomeDashboard';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
@@ -11,6 +12,7 @@ import TvDetail from './TV/TvShowDetail';
 import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
+import TvContinue from './TV/TvContinue';
 import ScrollToTop from './ScrollToTop';
 import { useAuth } from '../context/AuthContext';
 
@@ -43,10 +45,12 @@ export default function Main() {
           <Route path="/search" element={<SearchBox />} />
 
           <Route element={<ProtectedRoute />}>
+            <Route path="/home" element={<HomeDashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/movies" element={<LandingPage />} />
             <Route path="/movies/:Id" element={<MovieDetail />} />
             <Route path="/tv" element={<TvLandingPage />} />
+            <Route path="/tv/:Id/continue" element={<TvContinue />} />
             <Route path="/tv/:Id" element={<TvDetail />} />
             <Route path="/tv/:Id/:seasonNumber/episodes" element={<SeasonEpisodes />} />
           </Route>

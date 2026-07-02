@@ -24,6 +24,8 @@ export default function Header() {
   const [showLogout, setShowLogout] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const homeTo = isAuthenticated ? '/home' : '/';
+
   const handleLogout = async () => {
     await logout();
     setShowLogout(false);
@@ -34,7 +36,7 @@ export default function Header() {
     <>
       <header className="app-header">
         <div className="mx-auto flex max-w-content items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <NavLink to="/" className="inline-flex shrink-0 items-center gap-2 cursor-pointer">
+          <NavLink to={homeTo} end className="inline-flex shrink-0 items-center gap-2 cursor-pointer">
             <MarqueeLogo className="h-8 w-8 shrink-0 text-ink-bright" />
             <span className="font-serif text-xl font-semibold tracking-tight text-ink-bright">{BRAND_NAME}</span>
           </NavLink>
@@ -51,7 +53,7 @@ export default function Header() {
 
           {/* Desktop navigation */}
           <nav className="hidden items-center md:flex" aria-label="Main">
-            <NavLink to="/" end className={desktopLink}>
+            <NavLink to={homeTo} end className={desktopLink}>
               <Home className="h-4 w-4" aria-hidden="true" />
               Home
             </NavLink>
@@ -132,7 +134,7 @@ export default function Header() {
       {/* Mobile bottom nav — iOS-style floating pill */}
       <div className="mobile-nav-shell" aria-hidden={false}>
         <nav className="mobile-nav-pill" aria-label="Mobile">
-          <NavLink to="/" end className={mobileLink}>
+          <NavLink to={homeTo} end className={mobileLink}>
             <Home className="h-[18px] w-[18px]" aria-hidden="true" />
             Home
           </NavLink>

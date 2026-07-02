@@ -21,7 +21,7 @@ export default function Signup() {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/profile" replace />;
+  if (isAuthenticated) return <Navigate to="/home" replace />;
   if (success) return <Navigate to="/login" replace />;
 
   const handleSubmit = async (e) => {

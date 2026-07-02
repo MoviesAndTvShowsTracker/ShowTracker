@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Phone } from 'lucide-react';
 import api from '../api/axios';
-import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
+import { IMAGE_URL } from '../config/keys';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
 import Dialog from './ui/Dialog';
@@ -44,7 +44,7 @@ export default function Profile() {
   const [phoneError, setPhoneError] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0 });
+  const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0, tvShowCount: 0 });
   const [tvStatsLoading, setTvStatsLoading] = useState(false);
 
   const fetchFavoriteMovies = () =>
@@ -160,54 +160,22 @@ export default function Profile() {
   );
 
   useEffect(() => {
-    if (!watchedShows.length) {
-      setTvStats({ episodes: 0, tvMins: 0 });
-      setTvStatsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
+    if (!user?.id) return;
     setTvStatsLoading(true);
-
-    Promise.all(
-      watchedShows.map((show) =>
-        fetch(`${API_URL}tv/${show.tvId}?api_key=${API_KEY}&language=en-US`)
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null)
-      )
-    )
-      .then((results) => {
-        if (cancelled) return;
-
-        let episodes = 0;
-        let tvMins = 0;
-
-        results.forEach((data, i) => {
-          if (!data) return;
-          const epCount = data.number_of_episodes || 0;
-          episodes += epCount;
-
-          const storedRuntime = watchedShows[i]?.tvRuntime;
-          const runtimes =
-            data.episode_run_time?.length > 0
-              ? data.episode_run_time
-              : Array.isArray(storedRuntime) && storedRuntime.length
-                ? storedRuntime
-                : [45];
-          const avgEp = runtimes.reduce((a, b) => a + Number(b), 0) / runtimes.length;
-          tvMins += epCount * avgEp;
-        });
-
-        setTvStats({ episodes, tvMins });
+    api
+      .get('/api/tv/episodes/stats')
+      .then((r) => {
+        if (r.data.success) {
+          setTvStats({
+            episodes: r.data.episodeCount || 0,
+            tvMins: r.data.tvMins || 0,
+            tvShowCount: r.data.tvShowCount || 0,
+          });
+        }
       })
-      .finally(() => {
-        if (!cancelled) setTvStatsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [watchedShows]);
+      .catch(() => setTvStats({ episodes: 0, tvMins: 0, tvShowCount: 0 }))
+      .finally(() => setTvStatsLoading(false));
+  }, [user?.id]);
 
   const isProfileEmpty = useMemo(
     () =>
@@ -309,7 +277,7 @@ export default function Profile() {
 
               <ProfileStats
                 filmCount={watchedMovies.length}
-                tvCount={watchedShows.length}
+                tvCount={tvStats.tvShowCount || watchedShows.length}
                 episodeCount={tvStats.episodes}
                 filmMins={watchedMins}
                 tvMins={tvStats.tvMins}

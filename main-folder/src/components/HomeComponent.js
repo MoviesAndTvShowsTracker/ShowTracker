@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Bookmark, CheckCircle2, Heart, List, Search, Sparkles } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
 import PageTitle from '../utils/PageTitle';
@@ -23,6 +23,8 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => setTrendingTv((d.results || []).slice(0, 16)));
   }, []);
+
+  if (isAuthenticated) return <Navigate to="/home" replace />;
 
   return (
     <>
@@ -65,7 +67,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="animate-fade-up mt-8 flex flex-wrap gap-3 opacity-0" style={{ animationDelay: '240ms' }}>
-              <Link to="/profile" className="btn-primary">
+              <Link to="/home" className="btn-primary">
                 My diary
               </Link>
               <Link to="/movies" className="btn-secondary">
