@@ -13,7 +13,6 @@ export default function Signup() {
   const { register, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    username: '',
     email: '',
     password: '',
   });
@@ -40,13 +39,12 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.username.trim() || !emailRegex.test(form.email) || form.password.length < 6) {
-      setError('Enter a username, valid email, and password (min. 6 characters).');
+    if (!emailRegex.test(form.email) || form.password.length < 6) {
+      setError('Enter a valid email and password (min. 6 characters).');
       return;
     }
     setSubmitting(true);
     const result = await register({
-      username: form.username.trim(),
       email: form.email.trim(),
       password: form.password,
     });
@@ -56,7 +54,6 @@ export default function Signup() {
   };
 
   const fields = [
-    { name: 'username', label: 'Username' },
     { name: 'email', label: 'Email', type: 'email' },
     { name: 'password', label: 'Password', type: 'password' },
   ];
@@ -95,9 +92,7 @@ export default function Signup() {
                   className="input-field"
                   value={form[name]}
                   onChange={(e) => setForm((p) => ({ ...p, [name]: e.target.value }))}
-                  autoComplete={
-                    name === 'username' ? 'username' : name === 'email' ? 'email' : 'new-password'
-                  }
+                  autoComplete={name === 'email' ? 'email' : 'new-password'}
                   disabled={googleSubmitting}
                 />
               </div>

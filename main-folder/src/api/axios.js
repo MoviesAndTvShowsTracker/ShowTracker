@@ -40,6 +40,8 @@ api.interceptors.response.use(
     if (status === 401 && hadToken && !isAuthRoute) {
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
+      localStorage.removeItem('email');
+      localStorage.removeItem('firstName');
       localStorage.removeItem('username');
       window.dispatchEvent(new Event('auth:session-expired'));
     }

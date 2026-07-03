@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import Dialog from './ui/Dialog';
 import MarqueeLogo from './brand/MarqueeLogo';
 import { BRAND_NAME } from '../config/brand';
+import { displayName } from '../utils/displayUser';
 
 const desktopLink = ({ isActive }) =>
   `nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
@@ -89,7 +90,7 @@ export default function Header() {
                   aria-expanded={menuOpen}
                 >
                   <User className="h-4 w-4" />
-                  <span className="max-w-[120px] truncate">{user?.username}</span>
+                  <span className="max-w-[120px] truncate">{displayName(user)}</span>
                 </button>
                 {menuOpen && (
                   <>

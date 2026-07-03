@@ -29,7 +29,7 @@ const STEPS = [
   },
 ];
 
-export default function ProfileEmptyState({ username }) {
+export default function ProfileEmptyState({ name }) {
   const [trendingFilms, setTrendingFilms] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
 
@@ -53,7 +53,7 @@ export default function ProfileEmptyState({ username }) {
         <div className="relative max-w-xl">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-accent">
             <Sparkles className="h-4 w-4" />
-            Welcome{username ? `, ${username}` : ''}
+            Welcome{name ? `, ${name}` : ''}
           </p>
           <h2 className="mt-3 font-serif text-2xl text-ink-bright sm:text-3xl">
             Your diary is ready for its first entry

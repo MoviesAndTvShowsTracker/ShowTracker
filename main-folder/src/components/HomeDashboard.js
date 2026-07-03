@@ -11,6 +11,7 @@ import {
   watchedSetFromEpisodes,
 } from '../utils/tvProgress';
 import PageTitle from '../utils/PageTitle';
+import { displayName } from '../utils/displayUser';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import TvTimeWelcomeBanner from './home/TvTimeWelcomeBanner';
 import PosterRail from './ui/PosterRail';
@@ -97,7 +98,7 @@ export default function HomeDashboard() {
     }
   };
 
-  const greeting = user?.username ? `Hey, ${user.username}` : 'Welcome back';
+  const greeting = user ? `Hey, ${displayName(user)}` : 'Welcome back';
 
   return (
     <>

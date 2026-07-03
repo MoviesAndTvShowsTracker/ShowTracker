@@ -114,11 +114,11 @@ export default function Profile() {
       .get(`/users/getUser/${user.id}`)
       .then((r) => {
         if (r.data.success) setUserInfo(r.data.found);
-        else setUserInfo({ username: user.username, firstName: '', lastName: '' });
+        else setUserInfo({ username: user.username, email: user.email || '', firstName: '', lastName: '' });
       })
       .catch(() => {
         setLoadError('Could not reach the server. Run npm start from backend-server, then log in again.');
-        setUserInfo({ username: user.username, firstName: '', lastName: '' });
+        setUserInfo({ username: user.username, email: user.email || '', firstName: '', lastName: '' });
       })
       .finally(() => {
         Promise.all([
@@ -165,23 +165,14 @@ export default function Profile() {
 
   const profileDisplay = useMemo(() => {
     if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };
-    const isGoogleUser = Boolean(userInfo.googleId);
     const firstName = userInfo.firstName?.trim() || '';
-    const lastName = userInfo.lastName?.trim() || '';
-    const fullName = [firstName, lastName].filter(Boolean).join(' ');
-
-    if (isGoogleUser && firstName) {
-      return {
-        title: firstName,
-        subtitle: `@${userInfo.username} · Member since ${joinDate}`,
-        avatarLetter: firstName.charAt(0).toUpperCase(),
-      };
-    }
+    const email = userInfo.email || '';
+    const title = firstName || (email ? email.split('@')[0] : userInfo.username) || 'You';
 
     return {
-      title: userInfo.username,
-      subtitle: `${fullName ? `${fullName} · ` : ''}Member since ${joinDate}`,
-      avatarLetter: userInfo.username?.charAt(0).toUpperCase() || '?',
+      title,
+      subtitle: email ? `${email} · Member since ${joinDate}` : `Member since ${joinDate}`,
+      avatarLetter: (firstName || title).charAt(0).toUpperCase() || '?',
     };
   }, [userInfo, joinDate]);
 
@@ -334,7 +325,7 @@ export default function Profile() {
               />
 
               {isProfileEmpty ? (
-                <ProfileEmptyState username={userInfo.username} />
+                <ProfileEmptyState name={profileDisplay.title} />
               ) : (
                 <div className="space-y-10 md:space-y-12">
                   <PosterRail
