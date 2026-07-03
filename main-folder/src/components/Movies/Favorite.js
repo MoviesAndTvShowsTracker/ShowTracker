@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bookmark, Check, Heart } from 'lucide-react';
 import api from '../../api/axios';
+import { clearSessionStats } from '../../utils/statsCache';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 
 export default function Favorite({ movieId, movieInfo }) {
@@ -45,7 +46,10 @@ export default function Favorite({ movieId, movieInfo }) {
   const toggleWatched = () => {
     const endpoint = watched ? '/api/watch/removeFromWatched' : '/api/watch/addToWatch';
     api.post(endpoint, payload).then((r) => {
-      if (r.data.success) setWatched(!watched);
+      if (r.data.success) {
+        setWatched(!watched);
+        clearSessionStats();
+      }
     });
   };
 

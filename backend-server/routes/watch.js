@@ -5,6 +5,8 @@ var Watch = require('../models/watch');
 var Favorite = require('../models/favorite');
 const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
+const { ensureMovieRuntime } = require('../services/mediaMeta');
+const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
 
@@ -28,12 +30,16 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
       userFrom: req.user._id,
     });
 
+    const runtime = await ensureMovieRuntime(req.body.movieId, req.body.movieRuntime);
+
     const watch = new Watch({
       ...req.body,
       userFrom: req.user._id,
+      movieRuntime: runtime > 0 ? String(runtime) : req.body.movieRuntime || '',
       watchedAt: req.body.watchedAt || new Date(),
     });
     await watch.save();
+    await invalidateUserStats(req.user._id);
     res.status(200).json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, err });
@@ -46,6 +52,7 @@ router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next
       movieId: req.body.movieId,
       userFrom: req.user._id,
     });
+    await invalidateUserStats(req.user._id);
     res.status(200).json({ success: true, doc });
   } catch (err) {
     res.status(400).json({ success: false, err });

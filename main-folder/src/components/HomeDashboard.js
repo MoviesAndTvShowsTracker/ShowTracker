@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tv } from 'lucide-react';
 import api from '../api/axios';
+import { clearSessionStats } from '../utils/statsCache';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_URL } from '../config/keys';
 import { profileListPath } from '../config/profileLists';
@@ -93,6 +94,7 @@ export default function HomeDashboard() {
       );
 
       await api.post('/api/tv/episodes/mark', payload);
+      clearSessionStats();
       loadTracks();
     } finally {
       setMarkingId(null);
