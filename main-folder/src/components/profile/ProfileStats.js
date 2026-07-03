@@ -1,24 +1,7 @@
 import { useMemo } from 'react';
-import { Clapperboard, Clock, Layers, Timer, Tv } from 'lucide-react';
-
-function formatDuration(totalMins) {
-  if (!totalMins || totalMins <= 0) return '—';
-  const rounded = Math.round(totalMins);
-  if (rounded < 60) return `${rounded}m`;
-  const h = Math.floor(rounded / 60);
-  const m = rounded % 60;
-  if (h >= 24) {
-    const d = Math.floor(h / 24);
-    const rh = h % 24;
-    return rh > 0 ? `${d}d ${rh}h` : `${d}d`;
-  }
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatCount(n) {
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-  return String(n);
-}
+import { Link } from 'react-router-dom';
+import { ChevronRight, Clapperboard, Clock, Layers, Timer, Tv } from 'lucide-react';
+import { formatCount, formatDuration } from '../../utils/statsFormat';
 
 function StatCard({ icon: Icon, label, value, detail, loading, className = '' }) {
   return (
@@ -85,8 +68,16 @@ export default function ProfileStats({
 
   return (
     <section aria-label="Your stats" className="glass-card overflow-hidden !p-0">
-      <div className="border-b border-border/60 px-4 py-3 sm:px-5">
+      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
         <h2 className="section-title">Your stats</h2>
+        <Link
+          to="/profile/stats"
+          className="inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-link transition-colors hover:text-ink-bright cursor-pointer"
+          aria-label="See all stats"
+        >
+          See all
+          <ChevronRight className="h-4 w-4" />
+        </Link>
       </div>
       <div className="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard icon={Clapperboard} label="Films" value={filmCount || '0'} detail={filmDetail} />

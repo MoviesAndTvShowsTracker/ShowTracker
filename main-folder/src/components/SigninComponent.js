@@ -7,10 +7,12 @@ import MarqueeLogo from './brand/MarqueeLogo';
 import { BRAND_NAME } from '../config/brand';
 import GoogleSignInButton from './auth/GoogleSignInButton';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Signin() {
   const { login, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,12 +35,12 @@ export default function Signin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
-      setError('Please enter your username and password.');
+    if (!emailRegex.test(email) || !password) {
+      setError('Please enter your email and password.');
       return;
     }
     setSubmitting(true);
-    const result = await login({ username, password });
+    const result = await login({ email: email.trim(), password });
     setSubmitting(false);
     if (result.success) navigate('/home');
     else setError(result.message || 'Sign in failed');
@@ -68,15 +70,16 @@ export default function Signin() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="username" className="section-title mb-2 block normal-case tracking-wide">
-                Username
+              <label htmlFor="email" className="section-title mb-2 block normal-case tracking-wide">
+                Email
               </label>
               <input
-                id="username"
+                id="email"
+                type="email"
                 className="input-field"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 disabled={googleSubmitting}
               />
             </div>

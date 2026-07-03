@@ -5,9 +5,13 @@ import { tmdbFetch } from '../../utils/tmdb';
 import {
   buildBatchPayload,
   buildMarkPayload,
+  countAiredEpisodes,
+  deriveShowProgress,
   episodeFromTmdb,
   episodeKey,
   fetchShowEpisodeIndex,
+  formatEpisodeReleaseLabel,
+  isEpisodeAired,
   progressPercent,
   watchedSetFromEpisodes,
 } from '../../utils/tvProgress';
@@ -31,6 +35,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   const [track, setTrack] = useState(null);
   const [episodeIndex, setEpisodeIndex] = useState([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
+  const [airedEpisodeCount, setAiredEpisodeCount] = useState(0);
   const [toggling, setToggling] = useState(null);
   const [batching, setBatching] = useState(false);
 
@@ -50,9 +55,10 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
 
   useEffect(() => {
     loadWatched();
-    fetchShowEpisodeIndex(tvShowId).then(({ episodes, totalEpisodes: total }) => {
+    fetchShowEpisodeIndex(tvShowId).then(({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
       setEpisodeIndex(episodes);
       setTotalEpisodes(total);
+      setAiredEpisodeCount(aired);
     });
   }, [tvShowId, loadWatched]);
 
@@ -95,12 +101,23 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
     [seasonEpisodes, selectedSeason]
   );
 
+  const seasonAiredMeta = useMemo(
+    () => seasonEpisodesMeta.filter((ep) => isEpisodeAired(ep)),
+    [seasonEpisodesMeta]
+  );
+
   const seasonWatchedCount = seasonEpisodesMeta.filter((ep) =>
     watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
   ).length;
 
+  const seasonAiredWatchedCount = seasonAiredMeta.filter((ep) =>
+    watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+  ).length;
+
+  const showProgress = deriveShowProgress(track, episodeIndex, watchedKeys);
+
   const seasonComplete =
-    seasonEpisodesMeta.length > 0 && seasonWatchedCount === seasonEpisodesMeta.length;
+    seasonAiredMeta.length > 0 && seasonAiredWatchedCount === seasonAiredMeta.length;
 
   const applyResponse = (r) => {
     if (r.data.success) {
@@ -132,7 +149,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   };
 
   const markSeason = async () => {
-    const unwatched = seasonEpisodesMeta.filter(
+    const unwatched = seasonAiredMeta.filter(
       (ep) => !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
     );
     if (!unwatched.length) return;
@@ -163,7 +180,9 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
 
   const markAllShow = async () => {
     const unwatched = episodeIndex.filter(
-      (ep) => !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+      (ep) =>
+        isEpisodeAired(ep) &&
+        !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
     );
     if (!unwatched.length) return;
     setBatching(true);
@@ -187,7 +206,10 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
         <h3 className="section-title">Episodes</h3>
         {track && (
           <span className="text-xs text-muted">
-            {track.watchedEpisodeCount || 0}/{track.totalEpisodes || totalEpisodes} episodes logged
+            {track.watchedEpisodeCount || 0}/{showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes} aired
+            {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
+              ? ` · ${showProgress.totalEpisodes} total`
+              : ''}
           </span>
         )}
       </div>
@@ -225,12 +247,12 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
               <div
                 className="h-full rounded-full bg-accent transition-all duration-300"
                 style={{
-                  width: `${progressPercent(seasonWatchedCount, seasonEpisodesMeta.length)}%`,
+                  width: `${progressPercent(seasonAiredWatchedCount, seasonAiredMeta.length || seasonEpisodesMeta.length)}%`,
                 }}
               />
             </div>
             <span className="text-[10px] font-bold tabular-nums text-muted">
-              {seasonWatchedCount}/{seasonEpisodesMeta.length || '—'}
+              {seasonAiredWatchedCount}/{seasonAiredMeta.length || seasonEpisodesMeta.length || '—'}
             </span>
           </div>
           {!seasonComplete ? (
@@ -272,22 +294,25 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
           <div className="space-y-2">
             {seasonEpisodes.map((episode) => {
               const key = episodeKey(selectedSeason, episode.episode_number);
+              const epMeta = episodeFromTmdb(selectedSeason, episode);
+              const aired = isEpisodeAired(epMeta);
+              const releaseLabel = !aired ? formatEpisodeReleaseLabel(episode.air_date) : null;
               const isWatched = watchedKeys.has(key);
-              const isNext = key === nextKey;
+              const isNext = aired && key === nextKey;
 
               return (
                 <article
                   key={episode.id}
                   className={`flex gap-3 rounded-xl border border-border/60 bg-surface/50 p-3 transition-colors ${
                     isNext ? 'ring-2 ring-accent/40' : ''
-                  }`}
+                  } ${!aired ? 'opacity-75' : ''}`}
                 >
                   <button
                     type="button"
-                    disabled={toggling === key || batching}
+                    disabled={!aired || toggling === key || batching}
                     onClick={() => toggleEpisode(episode)}
-                    aria-label={isWatched ? 'Mark unwatched' : 'Mark watched'}
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all cursor-pointer disabled:opacity-50 ${
+                    aria-label={isWatched ? 'Mark unwatched' : aired ? 'Mark watched' : 'Not released yet'}
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                       isWatched
                         ? 'border-accent bg-accent text-on-accent'
                         : 'border-border bg-surface hover:border-accent/50'
@@ -301,6 +326,11 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
                       {isNext && (
                         <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent">
                           Up next
+                        </span>
+                      )}
+                      {releaseLabel && (
+                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-muted">
+                          {releaseLabel}
                         </span>
                       )}
                     </p>

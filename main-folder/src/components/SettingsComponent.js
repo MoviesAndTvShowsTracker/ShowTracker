@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
+import { displayName } from '../utils/displayUser';
 import BackNav from './ui/BackNav';
 import TvTimeImportSection from './settings/TvTimeImportSection';
 
@@ -128,7 +129,7 @@ export default function Settings() {
           <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Account</p>
           <h1 className="page-title mt-2">Settings</h1>
           <p className="mt-2 text-sm text-muted">
-            Signed in as <span className="font-medium text-ink">{user?.username}</span>
+            Signed in as <span className="font-medium text-ink">{user?.email || displayName(user)}</span>
           </p>
         </header>
 

@@ -102,6 +102,8 @@ async function processImportJob(jobId, userId, dataDir, workDir) {
       report,
       finishedAt: new Date(),
     });
+    const { invalidateUserStats } = require('../services/statsCache');
+    await invalidateUserStats(userId);
   } catch (err) {
     await ImportJob.findByIdAndUpdate(jobId, {
       status: 'failed',

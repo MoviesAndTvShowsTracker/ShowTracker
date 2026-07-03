@@ -2,15 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tv } from 'lucide-react';
 import api from '../api/axios';
+import { clearSessionStats } from '../utils/statsCache';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_URL } from '../config/keys';
 import { profileListPath } from '../config/profileLists';
+import { tvLibraryPath } from '../config/tvLibrary';
 import {
   buildMarkPayload,
   fetchShowEpisodeIndex,
   watchedSetFromEpisodes,
 } from '../utils/tvProgress';
 import PageTitle from '../utils/PageTitle';
+import { displayName } from '../utils/displayUser';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import TvTimeWelcomeBanner from './home/TvTimeWelcomeBanner';
 import PosterRail from './ui/PosterRail';
@@ -91,13 +94,14 @@ export default function HomeDashboard() {
       );
 
       await api.post('/api/tv/episodes/mark', payload);
+      clearSessionStats();
       loadTracks();
     } finally {
       setMarkingId(null);
     }
   };
 
-  const greeting = user?.username ? `Hey, ${user.username}` : 'Welcome back';
+  const greeting = user ? `Hey, ${displayName(user)}` : 'Welcome back';
 
   return (
     <>
@@ -122,6 +126,12 @@ export default function HomeDashboard() {
                 </p>
               )}
             </div>
+            <Link
+              to={tvLibraryPath('watching')}
+              className="shrink-0 text-xs font-semibold text-link hover:text-ink-bright cursor-pointer"
+            >
+              View library
+            </Link>
           </div>
 
           {loading ? (

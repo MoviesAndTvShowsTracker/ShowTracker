@@ -3,6 +3,32 @@ import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
+function persistUser(session) {
+  localStorage.setItem('token', session.token);
+  localStorage.setItem('userId', session.id);
+  localStorage.setItem('email', session.email || '');
+  if (session.firstName) localStorage.setItem('firstName', session.firstName);
+  else localStorage.removeItem('firstName');
+}
+
+function clearStoredUser() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('email');
+  localStorage.removeItem('firstName');
+  localStorage.removeItem('username');
+}
+
+function userFromApi(userId, token, u) {
+  return {
+    id: userId,
+    token,
+    email: u.email || '',
+    firstName: u.firstName || '',
+    username: u.username || '',
+  };
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -16,9 +42,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const clearSession = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
+    clearStoredUser();
     setUser(null);
   }, []);
 
@@ -31,7 +55,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('userId');
-    const username = localStorage.getItem('username');
 
     if (!token || !userId) {
       setLoading(false);
@@ -40,8 +63,14 @@ export const AuthProvider = ({ children }) => {
 
     api
       .get(`/users/getUser/${userId}`)
-      .then(() => {
-        setUser({ id: userId, token, username: username || '' });
+      .then((r) => {
+        if (r.data.success && r.data.found) {
+          const session = userFromApi(userId, token, r.data.found);
+          setUser(session);
+          persistUser(session);
+        } else {
+          clearSession();
+        }
       })
       .catch(() => {
         clearSession();
@@ -49,17 +78,26 @@ export const AuthProvider = ({ children }) => {
       .finally(() => setLoading(false));
   }, [clearSession]);
 
+  const applySession = (userId, token, profile = {}) => {
+    const session = {
+      id: userId,
+      token,
+      email: profile.email || '',
+      firstName: profile.firstName || '',
+      username: profile.username || '',
+    };
+    persistUser(session);
+    setUser(session);
+    return session;
+  };
+
   const login = async (credentials) => {
     try {
       const response = await api.post('/users/login', credentials);
       if (response.data.status === 200 && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('userId', response.data.userId);
-        localStorage.setItem('username', credentials.username);
-        setUser({
-          id: response.data.userId,
-          token: response.data.token,
-          username: credentials.username,
+        applySession(response.data.userId, response.data.token, {
+          email: response.data.email || credentials.email,
+          firstName: response.data.firstName,
         });
         return { success: true };
       }
@@ -70,7 +108,7 @@ export const AuthProvider = ({ children }) => {
         message:
           error.response?.data?.message ||
           error.response?.data?.err?.message ||
-          'Invalid username or password',
+          'Invalid email or password',
       };
     }
   };
@@ -109,12 +147,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/users/google', { idToken });
       if (response.data.success && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('userId', response.data.userId);
-        localStorage.setItem('username', response.data.username);
-        setUser({
-          id: response.data.userId,
-          token: response.data.token,
+        applySession(response.data.userId, response.data.token, {
+          email: response.data.email,
+          firstName: response.data.firstName,
           username: response.data.username,
         });
         return { success: true };

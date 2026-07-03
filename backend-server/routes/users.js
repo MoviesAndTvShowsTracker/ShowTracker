@@ -5,16 +5,17 @@ var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
+const { uniqueUsername } = require('../lib/userHelpers');
 
 router.use(bodyParser.json());
 
 function signupErrorMessage(err) {
   if (err?.name === 'UserExistsError') {
-    return 'That username is already taken.';
+    return 'That email is already registered.';
   }
   if (err?.code === 11000) {
     if (err.keyPattern?.email) return 'That email is already registered.';
-    if (err.keyPattern?.username) return 'That username is already taken.';
+    if (err.keyPattern?.username) return 'That email is already registered.';
   }
   return err?.message || 'Registration failed.';
 }
@@ -23,38 +24,44 @@ router.get('/', function(req, res, next) {
   res.send('respond with a resource');
 });
 
-router.post('/signup', (req, res, next) => {
-  const { username, email, password } = req.body;
-  if (!username?.trim() || !email?.trim() || !password) {
-    return res.status(400).json({ success: false, message: 'Username, email, and password are required.' });
-  }
-  if (password.length < 6) {
-    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-  }
-
-  User.register(
-    new User({
-      username: username.trim(),
-      email: email.trim(),
-    }),
-    password,
-    (err, user) => {
-      if (err) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        return res.json({ success: false, err: signupErrorMessage(err) });
-      }
-
-      passport.authenticate('local')(req, res, () => {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200).json({
-          status: 200,
-          success: true,
-          message: 'Registration Successful!',
-        });
-      });
+router.post('/signup', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
-  );
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    const username = await uniqueUsername(email.trim().split('@')[0]);
+
+    User.register(
+      new User({
+        email: email.trim(),
+        username,
+      }),
+      password,
+      (err, user) => {
+        if (err) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          return res.json({ success: false, err: signupErrorMessage(err) });
+        }
+
+        passport.authenticate('local')(req, res, () => {
+          res.setHeader('Content-Type', 'application/json');
+          res.status(200).json({
+            status: 200,
+            success: true,
+            message: 'Registration Successful!',
+          });
+        });
+      }
+    );
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/google', async (req, res, next) => {
@@ -72,6 +79,8 @@ router.post('/google', async (req, res, next) => {
       success: true,
       token,
       userId: user._id,
+      email: user.email,
+      firstName: user.firstName || '',
       username: user.username,
       message: 'Signed in with Google.',
     });
@@ -91,7 +100,7 @@ router.post('/login', (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: info?.message || 'Invalid username or password',
+        message: info?.message || 'Invalid email or password',
       });
     }
 
@@ -101,6 +110,8 @@ router.post('/login', (req, res, next) => {
       success: true,
       token,
       userId: user._id,
+      email: user.email,
+      firstName: user.firstName || '',
       message: 'You are successfully logged in!',
     });
   })(req, res, next);

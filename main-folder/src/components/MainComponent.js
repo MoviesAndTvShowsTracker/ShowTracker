@@ -7,6 +7,7 @@ import Signup from './SignupComponent';
 import Signin from './SigninComponent';
 import Profile from './ProfileComponent';
 import ProfileListPage from './profile/ProfileListPage';
+import ProfileStatsPage from './profile/ProfileStatsPage';
 import Settings from './SettingsComponent';
 import LandingPage from './Movies/LandingComponent';
 import MovieDetail from './Movies/MovieDetail';
@@ -15,6 +16,7 @@ import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
 import TvContinue from './TV/TvContinue';
+import TvLibraryPage from './TV/TvLibraryPage';
 import ScrollToTop from './ScrollToTop';
 import { useAuth } from '../context/AuthContext';
 
@@ -49,11 +51,14 @@ export default function Main() {
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<HomeDashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/stats" element={<ProfileStatsPage />} />
             <Route path="/profile/lists/:listKey" element={<ProfileListPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/movies" element={<LandingPage />} />
             <Route path="/movies/:Id" element={<MovieDetail />} />
             <Route path="/tv" element={<TvLandingPage />} />
+            <Route path="/tv/library" element={<Navigate to="/tv/library/watching" replace />} />
+            <Route path="/tv/library/:tab" element={<TvLibraryPage />} />
             <Route path="/tv/:Id/continue" element={<TvContinue />} />
             <Route path="/tv/:Id" element={<TvDetail />} />
             <Route path="/tv/:Id/:seasonNumber/episodes" element={<SeasonEpisodes />} />
