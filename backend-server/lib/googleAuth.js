@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user');
 
-const { uniqueUsername } = require('./userHelpers');
+const { uniqueUsername, normalizeEmail, findUserByEmail } = require('./userHelpers');
 
 function registerUser(user, password) {
   return new Promise((resolve, reject) => {
@@ -28,14 +28,17 @@ async function verifyGoogleIdToken(idToken) {
 
 async function findOrCreateGoogleUser(payload) {
   const googleId = payload.sub;
-  const email = payload.email;
+  const email = normalizeEmail(payload.email);
   if (!googleId || !email) {
     const err = new Error('Google account must include an email address.');
     err.status = 400;
     throw err;
   }
 
-  let user = await User.findOne({ $or: [{ googleId }, { email }] });
+  let user = await User.findOne({ googleId });
+  if (!user) {
+    user = await findUserByEmail(email);
+  }
 
   if (user) {
     if (!user.googleId) {

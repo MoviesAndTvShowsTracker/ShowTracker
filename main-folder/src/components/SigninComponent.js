@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import PageTitle from '../utils/PageTitle';
 import { useAuth } from '../context/AuthContext';
 import BackNav from './ui/BackNav';
@@ -12,6 +12,8 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function Signin() {
   const { login, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passwordReset = location.state?.passwordReset;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -84,9 +86,17 @@ export default function Signin() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="section-title mb-2 block normal-case tracking-wide">
-                Password
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <label htmlFor="password" className="section-title block normal-case tracking-wide">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-link hover:text-ink-bright"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="password"
                 type="password"
@@ -97,6 +107,9 @@ export default function Signin() {
                 disabled={googleSubmitting}
               />
             </div>
+            {passwordReset && (
+              <p className="text-sm text-accent">Password updated. Sign in with your new password.</p>
+            )}
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button
               type="submit"

@@ -31,6 +31,14 @@ var User = new Schema({
         unique: true,
         sparse: true
     },
+    resetPasswordToken: {
+        type: String,
+        select: false
+    },
+    resetPasswordExpires: {
+        type: Date,
+        select: false
+    },
     admin: {
         type: Boolean,
         default: false

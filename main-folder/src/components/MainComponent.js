@@ -5,6 +5,8 @@ import Home from './HomeComponent';
 import HomeDashboard from './HomeDashboard';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
+import ForgotPassword from './ForgotPasswordComponent';
+import ResetPassword from './ResetPasswordComponent';
 import Profile from './ProfileComponent';
 import ProfileListPage from './profile/ProfileListPage';
 import ProfileStatsPage from './profile/ProfileStatsPage';
@@ -46,6 +48,8 @@ export default function Main() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Signin />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/search" element={<SearchBox />} />
 
           <Route element={<ProtectedRoute />}>
