@@ -5,6 +5,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_URL } from '../config/keys';
 import { profileListPath } from '../config/profileLists';
+import { tvLibraryPath } from '../config/tvLibrary';
 import {
   buildMarkPayload,
   fetchShowEpisodeIndex,
@@ -123,6 +124,12 @@ export default function HomeDashboard() {
                 </p>
               )}
             </div>
+            <Link
+              to={tvLibraryPath('watching')}
+              className="shrink-0 text-xs font-semibold text-link hover:text-ink-bright cursor-pointer"
+            >
+              View library
+            </Link>
           </div>
 
           {loading ? (

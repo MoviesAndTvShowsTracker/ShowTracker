@@ -26,6 +26,7 @@ export default function TvTrackingBanner({ tvId }) {
   const pct = progress?.pct ?? 0;
   const caughtUp = progress?.caughtUpWithAired && progress?.upcomingLabel;
   const isComplete = progress?.isComplete ?? track.status === 'completed';
+  const isPaused = track.status === 'paused';
 
   return (
     <Link
@@ -35,9 +36,11 @@ export default function TvTrackingBanner({ tvId }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
-            {isComplete ? 'Completed' : caughtUp ? 'Caught up' : 'Tracking'}
+            {isComplete ? 'Completed' : isPaused ? 'Stopped' : caughtUp ? 'Caught up' : 'Tracking'}
           </p>
-          {isComplete ? (
+          {isPaused ? (
+            <p className="mt-1 text-sm font-medium text-ink-bright">Paused — mark an episode to resume</p>
+          ) : isComplete ? (
             <p className="mt-1 text-sm font-medium text-ink-bright">All episodes logged</p>
           ) : caughtUp && progress.upcomingLabel ? (
             <p className="mt-1 text-sm font-medium text-ink-bright">

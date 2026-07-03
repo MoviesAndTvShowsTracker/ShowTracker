@@ -15,6 +15,7 @@ import TvLandingPage from './TV/TvLandingComponent';
 import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
 import TvContinue from './TV/TvContinue';
+import TvLibraryPage from './TV/TvLibraryPage';
 import ScrollToTop from './ScrollToTop';
 import { useAuth } from '../context/AuthContext';
 
@@ -54,6 +55,8 @@ export default function Main() {
             <Route path="/movies" element={<LandingPage />} />
             <Route path="/movies/:Id" element={<MovieDetail />} />
             <Route path="/tv" element={<TvLandingPage />} />
+            <Route path="/tv/library" element={<Navigate to="/tv/library/watching" replace />} />
+            <Route path="/tv/library/:tab" element={<TvLibraryPage />} />
             <Route path="/tv/:Id/continue" element={<TvContinue />} />
             <Route path="/tv/:Id" element={<TvDetail />} />
             <Route path="/tv/:Id/:seasonNumber/episodes" element={<SeasonEpisodes />} />

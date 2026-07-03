@@ -1,10 +1,14 @@
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export default function BackNav({ fallback = '/', label = 'Back', className = '' }) {
+export default function BackNav({ fallback = '/', label = 'Back', className = '', to }) {
   const navigate = useNavigate();
 
   const handleBack = () => {
+    if (to) {
+      navigate(to);
+      return;
+    }
     if (window.history.state?.idx > 0) {
       navigate(-1);
     } else {

@@ -11,6 +11,7 @@ import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 import ProfileEmptyState from './profile/ProfileEmptyState';
 import ProfileStats from './profile/ProfileStats';
+import TvLibrarySummary from './profile/TvLibrarySummary';
 import BackNav from './ui/BackNav';
 
 const emptyFilm = (browse) => (
@@ -323,6 +324,8 @@ export default function Profile() {
                 tvMins={tvStats.tvMins}
                 tvStatsLoading={tvStatsLoading}
               />
+
+              <TvLibrarySummary />
 
               {isProfileEmpty ? (
                 <ProfileEmptyState name={profileDisplay.title} />
