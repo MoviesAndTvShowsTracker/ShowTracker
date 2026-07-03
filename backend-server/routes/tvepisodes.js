@@ -52,6 +52,7 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       tvPosterImage,
       tvBackdropImage,
       totalEpisodes,
+      airedEpisodeCount,
       nextSeason,
       nextEpisode,
       nextEpisodeName,
@@ -81,6 +82,7 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
         tvPosterImage,
         tvBackdropImage,
         totalEpisodes: totalEpisodes || 0,
+        airedEpisodeCount: airedEpisodeCount || 0,
         status: 'watching',
         nextSeason,
         nextEpisode,
@@ -94,6 +96,7 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       nextEpisode,
       nextEpisodeName,
       totalEpisodes,
+      airedEpisodeCount,
     });
 
     const episodes = await TvEpisodeWatch.find({ userFrom: userId, tvId }).sort({
@@ -117,6 +120,7 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
       tvPosterImage,
       tvBackdropImage,
       totalEpisodes,
+      airedEpisodeCount,
       nextSeason,
       nextEpisode,
       nextEpisodeName,
@@ -159,6 +163,7 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
         tvPosterImage,
         tvBackdropImage,
         totalEpisodes: totalEpisodes || 0,
+        airedEpisodeCount: airedEpisodeCount || 0,
         status: 'watching',
         nextSeason,
         nextEpisode,
@@ -172,6 +177,7 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
       nextEpisode,
       nextEpisodeName,
       totalEpisodes,
+      airedEpisodeCount,
     });
 
     const allEpisodes = await TvEpisodeWatch.find({ userFrom: userId, tvId }).sort({

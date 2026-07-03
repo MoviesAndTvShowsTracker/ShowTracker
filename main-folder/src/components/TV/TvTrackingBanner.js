@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
-import { progressPercent } from '../../utils/tvProgress';
+import { deriveShowProgress, fetchShowEpisodeIndex } from '../../utils/tvProgress';
 
 export default function TvTrackingBanner({ tvId }) {
   const [track, setTrack] = useState(null);
+  const [progress, setProgress] = useState(null);
 
   useEffect(() => {
     api.get(`/api/tv/tracking/show/${tvId}`).then((r) => {
@@ -13,10 +14,18 @@ export default function TvTrackingBanner({ tvId }) {
     });
   }, [tvId]);
 
+  useEffect(() => {
+    if (!track) return;
+    fetchShowEpisodeIndex(tvId)
+      .then(({ episodes }) => setProgress(deriveShowProgress(track, episodes)))
+      .catch(() => setProgress(null));
+  }, [track, tvId]);
+
   if (!track || track.status === 'dropped') return null;
 
-  const pct = progressPercent(track.watchedEpisodeCount, track.totalEpisodes);
-  const isComplete = track.status === 'completed' || pct >= 100;
+  const pct = progress?.pct ?? 0;
+  const caughtUp = progress?.caughtUpWithAired && progress?.upcomingLabel;
+  const isComplete = progress?.isComplete ?? track.status === 'completed';
 
   return (
     <Link
@@ -26,10 +35,17 @@ export default function TvTrackingBanner({ tvId }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
-            {isComplete ? 'Completed' : 'Tracking'}
+            {isComplete ? 'Completed' : caughtUp ? 'Caught up' : 'Tracking'}
           </p>
           {isComplete ? (
             <p className="mt-1 text-sm font-medium text-ink-bright">All episodes logged</p>
+          ) : caughtUp && progress.upcomingLabel ? (
+            <p className="mt-1 text-sm font-medium text-ink-bright">
+              Next episode {progress.upcomingLabel}
+              {progress.nextUnaired
+                ? ` · S${progress.nextUnaired.seasonNumber} E${progress.nextUnaired.episodeNumber}`
+                : ''}
+            </p>
           ) : track.nextSeason ? (
             <p className="mt-1 text-sm font-medium text-ink-bright">
               Up next · S{track.nextSeason} E{track.nextEpisode}

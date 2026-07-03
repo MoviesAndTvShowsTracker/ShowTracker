@@ -5,8 +5,8 @@ import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import {
   buildMarkPayload,
+  deriveShowProgress,
   fetchShowEpisodeIndex,
-  progressPercent,
   watchedSetFromEpisodes,
 } from '../../utils/tvProgress';
 import PageTitle from '../../utils/PageTitle';
@@ -44,15 +44,15 @@ export default function TvContinue() {
   }, [tvShowId]);
 
   const watchedKeys = watchedSetFromEpisodes(watched);
+  const progress = deriveShowProgress(track, episodeIndex, watchedKeys);
   const nextEp =
     track?.nextSeason && track?.nextEpisode
       ? episodeIndex.find(
           (e) => e.seasonNumber === track.nextSeason && e.episodeNumber === track.nextEpisode
         )
-      : null;
+      : progress.nextAired;
 
-  const pct = progressPercent(track?.watchedEpisodeCount || 0, track?.totalEpisodes || 0);
-  const isComplete = track?.status === 'completed' || pct >= 100;
+  const { pct, caughtUpWithAired, upcomingLabel, nextUnaired, isComplete } = progress;
 
   const markNext = async () => {
     if (!nextEp || !showMeta) return;
@@ -117,7 +117,11 @@ export default function TvContinue() {
                   <span className="text-xs font-bold text-muted">{pct}%</span>
                 </div>
                 <p className="mt-1 text-xs text-muted">
-                  {track?.watchedEpisodeCount || 0} of {track?.totalEpisodes || '—'} episodes
+                  {track?.watchedEpisodeCount || 0} of {progress.airedTotal || track?.totalEpisodes || '—'}{' '}
+                  aired episodes
+                  {progress.airedTotal < progress.totalEpisodes && progress.totalEpisodes > 0
+                    ? ` (${progress.totalEpisodes} total)`
+                    : ''}
                 </p>
               </div>
             </div>
@@ -126,6 +130,23 @@ export default function TvContinue() {
               <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5 text-center">
                 <p className="font-serif text-lg text-ink-bright">You&apos;ve finished this show</p>
                 <Link to={`/tv/${tvShowId}`} className="btn-secondary mt-4 inline-flex">
+                  View show page
+                </Link>
+              </div>
+            ) : caughtUpWithAired && upcomingLabel ? (
+              <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Caught up</p>
+                <p className="mt-2 font-serif text-lg text-ink-bright">
+                  You&apos;re up to date on all aired episodes
+                </p>
+                {nextUnaired && (
+                  <p className="mt-2 text-sm text-muted">
+                    S{nextUnaired.seasonNumber} · E{nextUnaired.episodeNumber}
+                    {nextUnaired.episodeName ? ` — ${nextUnaired.episodeName}` : ''} releases{' '}
+                    <span className="font-medium text-ink">{upcomingLabel}</span>
+                  </p>
+                )}
+                <Link to={`/tv/${tvShowId}`} className="btn-secondary mt-5 inline-flex">
                   View show page
                 </Link>
               </div>

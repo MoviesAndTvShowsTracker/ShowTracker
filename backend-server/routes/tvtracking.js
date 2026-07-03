@@ -28,7 +28,28 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
 
   const tracking = await TvShowTracking.findOne({ userFrom: userId, tvId });
   if (tracking) {
-    if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
+    const progressTotal =
+      extra.airedEpisodeCount ?? tracking.airedEpisodeCount ?? tracking.totalEpisodes;
+    const hasUnreleased =
+      tracking.totalEpisodes > 0 && progressTotal < tracking.totalEpisodes;
+
+    if (progressTotal > 0 && count >= progressTotal) {
+      if (hasUnreleased && count < tracking.totalEpisodes) {
+        patch.status = 'watching';
+        if (!extra.nextSeason && !('nextSeason' in extra)) {
+          patch.nextSeason = null;
+          patch.nextEpisode = null;
+          patch.nextEpisodeName = null;
+        }
+      } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
+        patch.status = 'completed';
+        patch.nextSeason = null;
+        patch.nextEpisode = null;
+        patch.nextEpisodeName = null;
+      }
+    } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
+      patch.status = 'watching';
+    } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
       patch.status = 'completed';
       patch.nextSeason = null;
       patch.nextEpisode = null;
@@ -36,6 +57,11 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
     } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
       patch.status = 'watching';
     }
+
+    if (extra.airedEpisodeCount != null) {
+      patch.airedEpisodeCount = extra.airedEpisodeCount;
+    }
+
     Object.assign(tracking, patch);
     await tracking.save();
     return tracking;

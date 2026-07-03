@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Pencil, Phone, Settings } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Pencil, Phone, Settings, LogOut } from 'lucide-react';
 import api from '../api/axios';
 import { IMAGE_URL } from '../config/keys';
 import { profileListPath } from '../config/profileLists';
@@ -32,7 +32,8 @@ const emptyTv = (browse) => (
 );
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [favoritedMovies, setFavoritedMovies] = useState([]);
   const [favoritedShows, setFavoritedShows] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
@@ -43,6 +44,7 @@ export default function Profile() {
   const [phoneDialog, setPhoneDialog] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [showLogout, setShowLogout] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0, tvShowCount: 0 });
@@ -149,6 +151,12 @@ export default function Profile() {
         });
       }
     });
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setShowLogout(false);
+    navigate('/');
   };
 
   const joinDate = userInfo?.createdAt
@@ -276,7 +284,7 @@ export default function Profile() {
                     <h1 className="page-title">{profileDisplay.title}</h1>
                     <Link
                       to="/settings"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                      className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer sm:flex"
                       aria-label="Settings"
                     >
                       <Settings className="h-4 w-4" />
@@ -297,6 +305,24 @@ export default function Profile() {
                   </div>
                 </div>
               </header>
+
+              <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
+                <Link
+                  to="/settings"
+                  className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowLogout(true)}
+                  className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400/40 hover:text-red-400 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  Sign out
+                </button>
+              </div>
 
               <ProfileStats
                 filmCount={watchedMovies.length}
@@ -403,6 +429,24 @@ export default function Profile() {
           />
           {phoneError && <p className="mt-2 text-sm text-red-400">{phoneError}</p>}
         </form>
+      </Dialog>
+
+      <Dialog
+        open={showLogout}
+        onClose={() => setShowLogout(false)}
+        title="Sign out?"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowLogout(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="button" onClick={handleLogout} className="btn-primary">
+              Sign out
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">Your lists and history will be here when you return.</p>
       </Dialog>
     </>
   );

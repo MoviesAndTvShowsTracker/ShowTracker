@@ -14,6 +14,7 @@ const TvShowTracking = new Schema(
       default: 'watching',
     },
     totalEpisodes: { type: Number, default: 0 },
+    airedEpisodeCount: { type: Number, default: 0 },
     watchedEpisodeCount: { type: Number, default: 0 },
     nextSeason: Number,
     nextEpisode: Number,

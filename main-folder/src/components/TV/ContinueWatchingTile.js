@@ -1,21 +1,23 @@
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { IMAGE_URL } from '../../config/keys';
-import { progressPercent } from '../../utils/tvProgress';
+import useShowProgress from '../../hooks/useShowProgress';
 
 const TILE_WIDTH = 'w-[108px] sm:w-[120px]';
 
 export default function ContinueWatchingTile({ track, onMark, marking }) {
-  const pct = progressPercent(track.watchedEpisodeCount, track.totalEpisodes);
-  const isComplete = track.status === 'completed' || pct >= 100;
-  const hasNext = track.nextSeason && track.nextEpisode;
-  const canMark = !isComplete && hasNext && onMark;
+  const progress = useShowProgress(track);
+  const pct = progress?.pct ?? 0;
+  const caughtUp = progress?.caughtUpWithAired && progress?.upcomingLabel;
+  const isComplete = progress?.isComplete ?? track.status === 'completed';
+  const hasNext = !caughtUp && !isComplete && track.nextSeason && track.nextEpisode;
+  const canMark = hasNext && onMark;
 
   return (
     <article className={`shrink-0 snap-start ${TILE_WIDTH}`}>
       <div className="group relative">
         <Link
-          to={isComplete ? `/tv/${track.tvId}` : `/tv/${track.tvId}/continue`}
+          to={isComplete || caughtUp ? `/tv/${track.tvId}/continue` : `/tv/${track.tvId}/continue`}
           className="block cursor-pointer"
           aria-label={`${track.tvTitle}${hasNext ? `, next S${track.nextSeason} E${track.nextEpisode}` : ''}`}
         >
@@ -31,10 +33,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
               <div className="aspect-[2/3] w-full bg-surface-raised" />
             )}
 
-            <div
-              className="absolute inset-x-0 bottom-0 h-1 bg-black/40"
-              aria-hidden
-            >
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40" aria-hidden>
               <div
                 className="h-full bg-accent transition-all duration-500"
                 style={{ width: `${pct}%` }}
@@ -44,6 +43,11 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
             {isComplete && (
               <span className="absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
                 Done
+              </span>
+            )}
+            {caughtUp && !isComplete && (
+              <span className="absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
+                Caught up
               </span>
             )}
           </div>
@@ -66,14 +70,16 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
         )}
       </div>
 
-      <Link
-        to={isComplete ? `/tv/${track.tvId}` : `/tv/${track.tvId}/continue`}
-        className="mt-2 block cursor-pointer"
-      >
+      <Link to={`/tv/${track.tvId}/continue`} className="mt-2 block cursor-pointer">
         <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-ink-bright sm:text-xs">
           {track.tvTitle}
         </p>
-        {isComplete ? (
+        {caughtUp && progress.upcomingLabel ? (
+          <p className="mt-0.5 text-[10px] font-medium text-accent">
+            Next {progress.upcomingLabel}
+            <span className="text-muted"> · {pct}%</span>
+          </p>
+        ) : isComplete ? (
           <p className="mt-0.5 text-[10px] font-medium text-muted">{pct}% · Finished</p>
         ) : hasNext ? (
           <p className="mt-0.5 text-[10px] font-medium text-accent">
