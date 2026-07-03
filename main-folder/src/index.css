@@ -53,6 +53,7 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -72,6 +73,7 @@
   body {
     @apply bg-canvas font-sans text-ink antialiased;
     margin: 0;
+    overflow-x: hidden;
     font-size: 16px;
     line-height: 1.5;
     background-image:
@@ -199,7 +201,15 @@
   }
 
   .auth-card {
-    @apply glass-card p-6 sm:p-8;
+    @apply glass-card overflow-hidden p-6 sm:p-8;
+  }
+
+  .google-signin-container {
+    @apply w-full max-w-full overflow-hidden;
+  }
+
+  .google-signin-container > div {
+    @apply !max-w-full;
   }
 
   .hero-band {
