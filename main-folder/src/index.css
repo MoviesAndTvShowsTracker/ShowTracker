@@ -225,7 +225,7 @@
   }
 
   .auth-card {
-    @apply glass-card overflow-hidden p-6 sm:p-8;
+    @apply glass-card flex flex-col gap-6 overflow-hidden p-6 sm:gap-7 sm:p-8;
   }
 
   .google-signin-container {

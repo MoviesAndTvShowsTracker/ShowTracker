@@ -110,7 +110,7 @@ export default function TvLibraryPage() {
           <h1 className="page-title mt-2">TV library</h1>
           <p className="mt-2 max-w-xl text-sm text-muted">{config.description}</p>
           {tab === 'stopped' && (
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-sm text-muted">
               Shows with no activity for {staleAfterDays} days move here automatically. Caught-up and
               finished shows are not moved.
             </p>
@@ -174,7 +174,7 @@ export default function TvLibraryPage() {
           </div>
         ) : (
           <>
-            <p className="mb-4 text-xs text-muted">
+            <p className="mb-4 text-sm text-muted">
               {tracks.length} {tracks.length === 1 ? 'show' : 'shows'}
               {tab === 'watching' && ' · tap check to log next episode'}
             </p>

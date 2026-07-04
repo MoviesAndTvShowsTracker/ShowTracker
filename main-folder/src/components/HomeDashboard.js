@@ -177,7 +177,7 @@ export default function HomeDashboard() {
           <div className="mb-4 flex items-end justify-between gap-3">
             <div className="min-w-0">
               <h2 className="section-title">Continue watching</h2>
-              <p className="mt-1 min-h-4 text-xs text-muted">
+              <p className="mt-1 min-h-5 text-sm text-muted">
                 {!loading && tracks.length > 0
                   ? `${tracks.length} in progress · tap poster to resume, check to log episode`
                   : '\u00a0'}

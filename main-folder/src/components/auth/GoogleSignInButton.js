@@ -44,7 +44,7 @@ export default function GoogleSignInButton({ onSuccess, onError, mode = 'signin'
           />
         )}
       </div>
-      <div className="relative py-1">
+      <div className="relative py-2 sm:py-3">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
