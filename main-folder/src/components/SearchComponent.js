@@ -6,8 +6,8 @@ import { tmdbFetch, withPoster } from '../utils/tmdb';
 import {
   clearRecentSearches,
   clearSearchCache,
+  getMatchingSearchCache,
   loadRecentSearches,
-  loadSearchCache,
   pushRecentSearch,
   restoreSearchScroll,
   saveSearchCache,
@@ -53,6 +53,16 @@ export default function SearchBox() {
   const [trendingFilms, setTrendingFilms] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
   const [hasSearched, setHasSearched] = useState(Boolean(urlQuery));
+
+  const applyCache = useCallback((cache) => {
+    setResults(cache.results);
+    setPage(cache.page || 1);
+    setTotalPages(cache.totalPages || 0);
+    setTotalResults(cache.totalResults || 0);
+    setHasSearched(true);
+    setError('');
+    setSearchParams({ q: cache.query, type: cache.type }, { replace: true });
+  }, [setSearchParams]);
 
   const runSearch = useCallback(async (searchQuery, searchType, pageNum, append = false) => {
     const trimmed = searchQuery.trim();
@@ -117,13 +127,9 @@ export default function SearchBox() {
   }, []);
 
   useEffect(() => {
-    const cache = loadSearchCache();
-    if (urlQuery && cache?.query === urlQuery && cache?.type === urlType && cache.results?.length) {
-      setResults(cache.results);
-      setPage(cache.page || 1);
-      setTotalPages(cache.totalPages || 0);
-      setTotalResults(cache.totalResults || 0);
-      setHasSearched(true);
+    const cache = getMatchingSearchCache(urlQuery, urlType);
+    if (urlQuery && cache) {
+      applyCache(cache);
       restoreSearchScroll();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,8 +159,9 @@ export default function SearchBox() {
       return;
     }
 
-    const cache = loadSearchCache();
-    if (cache?.query === trimmed && cache?.type === type && cache.results?.length && !loading) {
+    const cache = getMatchingSearchCache(trimmed, type);
+    if (cache) {
+      applyCache(cache);
       return;
     }
 
