@@ -20,6 +20,7 @@ import SeasonEpisodes from './TV/SeasonEpisodes';
 import TvContinue from './TV/TvContinue';
 import TvLibraryPage from './TV/TvLibraryPage';
 import ScrollToTop from './ScrollToTop';
+import useSearchShortcut from '../hooks/useSearchShortcut';
 import { useAuth } from '../context/AuthContext';
 import { hideMobileBottomNav } from '../utils/layout';
 
@@ -50,6 +51,8 @@ function AppLayout() {
 }
 
 export default function Main() {
+  useSearchShortcut();
+
   return (
     <>
       <ScrollToTop />

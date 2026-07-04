@@ -18,6 +18,7 @@ import BackNav from './ui/BackNav';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 import SearchResultTile from './search/SearchResultTile';
+import { FOCUS_SEARCH_EVENT } from '../hooks/useSearchShortcut';
 
 const TABS = [
   { id: 'multi', label: 'All', icon: Search },
@@ -110,6 +111,12 @@ export default function SearchBox() {
 
   // Restore cache + scroll when returning to search
   useEffect(() => {
+    const focusInput = () => inputRef.current?.focus();
+    window.addEventListener(FOCUS_SEARCH_EVENT, focusInput);
+    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusInput);
+  }, []);
+
+  useEffect(() => {
     const cache = loadSearchCache();
     if (urlQuery && cache?.query === urlQuery && cache?.type === urlType && cache.results?.length) {
       setResults(cache.results);
@@ -199,6 +206,9 @@ export default function SearchBox() {
 
           <div className="mx-auto max-w-2xl">
             <h1 className="page-title mb-4 hidden md:block">Search</h1>
+            <p className="mb-3 hidden text-xs text-muted md:block">
+              Press <kbd className="rounded border border-border bg-surface-raised px-1.5 py-0.5 font-mono text-[10px]">/</kbd> anywhere to jump here
+            </p>
 
             <div className="relative">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />

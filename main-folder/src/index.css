@@ -68,6 +68,9 @@
       animation: none !important;
       transition: none !important;
     }
+    .app-dialog[open] {
+      animation: none !important;
+    }
   }
 
   body {
@@ -223,6 +226,38 @@
 
   .theme-toggle {
     @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface/80 text-muted shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:text-accent cursor-pointer;
+  }
+
+  .app-dialog[open] {
+    animation: dialog-sheet-up 0.28s ease-out;
+  }
+
+  @media (min-width: 768px) {
+    .app-dialog[open] {
+      animation: dialog-fade-in 0.2s ease-out;
+    }
+  }
+}
+
+@keyframes dialog-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
