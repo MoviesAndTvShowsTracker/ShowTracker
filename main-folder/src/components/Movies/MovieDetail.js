@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_URL, API_KEY, IMAGE_URL } from '../../config/keys';
@@ -8,6 +8,8 @@ import SimilarMoviesData from './ShowSimilarMovies';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
+import DetailPageSkeleton from '../ui/DetailPageSkeleton';
+import DetailPageError from '../ui/DetailPageError';
 
 export default function MovieDetail() {
   const { Id: movieId } = useParams();
@@ -17,31 +19,61 @@ export default function MovieDetail() {
   const [watchProviders, setWatchProviders] = useState([]);
   const [genres, setGenres] = useState([]);
   const [actorToggle, setActorToggle] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const loadMovie = useCallback(async (signal) => {
+    setLoading(true);
+    setError('');
+    setMovie({});
+    setActors([]);
+    setCrews([]);
+    setGenres([]);
+    setWatchProviders([]);
+
+    try {
+      const movieRes = await fetch(
+        `${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`,
+        { signal }
+      );
+      const movieData = await movieRes.json();
+
+      if (!movieRes.ok || movieData.success === false || !movieData.id) {
+        throw new Error('not_found');
+      }
+
+      setMovie(movieData);
+      setGenres(movieData.genres || []);
+
+      const creditsRes = await fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`, {
+        signal,
+      });
+      const creditsData = await creditsRes.json();
+      setActors(creditsData.cast || []);
+      setCrews(creditsData.crew || []);
+
+      fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`, { signal })
+        .then((r) => r.json())
+        .then((response) => {
+          const india = response.results?.IN;
+          if (india) setWatchProviders(india.flatrate || india.buy || india.rent || []);
+        })
+        .catch(() => {});
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setError("Couldn't load this film. Check your connection and try again.");
+    } finally {
+      if (!signal.aborted) setLoading(false);
+    }
+  }, [movieId]);
 
   useEffect(() => {
-    fetch(`${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`)
-      .then((r) => r.json())
-      .then((response) => {
-        setMovie(response);
-        setGenres(response.genres || []);
-        return fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`);
-      })
-      .then((r) => r.json())
-      .then((response) => {
-        setActors(response.cast || []);
-        setCrews(response.crew || []);
-      });
-
-    fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`)
-      .then((r) => r.json())
-      .then((response) => {
-        const india = response.results?.IN;
-        if (india) setWatchProviders(india.flatrate || india.buy || india.rent || []);
-      })
-      .catch(() => {});
-
+    const controller = new AbortController();
+    loadMovie(controller.signal);
     window.scrollTo(0, 0);
-  }, [movieId]);
+    return () => controller.abort();
+  }, [loadMovie, reloadKey]);
 
   const convertToReadable = (n) => {
     const v = Math.abs(Number(n));
@@ -69,9 +101,32 @@ export default function MovieDetail() {
     ['Revenue', movie.revenue ? `$${convertToReadable(movie.revenue)}` : null],
   ];
 
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Loading…" />
+        <DetailPageSkeleton fallback="/movies" backLabel="Back to films" />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageTitle title="Film" />
+        <DetailPageError
+          fallback="/movies"
+          backLabel="Back to films"
+          message={error}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      <PageTitle title={movie.title || 'Loading…'} />
+      <PageTitle title={movie.title || 'Film'} />
 
       {movie.backdrop_path && (
         <MainImageforDetail
@@ -84,7 +139,6 @@ export default function MovieDetail() {
       <div className="mx-auto max-w-content px-4 py-5 sm:px-6 md:py-8">
         <BackNav fallback="/movies" label="Back to films" className="mb-4 md:hidden" />
 
-        {/* Mobile: poster + rating strip */}
         {movie.poster_path && (
           <div className="mb-4 flex gap-3 md:hidden">
             <img
@@ -114,7 +168,6 @@ export default function MovieDetail() {
           <span className="text-ink">{movie.title}</span>
         </nav>
 
-        {/* Actions — full width grid on mobile */}
         {movie.title && (
           <section className="mb-5 md:mb-8">
             <h2 className="section-title mb-3 md:hidden">Your diary</h2>

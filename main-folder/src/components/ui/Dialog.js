@@ -19,7 +19,7 @@ export default function Dialog({ open, onClose, title, children, footer }) {
     >
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ink-bright">{title}</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="btn-ghost !min-h-[32px] !px-2">
+        <button type="button" onClick={onClose} aria-label="Close" className="btn-ghost !min-h-[44px] !min-w-[44px] !px-2">
           <X className="h-5 w-5" />
         </button>
       </div>

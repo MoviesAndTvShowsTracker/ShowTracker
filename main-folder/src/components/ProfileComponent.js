@@ -12,6 +12,7 @@ import PosterTile from './ui/PosterTile';
 import ProfileEmptyState from './profile/ProfileEmptyState';
 import ProfileStats from './profile/ProfileStats';
 import TvLibrarySummary from './profile/TvLibrarySummary';
+import ProfileJumpNav from './profile/ProfileJumpNav';
 import BackNav from './ui/BackNav';
 
 const emptyFilm = (browse) => (
@@ -39,8 +40,6 @@ export default function Profile() {
   const [favoritedShows, setFavoritedShows] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [watchedShows, setWatchedShows] = useState([]);
-  const [movieWatchlist, setMovieWatchlist] = useState([]);
-  const [tvWatchlist, setTvWatchlist] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
   const [phoneDialog, setPhoneDialog] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -97,15 +96,6 @@ export default function Profile() {
           .catch(() => setWatchedShows([]))
       );
 
-  const fetchWatchlists = () =>
-    Promise.all([
-      api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
-      api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
-    ]).then(([movies, tv]) => {
-      if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
-      if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
-    });
-
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
@@ -127,7 +117,6 @@ export default function Profile() {
           fetchFavoriteShows(),
           fetchWatchedMovies(),
           fetchWatchedShows(),
-          fetchWatchlists(),
         ]).finally(() => {
           setLoading(false);
           window.scrollTo(0, 0);
@@ -205,10 +194,8 @@ export default function Profile() {
       favoritedMovies.length === 0 &&
       favoritedShows.length === 0 &&
       watchedMovies.length === 0 &&
-      watchedShows.length === 0 &&
-      movieWatchlist.length === 0 &&
-      tvWatchlist.length === 0,
-    [favoritedMovies, favoritedShows, watchedMovies, watchedShows, movieWatchlist, tvWatchlist]
+      watchedShows.length === 0,
+    [favoritedMovies, favoritedShows, watchedMovies, watchedShows]
   );
 
   const removeFavoriteFilm = (movieId) =>
@@ -316,74 +303,66 @@ export default function Profile() {
                 </button>
               </div>
 
-              <ProfileStats
-                filmCount={watchedMovies.length}
-                tvCount={tvStats.tvShowCount || watchedShows.length}
-                episodeCount={tvStats.episodes}
-                filmMins={watchedMins}
-                tvMins={tvStats.tvMins}
-                tvStatsLoading={tvStatsLoading}
-              />
+              <ProfileJumpNav showLists={!isProfileEmpty} />
 
-              <TvLibrarySummary />
+              <div id="profile-stats" className="scroll-mt-24">
+                <ProfileStats
+                  filmCount={watchedMovies.length}
+                  tvCount={tvStats.tvShowCount || watchedShows.length}
+                  episodeCount={tvStats.episodes}
+                  filmMins={watchedMins}
+                  tvMins={tvStats.tvMins}
+                  tvStatsLoading={tvStatsLoading}
+                />
+              </div>
+
+              <div id="profile-library" className="scroll-mt-24">
+                <TvLibrarySummary />
+              </div>
 
               {isProfileEmpty ? (
                 <ProfileEmptyState name={profileDisplay.title} />
               ) : (
                 <div className="space-y-10 md:space-y-12">
-                  <PosterRail
-                    title="Favorite films"
-                    actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
-                    actionLabel="View all"
-                    empty={emptyFilm('Browse films')}
-                  >
-                    {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
-                  </PosterRail>
+                  <div id="profile-films" className="scroll-mt-24 space-y-10 md:space-y-12">
+                    <PosterRail
+                      title="Favorite films"
+                      actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
+                      actionLabel="View all"
+                      empty={emptyFilm('Browse films')}
+                    >
+                      {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
+                    </PosterRail>
 
-                  <PosterRail
-                    title="Favorite TV"
-                    actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
-                    actionLabel="View all"
-                    empty={emptyTv('Browse TV')}
-                  >
-                    {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
-                  </PosterRail>
+                    <PosterRail
+                      title="Watched films"
+                      actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
+                      actionLabel="View all"
+                      empty={emptyFilm('Find a film')}
+                    >
+                      {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
+                    </PosterRail>
+                  </div>
 
-                  <PosterRail
-                    title="Watched films"
-                    actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
-                    actionLabel="View all"
-                    empty={emptyFilm('Find a film')}
-                  >
-                    {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
-                  </PosterRail>
+                  <div id="profile-tv" className="scroll-mt-24 space-y-10 md:space-y-12">
+                    <PosterRail
+                      title="Favorite TV"
+                      actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
+                      actionLabel="View all"
+                      empty={emptyTv('Browse TV')}
+                    >
+                      {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
+                    </PosterRail>
 
-                  <PosterRail
-                    title="Watched TV"
-                    actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
-                    actionLabel="View all"
-                    empty={emptyTv('Browse TV')}
-                  >
-                    {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
-                  </PosterRail>
-
-                  <PosterRail
-                    title="Film watchlist"
-                    actionTo={movieWatchlist.length ? profileListPath('film-watchlist') : undefined}
-                    actionLabel="View all"
-                    empty={emptyFilm('Add films')}
-                  >
-                    {movieWatchlist.map((m) => filmTile(m))}
-                  </PosterRail>
-
-                  <PosterRail
-                    title="TV watchlist"
-                    actionTo={tvWatchlist.length ? profileListPath('tv-watchlist') : undefined}
-                    actionLabel="View all"
-                    empty={emptyTv('Add shows')}
-                  >
-                    {tvWatchlist.map((s) => tvTile(s))}
-                  </PosterRail>
+                    <PosterRail
+                      title="Watched TV"
+                      actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
+                      actionLabel="View all"
+                      empty={emptyTv('Browse TV')}
+                    >
+                      {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
+                    </PosterRail>
+                  </div>
                 </div>
               )}
             </div>

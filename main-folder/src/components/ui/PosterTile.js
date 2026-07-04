@@ -36,7 +36,7 @@ export default function PosterTile({
             onRemove();
           }}
           aria-label={`Remove ${title}`}
-          className="absolute right-1 top-1 rounded-full bg-canvas/80 p-1 text-ink-bright opacity-0 transition-opacity duration-200 group-hover:opacity-100 cursor-pointer"
+          className="absolute right-1 top-1 hidden h-8 w-8 items-center justify-center rounded-full bg-canvas/80 p-1 text-ink-bright opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:flex cursor-pointer"
         >
           <X className="h-3.5 w-3.5" />
         </button>

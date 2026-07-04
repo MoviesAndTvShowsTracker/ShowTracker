@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
@@ -10,6 +10,8 @@ import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
+import DetailPageSkeleton from '../ui/DetailPageSkeleton';
+import DetailPageError from '../ui/DetailPageError';
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
@@ -24,36 +26,67 @@ export default function TvDetail() {
   const [crews, setCrews] = useState([]);
   const [watchProviders, setWatchProviders] = useState([]);
   const [actorToggle, setActorToggle] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`)
-      .then((response) => response.json())
-      .then((response) => {
-        setTvShow(response);
-        setCreatedBy(response.created_by || []);
-        setGenres(response.genres || []);
-        setSeasons(response.seasons || []);
+  const loadShow = useCallback(async (signal) => {
+    setLoading(true);
+    setError('');
+    setTvShow({});
+    setCreatedBy([]);
+    setGenres([]);
+    setSeasons([]);
+    setCrews([]);
+    setWatchProviders([]);
+
+    try {
+      const showRes = await fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`, {
+        signal,
       });
+      const showData = await showRes.json();
 
-    fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`)
-      .then((response) => response.json())
-      .then((response) => setCrews(response.cast || []));
+      if (!showRes.ok || showData.success === false || !showData.id) {
+        throw new Error('not_found');
+      }
 
-    fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`)
-      .then((response) => response.json())
-      .then((response) => {
-        const india = response.results?.IN;
-        if (india) {
-          setWatchProviders(india.flatrate || india.buy || india.free || []);
-        }
-      })
-      .catch(() => {});
+      setTvShow(showData);
+      setCreatedBy(showData.created_by || []);
+      setGenres(showData.genres || []);
+      setSeasons(showData.seasons || []);
 
-    window.scrollTo(0, 0);
+      const creditsRes = await fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, {
+        signal,
+      });
+      const creditsData = await creditsRes.json();
+      setCrews(creditsData.cast || []);
+
+      fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal })
+        .then((r) => r.json())
+        .then((response) => {
+          const india = response.results?.IN;
+          if (india) {
+            setWatchProviders(india.flatrate || india.buy || india.free || []);
+          }
+        })
+        .catch(() => {});
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setError("Couldn't load this show. Check your connection and try again.");
+    } finally {
+      if (!signal.aborted) setLoading(false);
+    }
   }, [tvShowId]);
 
   useEffect(() => {
-    if (initialSeason) {
+    const controller = new AbortController();
+    loadShow(controller.signal);
+    window.scrollTo(0, 0);
+    return () => controller.abort();
+  }, [loadShow, reloadKey]);
+
+  useEffect(() => {
+    if (initialSeason && tvShow.name) {
       document.getElementById('episodes')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [initialSeason, tvShow.name]);
@@ -69,6 +102,29 @@ export default function TvDetail() {
     ['Seasons', tvShow.number_of_seasons],
     ['Status', tvShow.status],
   ];
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Loading…" />
+        <DetailPageSkeleton fallback="/tv" backLabel="Back to TV" />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageTitle title="TV Show" />
+        <DetailPageError
+          fallback="/tv"
+          backLabel="Back to TV"
+          message={error}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      </>
+    );
+  }
 
   return (
     <>

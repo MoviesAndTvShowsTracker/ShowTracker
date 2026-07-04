@@ -54,12 +54,12 @@ function StatCell({ label, value, sub, icon: Icon }) {
       {Icon && (
         <Icon className="mx-auto mb-0.5 h-3 w-3 text-accent/80 sm:mb-1 sm:h-3.5 sm:w-3.5" aria-hidden />
       )}
-      <p className="text-[8px] font-bold uppercase tracking-wider text-muted sm:text-[9px]">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted sm:text-[11px]">
         {label}
       </p>
       <p className="mt-0.5 font-serif text-base leading-none text-ink-bright sm:text-lg">{value}</p>
       {sub && (
-        <p className="mt-0.5 line-clamp-1 text-[9px] leading-snug text-muted-dim sm:line-clamp-2 sm:text-[10px]">
+        <p className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-muted-dim sm:line-clamp-2 sm:text-xs">
           {sub}
         </p>
       )}
@@ -67,7 +67,7 @@ function StatCell({ label, value, sub, icon: Icon }) {
   );
 }
 
-function StatStrip({ items, className = 'grid-cols-3 sm:grid-cols-6' }) {
+function StatStrip({ items, className = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' }) {
   return (
     <div className={`grid gap-1.5 sm:gap-2 ${className}`}>
       {items.map((item) => (
@@ -322,12 +322,12 @@ export default function ProfileStatsPage() {
                 </Link>
               }
             >
-              <StatStrip items={tvActivityCells} className="grid-cols-3 lg:grid-cols-6" />
+              <StatStrip items={tvActivityCells} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" />
               <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
                 <WeeklyTrendChart data={act?.weeklyTrend} weeksToShow={8} />
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Library</p>
-                  <StatStrip items={libraryCells} className="grid-cols-3 sm:grid-cols-5" />
+                  <StatStrip items={libraryCells} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
                 </div>
               </div>
             </Section>
@@ -340,7 +340,7 @@ export default function ProfileStatsPage() {
                 </p>
               )}
               <StatStrip
-                className="grid-cols-3 lg:grid-cols-6"
+                className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
                 items={[
                   { label: 'Total', value: formatCount(films?.count), icon: Film },
                   {

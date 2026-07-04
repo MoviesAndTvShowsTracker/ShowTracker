@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Header from './HeaderComponent';
 import Footer from './FooterComponent';
 import Home from './HomeComponent';
@@ -21,6 +21,7 @@ import TvContinue from './TV/TvContinue';
 import TvLibraryPage from './TV/TvLibraryPage';
 import ScrollToTop from './ScrollToTop';
 import { useAuth } from '../context/AuthContext';
+import { hideMobileBottomNav } from '../utils/layout';
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -28,10 +29,19 @@ function ProtectedRoute() {
 }
 
 function AppLayout() {
+  const location = useLocation();
+  const noMobileNavPad = hideMobileBottomNav(location.pathname);
+
   return (
     <>
       <Header />
-      <main className="page-content min-h-[calc(100vh-3.5rem)] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-screen md:pb-0">
+      <main
+        className={`page-content min-h-[calc(100vh-3.5rem)] md:min-h-screen md:pb-0 ${
+          noMobileNavPad
+            ? 'pb-6'
+            : 'pb-[calc(5.75rem+env(safe-area-inset-bottom))]'
+        }`}
+      >
         <Outlet />
       </main>
       <Footer />

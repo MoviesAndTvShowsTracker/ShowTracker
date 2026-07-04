@@ -216,7 +216,7 @@ export default function SearchBox() {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
+                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -230,7 +230,7 @@ export default function SearchBox() {
                   key={id}
                   type="button"
                   onClick={() => handleTabChange(id)}
-                  className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     type === id
                       ? 'bg-accent text-on-accent shadow-sm'
                       : 'text-muted hover:bg-surface-raised hover:text-ink-bright'
@@ -258,7 +258,7 @@ export default function SearchBox() {
                     clearRecentSearches();
                     setRecent([]);
                   }}
-                  className="text-[10px] font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
+                  className="min-h-[44px] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
                 >
                   Clear
                 </button>
@@ -269,7 +269,7 @@ export default function SearchBox() {
                     key={`${item.type}-${item.query}`}
                     type="button"
                     onClick={() => handleRecentClick(item)}
-                    className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
+                    className="min-h-[44px] rounded-full border border-border bg-surface/80 px-4 py-2.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
                   >
                     {item.query}
                     <span className="ml-1.5 text-[10px] uppercase text-muted">

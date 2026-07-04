@@ -189,6 +189,7 @@
 
   .app-header {
     @apply sticky top-0 z-50 border-b border-border/60 bg-canvas/85 backdrop-blur-xl;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .mobile-nav-shell {

@@ -6,6 +6,7 @@ import HeroCarousel from '../ui/HeroCarousel';
 import PosterRail from '../ui/PosterRail';
 import GenreChips, { filterCuratedGenres } from '../ui/GenreChips';
 import MediaPosterTiles from '../browse/MediaPosterTiles';
+import MyWatchlistRail from '../browse/MyWatchlistRail';
 import { heroSlides, tmdbFetch, withPoster } from '../../utils/tmdb';
 
 export default function LandingPage() {
@@ -95,6 +96,8 @@ export default function LandingPage() {
             What&apos;s trending, in theaters near you, coming soon, and the highest rated — explore by genre.
           </p>
         </header>
+
+        <MyWatchlistRail type="movie" />
 
         <GenreChips
           genres={genres}
