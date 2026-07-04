@@ -5,7 +5,15 @@ var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
-const { uniqueUsername } = require('../lib/userHelpers');
+const { uniqueUsername, normalizeEmail, findUserByEmail } = require('../lib/userHelpers');
+const { sendPasswordResetEmail } = require('../lib/mail');
+const {
+  RESET_GENERIC_MESSAGE,
+  generateResetToken,
+  hashResetToken,
+  buildResetUrl,
+  setPassword,
+} = require('../lib/passwordReset');
 
 router.use(bodyParser.json());
 
@@ -27,18 +35,19 @@ router.get('/', function(req, res, next) {
 router.post('/signup', async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email?.trim() || !password) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     }
 
-    const username = await uniqueUsername(email.trim().split('@')[0]);
+    const username = await uniqueUsername(normalizedEmail.split('@')[0]);
 
     User.register(
       new User({
-        email: email.trim(),
+        email: normalizedEmail,
         username,
       }),
       password,
@@ -92,29 +101,43 @@ router.post('/google', async (req, res, next) => {
   }
 });
 
-router.post('/login', (req, res, next) => {
-  passport.authenticate('local', { session: false }, (err, user, info) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
-    }
+router.post('/login', async (req, res, next) => {
+  try {
+    const user = await findUserByEmail(req.body.email);
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: info?.message || 'Invalid email or password',
+        message: 'Invalid email or password',
       });
     }
 
-    const token = authenticate.getToken({ _id: user._id });
-    return res.status(200).json({
-      status: 200,
-      success: true,
-      token,
-      userId: user._id,
-      email: user.email,
-      firstName: user.firstName || '',
-      message: 'You are successfully logged in!',
-    });
-  })(req, res, next);
+    req.body.email = user.email;
+
+    passport.authenticate('local', { session: false }, (err, authedUser, info) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
+      }
+      if (!authedUser) {
+        return res.status(401).json({
+          success: false,
+          message: info?.message || 'Invalid email or password',
+        });
+      }
+
+      const token = authenticate.getToken({ _id: authedUser._id });
+      return res.status(200).json({
+        status: 200,
+        success: true,
+        token,
+        userId: authedUser._id,
+        email: authedUser.email,
+        firstName: authedUser.firstName || '',
+        message: 'You are successfully logged in!',
+      });
+    })(req, res, next);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/getUser/:id', authenticate.verifyUser, (req, res) => {
@@ -206,6 +229,86 @@ router.post('/changePassword', authenticate.verifyUser, (req, res) => {
     }
     return res.status(200).json({ success: true, message: 'Password updated.' });
   });
+});
+
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const normalizedEmail = normalizeEmail(req.body.email);
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    const user = await findUserByEmail(normalizedEmail);
+    let emailDispatched = false;
+
+    if (user) {
+      const { raw, hash, expires } = generateResetToken();
+      user.resetPasswordToken = hash;
+      user.resetPasswordExpires = expires;
+      await user.save();
+
+      try {
+        await sendPasswordResetEmail({
+          to: user.email,
+          resetUrl: buildResetUrl(raw),
+        });
+        emailDispatched = true;
+      } catch (mailErr) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        console.error('[forgot-password] email failed:', mailErr.message);
+        return res.status(mailErr.status || 502).json({
+          success: false,
+          message: 'Could not send reset email. Try again later.',
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      emailDispatched,
+      message: emailDispatched
+        ? 'Check your inbox for a password reset link. It expires in 1 hour.'
+        : RESET_GENERIC_MESSAGE,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token?.trim()) {
+      return res.status(400).json({ success: false, message: 'Reset token is required.' });
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    const tokenHash = hashResetToken(token.trim());
+    const user = await User.findOne({
+      resetPasswordToken: tokenHash,
+      resetPasswordExpires: { $gt: new Date() },
+    }).select('+resetPasswordToken +resetPasswordExpires');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'This reset link is invalid or has expired. Request a new one.',
+      });
+    }
+
+    await setPassword(user, newPassword);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password updated. You can sign in now.' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

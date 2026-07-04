@@ -64,9 +64,14 @@
     .animate-fade-in,
     .animate-soft-rise,
     .bento-card,
-    .glass-card {
+    .glass-card,
+    .page-tab-enter,
+    .mobile-nav-indicator {
       animation: none !important;
       transition: none !important;
+    }
+    .app-dialog[open] {
+      animation: none !important;
     }
   }
 
@@ -189,6 +194,7 @@
 
   .app-header {
     @apply sticky top-0 z-50 border-b border-border/60 bg-canvas/85 backdrop-blur-xl;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .mobile-nav-shell {
@@ -197,7 +203,25 @@
   }
 
   .mobile-nav-pill {
-    @apply pointer-events-auto flex w-full max-w-md items-stretch justify-around rounded-full border border-border/70 bg-surface/90 px-1.5 py-1.5 shadow-glass backdrop-blur-2xl;
+    @apply pointer-events-auto relative flex w-full max-w-md items-stretch justify-around rounded-full border border-border/70 bg-surface/90 px-1.5 py-1.5 shadow-glass backdrop-blur-2xl;
+  }
+
+  .mobile-nav-indicator {
+    @apply absolute left-0 top-1.5 bottom-1.5 rounded-full bg-accent/15;
+    transition:
+      transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.15s ease-out;
+    will-change: transform;
+  }
+
+  .page-tab-enter {
+    animation: pageTabIn 0.24s ease-out forwards;
+  }
+
+  @media (min-width: 768px) {
+    .page-tab-enter {
+      animation: none;
+    }
   }
 
   .auth-card {
@@ -216,12 +240,49 @@
     @apply relative overflow-hidden border-b border-border/60;
   }
 
-  .page-content {
-    @apply animate-fade-in;
-  }
-
   .theme-toggle {
     @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface/80 text-muted shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:text-accent cursor-pointer;
+  }
+
+  .app-dialog[open] {
+    animation: dialog-sheet-up 0.28s ease-out;
+  }
+
+  @media (min-width: 768px) {
+    .app-dialog[open] {
+      animation: dialog-fade-in 0.2s ease-out;
+    }
+  }
+}
+
+@keyframes dialog-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pageTabIn {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
   }
 }
 

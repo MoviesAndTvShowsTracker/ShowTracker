@@ -13,7 +13,9 @@ api.interceptors.request.use(
     const isAuthRoute =
       url.includes('/users/login') ||
       url.includes('/users/signup') ||
-      url.includes('/users/google');
+      url.includes('/users/google') ||
+      url.includes('/users/forgot-password') ||
+      url.includes('/users/reset-password');
     const token = localStorage.getItem('token');
     if (token && !isAuthRoute) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -35,7 +37,9 @@ api.interceptors.response.use(
     const isAuthRoute =
       url.includes('/users/login') ||
       url.includes('/users/signup') ||
-      url.includes('/users/google');
+      url.includes('/users/google') ||
+      url.includes('/users/forgot-password') ||
+      url.includes('/users/reset-password');
 
     if (status === 401 && hadToken && !isAuthRoute) {
       localStorage.removeItem('token');

@@ -24,6 +24,17 @@ export function clearSearchCache() {
   sessionStorage.removeItem(CACHE_KEY);
 }
 
+/** Returns cached search payload when query + type match, else null. */
+export function getMatchingSearchCache(query, type) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return null;
+  const cache = loadSearchCache();
+  if (cache?.query === trimmed && cache?.type === type && cache.results?.length) {
+    return cache;
+  }
+  return null;
+}
+
 export function saveSearchScroll() {
   sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
 }

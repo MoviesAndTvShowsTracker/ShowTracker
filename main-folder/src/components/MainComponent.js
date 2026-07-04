@@ -1,10 +1,12 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Header from './HeaderComponent';
 import Footer from './FooterComponent';
 import Home from './HomeComponent';
 import HomeDashboard from './HomeDashboard';
 import Signup from './SignupComponent';
 import Signin from './SigninComponent';
+import ForgotPassword from './ForgotPasswordComponent';
+import ResetPassword from './ResetPasswordComponent';
 import Profile from './ProfileComponent';
 import ProfileListPage from './profile/ProfileListPage';
 import ProfileStatsPage from './profile/ProfileStatsPage';
@@ -17,8 +19,11 @@ import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
 import TvContinue from './TV/TvContinue';
 import TvLibraryPage from './TV/TvLibraryPage';
+import PageTransition from './PageTransition';
 import ScrollToTop from './ScrollToTop';
+import useSearchShortcut from '../hooks/useSearchShortcut';
 import { useAuth } from '../context/AuthContext';
+import { hideMobileBottomNav } from '../utils/layout';
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -26,11 +31,22 @@ function ProtectedRoute() {
 }
 
 function AppLayout() {
+  const location = useLocation();
+  const noMobileNavPad = hideMobileBottomNav(location.pathname);
+
   return (
     <>
       <Header />
-      <main className="page-content min-h-[calc(100vh-3.5rem)] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-screen md:pb-0">
-        <Outlet />
+      <main
+        className={`min-h-[calc(100vh-3.5rem)] md:min-h-screen md:pb-0 ${
+          noMobileNavPad
+            ? 'pb-6'
+            : 'pb-[calc(5.75rem+env(safe-area-inset-bottom))]'
+        }`}
+      >
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <Footer />
     </>
@@ -38,6 +54,8 @@ function AppLayout() {
 }
 
 export default function Main() {
+  useSearchShortcut();
+
   return (
     <>
       <ScrollToTop />
@@ -46,6 +64,8 @@ export default function Main() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Signin />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/search" element={<SearchBox />} />
 
           <Route element={<ProtectedRoute />}>

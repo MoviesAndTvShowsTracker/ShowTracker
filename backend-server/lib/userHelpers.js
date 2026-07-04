@@ -1,5 +1,21 @@
 const User = require('../models/user');
 
+function normalizeEmail(raw) {
+  return String(raw || '').trim().toLowerCase();
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function findUserByEmail(rawEmail) {
+  const trimmed = String(rawEmail || '').trim();
+  if (!trimmed) return null;
+  return User.findOne({
+    email: { $regex: new RegExp(`^${escapeRegex(trimmed)}$`, 'i') },
+  });
+}
+
 async function uniqueUsername(base) {
   const cleaned = String(base || 'user')
     .toLowerCase()
@@ -15,4 +31,4 @@ async function uniqueUsername(base) {
   return candidate;
 }
 
-module.exports = { uniqueUsername };
+module.exports = { uniqueUsername, normalizeEmail, findUserByEmail };

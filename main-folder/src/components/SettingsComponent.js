@@ -199,9 +199,9 @@ export default function Settings() {
             </form>
           </section>
 
-          <section className="glass-card p-5 sm:p-6">
+          <section className="glass-card overflow-hidden p-5 sm:p-6">
             <h2 className="section-title mb-4 normal-case tracking-wide">Password</h2>
-            <form onSubmit={changePassword} className="space-y-4">
+            <form id="password-form" onSubmit={changePassword} className="space-y-4">
               <div>
                 <label htmlFor="currentPassword" className="section-title mb-2 block normal-case tracking-wide">
                   Current password
@@ -241,11 +241,13 @@ export default function Settings() {
                   autoComplete="new-password"
                 />
               </div>
-              {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
-              {passwordMessage && <p className="text-sm text-accent">{passwordMessage}</p>}
-              <button type="submit" disabled={passwordSaving} className="btn-primary w-full sm:w-auto">
-                {passwordSaving ? 'Updating…' : 'Change password'}
-              </button>
+              <div className="sticky bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-20 -mx-5 space-y-2 border-t border-border/60 bg-surface/95 px-5 py-3 backdrop-blur-xl lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+                {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
+                {passwordMessage && <p className="text-sm text-accent">{passwordMessage}</p>}
+                <button type="submit" disabled={passwordSaving} className="btn-primary w-full sm:w-auto">
+                  {passwordSaving ? 'Updating…' : 'Change password'}
+                </button>
+              </div>
             </form>
           </section>
 

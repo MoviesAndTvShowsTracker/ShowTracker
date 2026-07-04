@@ -6,8 +6,8 @@ import { tmdbFetch, withPoster } from '../utils/tmdb';
 import {
   clearRecentSearches,
   clearSearchCache,
+  getMatchingSearchCache,
   loadRecentSearches,
-  loadSearchCache,
   pushRecentSearch,
   restoreSearchScroll,
   saveSearchCache,
@@ -18,6 +18,7 @@ import BackNav from './ui/BackNav';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 import SearchResultTile from './search/SearchResultTile';
+import { FOCUS_SEARCH_EVENT } from '../hooks/useSearchShortcut';
 
 const TABS = [
   { id: 'multi', label: 'All', icon: Search },
@@ -52,6 +53,16 @@ export default function SearchBox() {
   const [trendingFilms, setTrendingFilms] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
   const [hasSearched, setHasSearched] = useState(Boolean(urlQuery));
+
+  const applyCache = useCallback((cache) => {
+    setResults(cache.results);
+    setPage(cache.page || 1);
+    setTotalPages(cache.totalPages || 0);
+    setTotalResults(cache.totalResults || 0);
+    setHasSearched(true);
+    setError('');
+    setSearchParams({ q: cache.query, type: cache.type }, { replace: true });
+  }, [setSearchParams]);
 
   const runSearch = useCallback(async (searchQuery, searchType, pageNum, append = false) => {
     const trimmed = searchQuery.trim();
@@ -110,13 +121,15 @@ export default function SearchBox() {
 
   // Restore cache + scroll when returning to search
   useEffect(() => {
-    const cache = loadSearchCache();
-    if (urlQuery && cache?.query === urlQuery && cache?.type === urlType && cache.results?.length) {
-      setResults(cache.results);
-      setPage(cache.page || 1);
-      setTotalPages(cache.totalPages || 0);
-      setTotalResults(cache.totalResults || 0);
-      setHasSearched(true);
+    const focusInput = () => inputRef.current?.focus();
+    window.addEventListener(FOCUS_SEARCH_EVENT, focusInput);
+    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusInput);
+  }, []);
+
+  useEffect(() => {
+    const cache = getMatchingSearchCache(urlQuery, urlType);
+    if (urlQuery && cache) {
+      applyCache(cache);
       restoreSearchScroll();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,8 +159,9 @@ export default function SearchBox() {
       return;
     }
 
-    const cache = loadSearchCache();
-    if (cache?.query === trimmed && cache?.type === type && cache.results?.length && !loading) {
+    const cache = getMatchingSearchCache(trimmed, type);
+    if (cache) {
+      applyCache(cache);
       return;
     }
 
@@ -199,6 +213,9 @@ export default function SearchBox() {
 
           <div className="mx-auto max-w-2xl">
             <h1 className="page-title mb-4 hidden md:block">Search</h1>
+            <p className="mb-3 hidden text-xs text-muted md:block">
+              Press <kbd className="rounded border border-border bg-surface-raised px-1.5 py-0.5 font-mono text-[10px]">/</kbd> anywhere to jump here
+            </p>
 
             <div className="relative">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -216,7 +233,7 @@ export default function SearchBox() {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
+                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -230,7 +247,7 @@ export default function SearchBox() {
                   key={id}
                   type="button"
                   onClick={() => handleTabChange(id)}
-                  className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     type === id
                       ? 'bg-accent text-on-accent shadow-sm'
                       : 'text-muted hover:bg-surface-raised hover:text-ink-bright'
@@ -258,7 +275,7 @@ export default function SearchBox() {
                     clearRecentSearches();
                     setRecent([]);
                   }}
-                  className="text-[10px] font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
+                  className="min-h-[44px] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
                 >
                   Clear
                 </button>
@@ -269,7 +286,7 @@ export default function SearchBox() {
                     key={`${item.type}-${item.query}`}
                     type="button"
                     onClick={() => handleRecentClick(item)}
-                    className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
+                    className="min-h-[44px] rounded-full border border-border bg-surface/80 px-4 py-2.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
                   >
                     {item.query}
                     <span className="ml-1.5 text-[10px] uppercase text-muted">

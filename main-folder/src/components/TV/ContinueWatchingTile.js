@@ -17,7 +17,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
     <article className={`shrink-0 snap-start ${TILE_WIDTH}`}>
       <div className="group relative">
         <Link
-          to={isComplete || caughtUp ? `/tv/${track.tvId}/continue` : `/tv/${track.tvId}/continue`}
+          to={`/tv/${track.tvId}/continue`}
           className="block cursor-pointer"
           aria-label={`${track.tvTitle}${hasNext ? `, next S${track.nextSeason} E${track.nextEpisode}` : ''}`}
         >
@@ -63,7 +63,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
               onMark(track);
             }}
             aria-label={`Mark S${track.nextSeason} E${track.nextEpisode} watched`}
-            className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-sm transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer"
+            className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-sm transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer"
           >
             <Check className="h-4 w-4" strokeWidth={2.5} />
           </button>
