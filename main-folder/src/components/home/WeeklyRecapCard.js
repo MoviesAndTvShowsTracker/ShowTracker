@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, TrendingUp } from 'lucide-react';
-import api from '../../api/axios';
 import { formatDuration } from '../../utils/statsFormat';
 import { clearSessionStats } from '../../utils/statsCache';
 
@@ -28,28 +26,16 @@ function recapMessage(recap) {
   return 'Log a film or episode to start your week.';
 }
 
-export default function WeeklyRecapCard({ refreshKey = 0 }) {
-  const [recap, setRecap] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    api
-      .get('/api/stats/week-recap')
-      .then((r) => {
-        if (r.data.success) setRecap(r.data.recap);
-      })
-      .catch(() => setRecap(null))
-      .finally(() => setLoading(false));
-  }, [refreshKey]);
-
+export default function WeeklyRecapCard({ recap, loading }) {
   if (loading) {
     return (
-      <div className="mb-6 h-20 animate-pulse rounded-xl bg-surface-raised" aria-hidden />
+      <div className="mb-6 min-h-[5.5rem] animate-pulse rounded-xl bg-surface-raised" aria-hidden />
     );
   }
 
-  if (!recap) return null;
+  if (!recap) {
+    return <div className="mb-6 min-h-0" aria-hidden />;
+  }
 
   const activeWeek =
     recap.episodesThisWeek > 0 ||
@@ -62,7 +48,7 @@ export default function WeeklyRecapCard({ refreshKey = 0 }) {
     <Link
       to="/profile/stats"
       onClick={() => clearSessionStats()}
-      className="mb-6 block rounded-xl border border-border/60 bg-surface-raised/30 p-4 transition-colors hover:border-accent/40 hover:bg-surface-raised/50 cursor-pointer"
+      className="mb-6 block min-h-[5.5rem] rounded-xl border border-border/60 bg-surface-raised/30 p-4 transition-colors hover:border-accent/40 hover:bg-surface-raised/50 cursor-pointer"
     >
       <div className="flex items-start gap-3">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">

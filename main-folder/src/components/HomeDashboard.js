@@ -16,7 +16,10 @@ import usePullToRefresh from '../hooks/usePullToRefresh';
 import PageTitle from '../utils/PageTitle';
 import { displayName } from '../utils/displayUser';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
-import TvTimeWelcomeBanner from './home/TvTimeWelcomeBanner';
+import TvTimeWelcomeBanner, {
+  dismissTvTimePrompt,
+  shouldShowTvTimeBanner,
+} from './home/TvTimeWelcomeBanner';
 import WeeklyRecapCard from './home/WeeklyRecapCard';
 import PwaInstallBanner from './home/PwaInstallBanner';
 import PosterRail from './ui/PosterRail';
@@ -40,6 +43,8 @@ const emptyTv = (
   </>
 );
 
+const SKELETON_TILE = 'h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]';
+
 export default function HomeDashboard() {
   const { user } = useAuth();
   const [tracks, setTracks] = useState([]);
@@ -48,34 +53,77 @@ export default function HomeDashboard() {
   const [movieWatchlist, setMovieWatchlist] = useState([]);
   const [tvWatchlist, setTvWatchlist] = useState([]);
   const [watchlistsLoading, setWatchlistsLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [recap, setRecap] = useState(null);
+  const [recapLoading, setRecapLoading] = useState(true);
+  const [showTvTimeBanner, setShowTvTimeBanner] = useState(false);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
     setWatchlistsLoading(true);
+    setRecapLoading(true);
     try {
-      const [continueRes, movies, tv] = await Promise.all([
+      const [
+        continueRes,
+        movies,
+        tv,
+        recapRes,
+        watchedMovies,
+        watchedTv,
+        favoriteMovies,
+        favoriteTv,
+      ] = await Promise.all([
         api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
         api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
         api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+        api.get('/api/stats/week-recap').catch(() => ({ data: { success: false } })),
+        api.post('/api/watch/getWatchMovie', {}).catch(() => ({ data: { success: false } })),
+        api.post('/api/tv/watch/getWatchTv', {}).catch(() => ({ data: { success: false } })),
+        api.post('/api/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
+        api.post('/api/tv/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
       ]);
-      if (continueRes.data.success) setTracks(continueRes.data.tracks || []);
-      else setTracks([]);
-      if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
-      if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
+
+      const nextTracks = continueRes.data.success ? continueRes.data.tracks || [] : [];
+      const nextMovieWatchlist = movies.data.success ? movies.data.watchlist || [] : [];
+      const nextTvWatchlist = tv.data.success ? tv.data.watchlist || [] : [];
+      const nextWatchedMovies = watchedMovies.data.success ? watchedMovies.data.watch || [] : [];
+      const nextWatchedTv = watchedTv.data.success ? watchedTv.data.watch || [] : [];
+      const nextFavoriteMovies = favoriteMovies.data.success ? favoriteMovies.data.favorites || [] : [];
+      const nextFavoriteTv = favoriteTv.data.success ? favoriteTv.data.favorites || [] : [];
+
+      setTracks(nextTracks);
+      setMovieWatchlist(nextMovieWatchlist);
+      setTvWatchlist(nextTvWatchlist);
+      setRecap(recapRes.data.success ? recapRes.data.recap : null);
+      setShowTvTimeBanner(
+        shouldShowTvTimeBanner({
+          userId: user?.id,
+          tracks: nextTracks,
+          movieWatchlist: nextMovieWatchlist,
+          tvWatchlist: nextTvWatchlist,
+          watchedMovies: nextWatchedMovies,
+          watchedTv: nextWatchedTv,
+          favoriteMovies: nextFavoriteMovies,
+          favoriteTv: nextFavoriteTv,
+        })
+      );
       clearSessionStats();
-      setRefreshKey((k) => k + 1);
     } finally {
       setLoading(false);
       setWatchlistsLoading(false);
+      setRecapLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const { indicator: pullIndicator } = usePullToRefresh(refreshAll);
 
   useEffect(() => {
     refreshAll();
   }, [refreshAll]);
+
+  const dismissTvTime = () => {
+    dismissTvTimePrompt(user?.id);
+    setShowTvTimeBanner(false);
+  };
 
   const markNextFromHome = async (track) => {
     if (!track.nextSeason || !track.nextEpisode) return;
@@ -122,19 +170,18 @@ export default function HomeDashboard() {
         </header>
 
         <PwaInstallBanner />
-        <WeeklyRecapCard refreshKey={refreshKey} />
-
-        <TvTimeWelcomeBanner />
+        <WeeklyRecapCard recap={recap} loading={recapLoading} />
+        <TvTimeWelcomeBanner visible={showTvTimeBanner} onDismiss={dismissTvTime} />
 
         <section aria-label="Continue watching" className="mb-10 md:mb-12">
           <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h2 className="section-title">Continue watching</h2>
-              {!loading && tracks.length > 0 && (
-                <p className="mt-1 text-xs text-muted">
-                  {tracks.length} in progress · tap poster to resume, check to log episode
-                </p>
-              )}
+              <p className="mt-1 min-h-4 text-xs text-muted">
+                {!loading && tracks.length > 0
+                  ? `${tracks.length} in progress · tap poster to resume, check to log episode`
+                  : '\u00a0'}
+              </p>
             </div>
             <Link
               to={tvLibraryPath('watching')}
@@ -149,7 +196,7 @@ export default function HomeDashboard() {
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="h-[180px] w-[108px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[120px]"
+                  className="h-[168px] w-[108px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[120px]"
                 />
               ))}
             </div>
@@ -181,17 +228,12 @@ export default function HomeDashboard() {
         <div className="space-y-10 md:space-y-12">
           <PosterRail
             title="Film watchlist"
-            actionTo={movieWatchlist.length ? profileListPath('film-watchlist') : undefined}
+            actionTo={profileListPath('film-watchlist')}
             actionLabel="View all"
             empty={watchlistsLoading ? null : emptyFilm}
           >
             {watchlistsLoading
-              ? [1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
-                  />
-                ))
+              ? [1, 2, 3, 4].map((i) => <div key={i} className={SKELETON_TILE} />)
               : movieWatchlist.map((m) => (
                   <PosterTile
                     key={m.movieId}
@@ -206,17 +248,12 @@ export default function HomeDashboard() {
 
           <PosterRail
             title="TV watchlist"
-            actionTo={tvWatchlist.length ? profileListPath('tv-watchlist') : undefined}
+            actionTo={profileListPath('tv-watchlist')}
             actionLabel="View all"
             empty={watchlistsLoading ? null : emptyTv}
           >
             {watchlistsLoading
-              ? [1, 2, 3, 4].map((i) => (
-                  <div
-                    key={`tv-${i}`}
-                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
-                  />
-                ))
+              ? [1, 2, 3, 4].map((i) => <div key={`tv-${i}`} className={SKELETON_TILE} />)
               : tvWatchlist.map((s) => (
                   <PosterTile
                     key={s.tvId}

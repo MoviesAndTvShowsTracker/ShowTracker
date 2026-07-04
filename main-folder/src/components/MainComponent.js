@@ -19,6 +19,7 @@ import SearchBox from './SearchComponent';
 import SeasonEpisodes from './TV/SeasonEpisodes';
 import TvContinue from './TV/TvContinue';
 import TvLibraryPage from './TV/TvLibraryPage';
+import PageTransition from './PageTransition';
 import ScrollToTop from './ScrollToTop';
 import useSearchShortcut from '../hooks/useSearchShortcut';
 import { useAuth } from '../context/AuthContext';
@@ -37,13 +38,15 @@ function AppLayout() {
     <>
       <Header />
       <main
-        className={`page-content min-h-[calc(100vh-3.5rem)] md:min-h-screen md:pb-0 ${
+        className={`min-h-[calc(100vh-3.5rem)] md:min-h-screen md:pb-0 ${
           noMobileNavPad
             ? 'pb-6'
             : 'pb-[calc(5.75rem+env(safe-area-inset-bottom))]'
         }`}
       >
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <Footer />
     </>

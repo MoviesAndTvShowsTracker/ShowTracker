@@ -19,12 +19,14 @@ export default function PosterRail({ title, actionLabel, actionTo, children, emp
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3 pr-1">
         <h2 className="section-title">{title}</h2>
-        {actionTo && (
-          <Link to={actionTo} className="btn-link inline-flex items-center gap-0.5 shrink-0">
-            {actionLabel || 'View all'}
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        )}
+        <div className="flex h-5 min-w-[4.5rem] shrink-0 items-center justify-end">
+          {actionTo && (
+            <Link to={actionTo} className="btn-link inline-flex items-center gap-0.5">
+              {actionLabel || 'View all'}
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          )}
+        </div>
       </div>
       <div className="poster-rail">{items}</div>
     </section>

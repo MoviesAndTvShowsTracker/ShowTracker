@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Film, Home, LogIn, LogOut, Moon, Search, Settings, Sun, Tv, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { hideMobileBottomNav } from '../utils/layout';
 import Dialog from './ui/Dialog';
+import MobileBottomNav from './MobileBottomNav';
 import MarqueeLogo from './brand/MarqueeLogo';
 import { BRAND_NAME } from '../config/brand';
 import { displayName } from '../utils/displayUser';
@@ -12,11 +13,6 @@ import { displayName } from '../utils/displayUser';
 const desktopLink = ({ isActive }) =>
   `nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
     isActive ? 'text-accent' : 'text-muted hover:text-ink-bright'
-  }`;
-
-const mobileLink = ({ isActive }) =>
-  `flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer min-h-[44px] ${
-    isActive ? 'bg-accent/15 text-accent' : 'text-muted active:bg-surface-raised'
   }`;
 
 export default function Header() {
@@ -143,32 +139,7 @@ export default function Header() {
         </div>
       </header>
 
-      {showMobileNav && (
-        <div className="mobile-nav-shell" aria-hidden={false}>
-          <nav className="mobile-nav-pill" aria-label="Mobile">
-            <NavLink to={homeTo} end className={mobileLink}>
-              <Home className="h-[18px] w-[18px]" aria-hidden="true" />
-              Home
-            </NavLink>
-            <NavLink to="/movies" className={mobileLink}>
-              <Film className="h-[18px] w-[18px]" aria-hidden="true" />
-              Films
-            </NavLink>
-            <NavLink to="/tv" className={mobileLink}>
-              <Tv className="h-[18px] w-[18px]" aria-hidden="true" />
-              TV
-            </NavLink>
-            <NavLink to="/search" className={mobileLink}>
-              <Search className="h-[18px] w-[18px]" aria-hidden="true" />
-              Search
-            </NavLink>
-            <NavLink to={isAuthenticated ? '/profile' : '/login'} className={mobileLink}>
-              <User className="h-[18px] w-[18px]" aria-hidden="true" />
-              {isAuthenticated ? 'You' : 'Sign in'}
-            </NavLink>
-          </nav>
-        </div>
-      )}
+      {showMobileNav && <MobileBottomNav />}
 
       <Dialog
         open={showLogout}

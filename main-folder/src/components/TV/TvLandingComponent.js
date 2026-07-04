@@ -6,7 +6,6 @@ import HeroCarousel from '../ui/HeroCarousel';
 import PosterRail from '../ui/PosterRail';
 import GenreChips, { filterCuratedGenres } from '../ui/GenreChips';
 import MediaPosterTiles from '../browse/MediaPosterTiles';
-import MyWatchlistRail from '../browse/MyWatchlistRail';
 import { heroSlides, tmdbFetch, withPoster } from '../../utils/tmdb';
 
 export default function TvLandingPage() {
@@ -95,8 +94,6 @@ export default function TvLandingPage() {
             Trending series, what&apos;s on the air, airing today, and the highest rated — explore by genre.
           </p>
         </header>
-
-        <MyWatchlistRail type="tv" />
 
         <GenreChips
           genres={genres}
