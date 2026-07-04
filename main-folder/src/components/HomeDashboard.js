@@ -12,10 +12,13 @@ import {
   fetchShowEpisodeIndex,
   watchedSetFromEpisodes,
 } from '../utils/tvProgress';
+import usePullToRefresh from '../hooks/usePullToRefresh';
 import PageTitle from '../utils/PageTitle';
 import { displayName } from '../utils/displayUser';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import TvTimeWelcomeBanner from './home/TvTimeWelcomeBanner';
+import WeeklyRecapCard from './home/WeeklyRecapCard';
+import PwaInstallBanner from './home/PwaInstallBanner';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 
@@ -45,31 +48,34 @@ export default function HomeDashboard() {
   const [movieWatchlist, setMovieWatchlist] = useState([]);
   const [tvWatchlist, setTvWatchlist] = useState([]);
   const [watchlistsLoading, setWatchlistsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const loadTracks = useCallback(() => {
+  const refreshAll = useCallback(async () => {
     setLoading(true);
-    api
-      .get('/api/tv/tracking/continue')
-      .then((r) => {
-        if (r.data.success) setTracks(r.data.tracks || []);
-      })
-      .catch(() => setTracks([]))
-      .finally(() => setLoading(false));
+    setWatchlistsLoading(true);
+    try {
+      const [continueRes, movies, tv] = await Promise.all([
+        api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
+        api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
+        api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+      ]);
+      if (continueRes.data.success) setTracks(continueRes.data.tracks || []);
+      else setTracks([]);
+      if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
+      if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
+      clearSessionStats();
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setLoading(false);
+      setWatchlistsLoading(false);
+    }
   }, []);
 
+  const { indicator: pullIndicator } = usePullToRefresh(refreshAll);
+
   useEffect(() => {
-    loadTracks();
-    setWatchlistsLoading(true);
-    Promise.all([
-      api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
-      api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
-    ])
-      .then(([movies, tv]) => {
-        if (movies.data.success) setMovieWatchlist(movies.data.watchlist || []);
-        if (tv.data.success) setTvWatchlist(tv.data.watchlist || []);
-      })
-      .finally(() => setWatchlistsLoading(false));
-  }, [loadTracks]);
+    refreshAll();
+  }, [refreshAll]);
 
   const markNextFromHome = async (track) => {
     if (!track.nextSeason || !track.nextEpisode) return;
@@ -94,8 +100,7 @@ export default function HomeDashboard() {
       );
 
       await api.post('/api/tv/episodes/mark', payload);
-      clearSessionStats();
-      loadTracks();
+      await refreshAll();
     } finally {
       setMarkingId(null);
     }
@@ -108,11 +113,16 @@ export default function HomeDashboard() {
       <PageTitle title="Home" />
 
       <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
+        {pullIndicator}
+
         <header className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Your diary</p>
           <h1 className="page-title mt-2">{greeting}</h1>
           <p className="mt-2 text-sm text-muted">Pick up where you left off.</p>
         </header>
+
+        <PwaInstallBanner />
+        <WeeklyRecapCard refreshKey={refreshKey} />
 
         <TvTimeWelcomeBanner />
 

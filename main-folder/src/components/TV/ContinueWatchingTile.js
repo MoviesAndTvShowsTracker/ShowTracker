@@ -17,7 +17,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
     <article className={`shrink-0 snap-start ${TILE_WIDTH}`}>
       <div className="group relative">
         <Link
-          to={isComplete || caughtUp ? `/tv/${track.tvId}/continue` : `/tv/${track.tvId}/continue`}
+          to={`/tv/${track.tvId}/continue`}
           className="block cursor-pointer"
           aria-label={`${track.tvTitle}${hasNext ? `, next S${track.nextSeason} E${track.nextEpisode}` : ''}`}
         >

@@ -6,6 +6,16 @@ const {
   getCachedUserStats,
   saveCachedUserStats,
 } = require('../services/statsCache');
+const { buildWeekRecap } = require('../services/weekRecap');
+
+router.get('/week-recap', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const recap = await buildWeekRecap(req.user._id);
+    res.status(200).json({ success: true, recap });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/dashboard', authenticate.verifyUser, async (req, res, next) => {
   try {
