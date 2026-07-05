@@ -142,14 +142,16 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
             episodeNumber: ep.episodeNumber,
           },
           {
-            userFrom: userId,
-            tvId,
-            seasonNumber: ep.seasonNumber,
-            episodeNumber: ep.episodeNumber,
-            tmdbEpisodeId: ep.tmdbEpisodeId,
-            episodeName: ep.episodeName,
-            runtimeMinutes: ep.runtimeMinutes || 0,
-            watchedAt: new Date(),
+            $set: {
+              userFrom: userId,
+              tvId,
+              seasonNumber: ep.seasonNumber,
+              episodeNumber: ep.episodeNumber,
+              tmdbEpisodeId: ep.tmdbEpisodeId,
+              episodeName: ep.episodeName,
+              runtimeMinutes: ep.runtimeMinutes || 0,
+            },
+            $setOnInsert: { watchedAt: new Date() },
           },
           { upsert: true, new: true }
         )

@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Bookmark, Check, Heart } from 'lucide-react';
 import api from '../../api/axios';
 import { clearSessionStats } from '../../utils/statsCache';
+import { formatShortDate } from '../../utils/statsFormat';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 
 export default function Favorite({ movieId, movieInfo }) {
   const [favoriteNumber, setFavoriteNumber] = useState(0);
   const [favorited, setFavorited] = useState(false);
   const [watched, setWatched] = useState(false);
+  const [watchedAt, setWatchedAt] = useState(null);
   const [watchlisted, setWatchlisted] = useState(false);
 
   const payload = {
@@ -18,6 +20,8 @@ export default function Favorite({ movieId, movieInfo }) {
     movieRuntime: movieInfo.runtime,
   };
 
+  const watchedDateLabel = watchedAt ? formatShortDate(watchedAt) : null;
+
   useEffect(() => {
     api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {
       if (r.data.success) setFavoriteNumber(r.data.favoriteNumber);
@@ -26,7 +30,10 @@ export default function Favorite({ movieId, movieInfo }) {
       if (fav.data.success) setFavorited(fav.data.favorited);
     });
     api.post('/api/watch/watched', { movieId }).then((watch) => {
-      if (watch.data.success) setWatched(watch.data.watched);
+      if (watch.data.success) {
+        setWatched(watch.data.watched);
+        setWatchedAt(watch.data.watchedAt || null);
+      }
     });
     api.post('/api/watchlist/watchlisted', { movieId }).then((r) => {
       if (r.data.success) setWatchlisted(r.data.watchlisted);
@@ -47,7 +54,9 @@ export default function Favorite({ movieId, movieInfo }) {
     const endpoint = watched ? '/api/watch/removeFromWatched' : '/api/watch/addToWatch';
     api.post(endpoint, payload).then((r) => {
       if (r.data.success) {
-        setWatched(!watched);
+        const nowWatched = !watched;
+        setWatched(nowWatched);
+        setWatchedAt(nowWatched ? r.data.watchedAt || new Date().toISOString() : null);
         clearSessionStats();
       }
     });
@@ -63,31 +72,34 @@ export default function Favorite({ movieId, movieInfo }) {
   };
 
   return (
-    <ActionStrip columns={watched ? 2 : 3}>
-      <ActionButton
-        active={favorited}
-        onClick={toggleFavorite}
-        icon={Heart}
-        label={favorited ? 'Favorited' : 'Favorite'}
-        compactLabel="Favorite"
-        badge={favoriteNumber}
-      />
-      <ActionButton
-        active={watched}
-        onClick={toggleWatched}
-        icon={Check}
-        label={watched ? 'Watched' : 'Mark watched'}
-        compactLabel="Watched"
-      />
-      {!watched && (
+    <div>
+      <ActionStrip columns={watched ? 2 : 3}>
         <ActionButton
-          active={watchlisted}
-          onClick={toggleWatchlist}
-          icon={Bookmark}
-          label={watchlisted ? 'On watchlist' : 'Watchlist'}
-          compactLabel="List"
+          active={favorited}
+          onClick={toggleFavorite}
+          icon={Heart}
+          label={favorited ? 'Favorited' : 'Favorite'}
+          compactLabel="Favorite"
+          badge={favoriteNumber}
         />
-      )}
-    </ActionStrip>
+        <ActionButton
+          active={watched}
+          onClick={toggleWatched}
+          icon={Check}
+          label="Watched"
+          compactLabel="Watched"
+          subLabel={watched ? watchedDateLabel : null}
+        />
+        {!watched && (
+          <ActionButton
+            active={watchlisted}
+            onClick={toggleWatchlist}
+            icon={Bookmark}
+            label={watchlisted ? 'On watchlist' : 'Watchlist'}
+            compactLabel="List"
+          />
+        )}
+      </ActionStrip>
+    </div>
   );
 }

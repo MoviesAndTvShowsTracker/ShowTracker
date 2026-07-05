@@ -14,7 +14,9 @@ import {
   isEpisodeAired,
   progressPercent,
   watchedSetFromEpisodes,
+  watchedMapFromEpisodes,
 } from '../../utils/tvProgress';
+import { formatShortDate } from '../../utils/statsFormat';
 
 export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initialSeason }) {
   const orderedSeasons = useMemo(
@@ -91,6 +93,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   }, [tvShowId, selectedSeason]);
 
   const watchedKeys = watchedSetFromEpisodes(watched);
+  const watchedByKey = useMemo(() => watchedMapFromEpisodes(watched), [watched]);
   const nextKey =
     track?.nextSeason && track?.nextEpisode
       ? episodeKey(track.nextSeason, track.nextEpisode)
@@ -299,6 +302,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
               const releaseLabel = !aired ? formatEpisodeReleaseLabel(episode.air_date) : null;
               const isWatched = watchedKeys.has(key);
               const isNext = aired && key === nextKey;
+              const watchedAt = watchedByKey.get(key)?.watchedAt;
 
               return (
                 <article
@@ -334,8 +338,13 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
-                      {episode.air_date ? airdate(episode.air_date) : '—'}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                      {episode.air_date && <span>Aired {airdate(episode.air_date)}</span>}
+                      {isWatched && watchedAt && (
+                        <span className="font-medium text-accent">
+                          Watched {formatShortDate(watchedAt)}
+                        </span>
+                      )}
                       {episode.runtime > 0 && <span>{episode.runtime} min</span>}
                       {episode.vote_average > 0 && (
                         <span className="inline-flex items-center gap-0.5">

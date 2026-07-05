@@ -74,6 +74,15 @@ export function watchedSetFromEpisodes(episodes) {
   return new Set(episodes.map((ep) => episodeKey(ep.seasonNumber, ep.episodeNumber)));
 }
 
+/** Map episode key → watch record (includes watchedAt from import or manual marks). */
+export function watchedMapFromEpisodes(episodes) {
+  const map = new Map();
+  for (const ep of episodes || []) {
+    map.set(episodeKey(ep.seasonNumber, ep.episodeNumber), ep);
+  }
+  return map;
+}
+
 export function findNextEpisode(episodeIndex, watchedKeys, now = new Date()) {
   return episodeIndex.find(
     (ep) =>

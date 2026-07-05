@@ -6,6 +6,7 @@ import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
 import PosterTile from '../ui/PosterTile';
+import { formatShortDate } from '../../utils/statsFormat';
 
 async function fetchListItems(listKey) {
   switch (listKey) {
@@ -137,6 +138,11 @@ export default function ProfileListPage() {
                   to={`/movies/${item.movieId}`}
                   poster={item.moviePosterImage}
                   title={item.movieTitle}
+                  subtitle={
+                    listKey === 'watched-films' && item.watchedAt
+                      ? formatShortDate(item.watchedAt)
+                      : undefined
+                  }
                   imageUrlPrefix={`${IMAGE_URL}w342`}
                   size="fill"
                   onRemove={canRemove ? () => handleRemove(item.movieId) : undefined}
