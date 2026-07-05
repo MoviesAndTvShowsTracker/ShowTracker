@@ -23,6 +23,34 @@ export function formatShortDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** True when an ISO date (YYYY-MM-DD) is after today in local time. */
+export function isFutureRelease(iso) {
+  if (!iso) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const release = new Date(`${iso}T00:00:00`);
+  return release > today;
+}
+
+export function releaseFieldLabel(iso) {
+  return isFutureRelease(iso) ? 'Release date' : 'Released';
+}
+
+export function premiereFieldLabel(iso) {
+  return isFutureRelease(iso) ? 'Premieres' : 'First aired';
+}
+
+const languageNames = typeof Intl !== 'undefined' ? new Intl.DisplayNames(['en'], { type: 'language' }) : null;
+
+export function formatLanguage(code) {
+  if (!code) return null;
+  try {
+    return languageNames?.of(code) || code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
 export function formatMemberSince(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

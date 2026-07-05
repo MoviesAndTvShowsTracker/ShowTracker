@@ -12,6 +12,8 @@ import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
+import { formatLanguage, formatShortDate, premiereFieldLabel } from '../../utils/statsFormat';
+import { pickWatchProviders, tvCertification } from '../../utils/watchRegion';
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
@@ -25,6 +27,8 @@ export default function TvDetail() {
   const [seasons, setSeasons] = useState([]);
   const [crews, setCrews] = useState([]);
   const [watchProviders, setWatchProviders] = useState([]);
+  const [watchRegion, setWatchRegion] = useState(null);
+  const [certification, setCertification] = useState(null);
   const [actorToggle, setActorToggle] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,6 +43,8 @@ export default function TvDetail() {
     setSeasons([]);
     setCrews([]);
     setWatchProviders([]);
+    setWatchRegion(null);
+    setCertification(null);
 
     try {
       const showRes = await fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`, {
@@ -55,21 +61,26 @@ export default function TvDetail() {
       setGenres(showData.genres || []);
       setSeasons(showData.seasons || []);
 
-      const creditsRes = await fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, {
-        signal,
-      });
+      const [creditsRes, providersRes, ratingsRes] = await Promise.all([
+        fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}tv/${tvShowId}/content_ratings?api_key=${API_KEY}`, { signal }),
+      ]);
+
       const creditsData = await creditsRes.json();
       setCrews(creditsData.cast || []);
 
-      fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal })
-        .then((r) => r.json())
-        .then((response) => {
-          const india = response.results?.IN;
-          if (india) {
-            setWatchProviders(india.flatrate || india.buy || india.free || []);
-          }
-        })
-        .catch(() => {});
+      if (providersRes.ok) {
+        const providersData = await providersRes.json();
+        const { providers, region } = pickWatchProviders(providersData.results);
+        setWatchProviders(providers);
+        setWatchRegion(region);
+      }
+
+      if (ratingsRes.ok) {
+        const ratingsData = await ratingsRes.json();
+        setCertification(tvCertification(ratingsData));
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       setError("Couldn't load this show. Check your connection and try again.");
@@ -91,16 +102,20 @@ export default function TvDetail() {
     }
   }, [initialSeason, tvShow.name]);
 
-  const airdate = (prop) =>
-    new Date(prop).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
   const infoItems = [
-    ['Title', tvShow.name],
+    [premiereFieldLabel(tvShow.first_air_date), tvShow.first_air_date && formatShortDate(tvShow.first_air_date)],
     ['Created by', createdBy.map((c) => c.name).join(', ')],
     ['Genre', genres.map((g) => g.name).join(', ')],
-    ['First aired', tvShow.first_air_date && airdate(tvShow.first_air_date)],
-    ['Seasons', tvShow.number_of_seasons],
-    ['Status', tvShow.status],
+    [
+      'Seasons',
+      tvShow.number_of_seasons
+        ? `${tvShow.number_of_seasons} season${tvShow.number_of_seasons !== 1 ? 's' : ''}${
+            tvShow.number_of_episodes ? ` · ${tvShow.number_of_episodes} eps` : ''
+          }`
+        : null,
+    ],
+    ['Language', formatLanguage(tvShow.original_language)],
+    ['Certification', certification],
   ];
 
   if (loading) {
@@ -156,7 +171,7 @@ export default function TvDetail() {
                 <span className="text-muted">/ 10</span>
               </div>
               {tvShow.first_air_date && (
-                <p className="mt-1 text-xs text-muted">{airdate(tvShow.first_air_date)}</p>
+                <p className="mt-1 text-xs text-muted">{formatShortDate(tvShow.first_air_date)}</p>
               )}
             </div>
           </div>
@@ -201,6 +216,7 @@ export default function TvDetail() {
             <DetailInfoGrid
               items={infoItems}
               providers={watchProviders}
+              providersRegion={watchRegion}
               imageUrlPrefix={`${IMAGE_URL}w92`}
             />
           </div>
