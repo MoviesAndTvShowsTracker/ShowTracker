@@ -1,4 +1,4 @@
-export default function DetailInfoGrid({ items, providers, imageUrlPrefix }) {
+export default function DetailInfoGrid({ items, providers, providersRegion, imageUrlPrefix }) {
   const rows = items.filter(([, value]) => value);
 
   return (
@@ -15,7 +15,14 @@ export default function DetailInfoGrid({ items, providers, imageUrlPrefix }) {
 
       {providers?.length > 0 && (
         <div className="col-span-2 rounded-xl border border-border bg-surface/90 p-3 shadow-glass backdrop-blur-md md:col-span-full md:grid md:grid-cols-3 md:gap-2 md:rounded-none md:border-0 md:bg-transparent md:shadow-none md:backdrop-blur-none md:px-5 md:py-4">
-          <dt className="text-[10px] font-bold uppercase tracking-wider text-muted">Where to watch</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-wider text-muted">
+            Where to watch
+            {providersRegion && (
+              <span className="mt-0.5 block font-medium normal-case tracking-normal text-muted-dim">
+                {providersRegion === 'CA' ? 'Canada' : 'United States'}
+              </span>
+            )}
+          </dt>
           <dd className="mt-2 flex flex-wrap gap-2 md:col-span-2 md:mt-0">
             {providers.map((p) => (
               <img

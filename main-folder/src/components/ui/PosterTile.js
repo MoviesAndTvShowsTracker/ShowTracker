@@ -11,6 +11,7 @@ export default function PosterTile({
   to,
   poster,
   title,
+  subtitle,
   imageUrlPrefix = '',
   size = 'sm',
   showTitle = true,
@@ -45,7 +46,12 @@ export default function PosterTile({
   );
 
   const titleEl = showTitle && title && (
-    <p className="mt-1.5 line-clamp-2 text-[11px] font-medium leading-snug text-ink sm:text-xs">{title}</p>
+    <>
+      <p className="mt-1.5 line-clamp-2 text-[11px] font-medium leading-snug text-ink sm:text-xs">{title}</p>
+      {subtitle && (
+        <p className="mt-0.5 text-[10px] font-medium text-accent sm:text-[11px]">{subtitle}</p>
+      )}
+    </>
   );
 
   if (!to) {

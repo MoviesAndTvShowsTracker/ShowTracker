@@ -16,8 +16,15 @@ router.get('/', function (req, res) {
 
 router.post('/watched', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const watch = await Watch.find({ movieId: req.body.movieId, userFrom: req.user._id });
-    res.status(200).json({ success: true, watched: watch.length !== 0 });
+    const watch = await Watch.findOne({
+      movieId: req.body.movieId,
+      userFrom: req.user._id,
+    });
+    res.status(200).json({
+      success: true,
+      watched: Boolean(watch),
+      watchedAt: watch?.watchedAt || null,
+    });
   } catch (err) {
     next(err);
   }
@@ -40,7 +47,7 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
     });
     await watch.save();
     await invalidateUserStats(req.user._id);
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, watchedAt: watch.watchedAt || null });
   } catch (err) {
     res.status(400).json({ success: false, err });
   }

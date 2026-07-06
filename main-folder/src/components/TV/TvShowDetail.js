@@ -2,16 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { fetchTvShowDiary } from '../../api/tvShowDiary';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
 import TvTrackingBanner from './TvTrackingBanner';
+import TvTrackingStatusAction from './TvTrackingStatusAction';
+import TvDiarySkeleton from './TvDiarySkeleton';
 import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
+import { formatLanguage, formatShortDate, premiereFieldLabel } from '../../utils/statsFormat';
+import { pickWatchProviders, tvCertification } from '../../utils/watchRegion';
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
@@ -25,22 +30,45 @@ export default function TvDetail() {
   const [seasons, setSeasons] = useState([]);
   const [crews, setCrews] = useState([]);
   const [watchProviders, setWatchProviders] = useState([]);
+  const [watchRegion, setWatchRegion] = useState(null);
+  const [certification, setCertification] = useState(null);
   const [actorToggle, setActorToggle] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [diary, setDiary] = useState(null);
+
+  const patchDiary = useCallback((patch) => {
+    setDiary((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
+  const handleProgressChange = useCallback((data) => {
+    if (!data || !('tracking' in data)) return;
+    setDiary((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        tracking: data.tracking ?? null,
+        watchlisted: data.tracking ? false : current.watchlisted,
+      };
+    });
+  }, []);
 
   const loadShow = useCallback(async (signal) => {
     setLoading(true);
     setError('');
+    setDiary(null);
     setTvShow({});
     setCreatedBy([]);
     setGenres([]);
     setSeasons([]);
     setCrews([]);
     setWatchProviders([]);
+    setWatchRegion(null);
+    setCertification(null);
 
     try {
+      const diaryPromise = fetchTvShowDiary(tvShowId);
       const showRes = await fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`, {
         signal,
       });
@@ -55,21 +83,29 @@ export default function TvDetail() {
       setGenres(showData.genres || []);
       setSeasons(showData.seasons || []);
 
-      const creditsRes = await fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, {
-        signal,
-      });
+      const [creditsRes, providersRes, ratingsRes, diaryData] = await Promise.all([
+        fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}tv/${tvShowId}/content_ratings?api_key=${API_KEY}`, { signal }),
+        diaryPromise,
+      ]);
+
+      if (!signal.aborted) setDiary(diaryData);
+
       const creditsData = await creditsRes.json();
       setCrews(creditsData.cast || []);
 
-      fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal })
-        .then((r) => r.json())
-        .then((response) => {
-          const india = response.results?.IN;
-          if (india) {
-            setWatchProviders(india.flatrate || india.buy || india.free || []);
-          }
-        })
-        .catch(() => {});
+      if (providersRes.ok) {
+        const providersData = await providersRes.json();
+        const { providers, region } = pickWatchProviders(providersData.results);
+        setWatchProviders(providers);
+        setWatchRegion(region);
+      }
+
+      if (ratingsRes.ok) {
+        const ratingsData = await ratingsRes.json();
+        setCertification(tvCertification(ratingsData));
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       setError("Couldn't load this show. Check your connection and try again.");
@@ -91,16 +127,20 @@ export default function TvDetail() {
     }
   }, [initialSeason, tvShow.name]);
 
-  const airdate = (prop) =>
-    new Date(prop).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
   const infoItems = [
-    ['Title', tvShow.name],
+    [premiereFieldLabel(tvShow.first_air_date), tvShow.first_air_date && formatShortDate(tvShow.first_air_date)],
     ['Created by', createdBy.map((c) => c.name).join(', ')],
     ['Genre', genres.map((g) => g.name).join(', ')],
-    ['First aired', tvShow.first_air_date && airdate(tvShow.first_air_date)],
-    ['Seasons', tvShow.number_of_seasons],
-    ['Status', tvShow.status],
+    [
+      'Seasons',
+      tvShow.number_of_seasons
+        ? `${tvShow.number_of_seasons} season${tvShow.number_of_seasons !== 1 ? 's' : ''}${
+            tvShow.number_of_episodes ? ` · ${tvShow.number_of_episodes} eps` : ''
+          }`
+        : null,
+    ],
+    ['Language', formatLanguage(tvShow.original_language)],
+    ['Certification', certification],
   ];
 
   if (loading) {
@@ -156,7 +196,7 @@ export default function TvDetail() {
                 <span className="text-muted">/ 10</span>
               </div>
               {tvShow.first_air_date && (
-                <p className="mt-1 text-xs text-muted">{airdate(tvShow.first_air_date)}</p>
+                <p className="mt-1 text-xs text-muted">{formatShortDate(tvShow.first_air_date)}</p>
               )}
             </div>
           </div>
@@ -172,9 +212,26 @@ export default function TvDetail() {
 
         {tvShow.name && (
           <section className="mb-5 md:mb-8">
-            <TvTrackingBanner tvId={tvShowId} />
-            <h2 className="section-title mb-3 md:hidden">Your diary</h2>
-            <TvFavorites tvId={tvShowId} tvInfo={tvShow} />
+            {!diary ? (
+              <TvDiarySkeleton />
+            ) : (
+              <>
+                <TvTrackingStatusAction
+                  tvId={tvShowId}
+                  track={diary.tracking}
+                  onStatusChange={handleProgressChange}
+                  className="mb-1"
+                />
+                <TvTrackingBanner tvId={tvShowId} track={diary.tracking} />
+                <h2 className="section-title mb-3 md:hidden">Your diary</h2>
+                <TvFavorites
+                  tvId={tvShowId}
+                  tvInfo={tvShow}
+                  diary={diary}
+                  onDiaryPatch={patchDiary}
+                />
+              </>
+            )}
           </section>
         )}
 
@@ -201,6 +258,7 @@ export default function TvDetail() {
             <DetailInfoGrid
               items={infoItems}
               providers={watchProviders}
+              providersRegion={watchRegion}
               imageUrlPrefix={`${IMAGE_URL}w92`}
             />
           </div>
@@ -241,6 +299,7 @@ export default function TvDetail() {
             tvShow={tvShow}
             seasons={seasons}
             initialSeason={initialSeason}
+            onProgressChange={handleProgressChange}
           />
         )}
 

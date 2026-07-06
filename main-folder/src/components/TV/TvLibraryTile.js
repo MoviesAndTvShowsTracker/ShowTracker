@@ -16,9 +16,9 @@ export default function TvLibraryTile({
   marking,
   resuming,
 }) {
-  const progress = useShowProgress(track);
+  const progress = useShowProgress(track, null, { trackOnly: true });
   const pct = progress?.pct ?? 0;
-  const caughtUp = progress?.caughtUpWithAired && progress?.upcomingLabel;
+  const caughtUp = progress?.caughtUpWithAired;
   const isComplete = progress?.isComplete ?? track.status === 'completed';
   const hasNext = !caughtUp && !isComplete && track.nextSeason && track.nextEpisode;
   const canMark = tab === 'watching' && hasNext && onMark;
@@ -26,7 +26,11 @@ export default function TvLibraryTile({
 
   const metaLine = () => {
     if (isComplete) return `${pct}% · Finished`;
-    if (caughtUp && progress.upcomingLabel) return `Next ${progress.upcomingLabel} · ${pct}%`;
+    if (caughtUp) {
+      return progress.upcomingLabel
+        ? `Next ${progress.upcomingLabel} · ${pct}%`
+        : `Caught up · ${pct}%`;
+    }
     if (hasNext) return `S${track.nextSeason} · E${track.nextEpisode} · ${pct}%`;
     const last = formatLastWatched(track.lastWatchedAt);
     if (last) return `${pct}% · Last watched ${last}`;

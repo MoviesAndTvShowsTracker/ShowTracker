@@ -50,7 +50,7 @@ export default function TvLibrarySummary() {
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h2 className="section-title">TV library</h2>
-          <p className="mt-1 text-xs text-muted">Watching, stopped, and finished shows</p>
+          <p className="mt-1 text-sm text-muted">Watching, stopped, and finished shows</p>
         </div>
         <Link
           to={tvLibraryPath('watching')}

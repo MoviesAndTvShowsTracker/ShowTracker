@@ -74,6 +74,15 @@ export function watchedSetFromEpisodes(episodes) {
   return new Set(episodes.map((ep) => episodeKey(ep.seasonNumber, ep.episodeNumber)));
 }
 
+/** Map episode key → watch record (includes watchedAt from import or manual marks). */
+export function watchedMapFromEpisodes(episodes) {
+  const map = new Map();
+  for (const ep of episodes || []) {
+    map.set(episodeKey(ep.seasonNumber, ep.episodeNumber), ep);
+  }
+  return map;
+}
+
 export function findNextEpisode(episodeIndex, watchedKeys, now = new Date()) {
   return episodeIndex.find(
     (ep) =>
@@ -103,6 +112,34 @@ export function formatEpisodeReleaseLabel(airDate, now = new Date()) {
 export function progressPercent(watchedCount, totalEpisodes) {
   if (!totalEpisodes) return 0;
   return Math.min(100, Math.round((watchedCount / totalEpisodes) * 100));
+}
+
+/** Progress from tracking record only — no TMDB (for library grids with many shows). */
+export function deriveProgressFromTrack(track) {
+  if (!track) return null;
+
+  const watchedCount = track.watchedEpisodeCount || 0;
+  const airedTotal = track.airedEpisodeCount || track.totalEpisodes || 0;
+  const totalEpisodes = track.totalEpisodes || 0;
+  const progressTotal = airedTotal || totalEpisodes;
+  const pct = progressPercent(watchedCount, progressTotal);
+  const caughtUpWithAired =
+    airedTotal > 0 && watchedCount >= airedTotal && totalEpisodes > airedTotal;
+  const isComplete =
+    track.status === 'completed' ||
+    (totalEpisodes > 0 && watchedCount >= totalEpisodes);
+
+  return {
+    airedTotal,
+    totalEpisodes,
+    pct,
+    caughtUpWithAired,
+    fullyComplete: isComplete,
+    nextAired: null,
+    nextUnaired: null,
+    upcomingLabel: null,
+    isComplete,
+  };
 }
 
 /** Progress vs aired episodes only; handles catch-up and upcoming releases. */
@@ -137,6 +174,28 @@ export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now 
     upcomingLabel,
     isComplete: fullyComplete || (caughtUpWithAired && !nextUnaired),
   };
+}
+
+/** Pick the season the user is currently on (next up, last watched, etc.). */
+export function resolveTrackingSeason(track, episodeIndex = [], watchedKeys = null) {
+  if (!track) return null;
+
+  const progress = deriveShowProgress(track, episodeIndex, watchedKeys);
+  const nextEp =
+    track.nextSeason && track.nextEpisode && episodeIndex.length
+      ? episodeIndex.find(
+          (e) =>
+            e.seasonNumber === track.nextSeason && e.episodeNumber === track.nextEpisode
+        )
+      : progress.nextAired;
+
+  return (
+    nextEp?.seasonNumber ??
+    progress.nextUnaired?.seasonNumber ??
+    track.nextSeason ??
+    track.lastSeason ??
+    null
+  );
 }
 
 export function buildBatchPayload(showMeta, episodesToMark, episodeIndex, watchedKeys, marking = true) {

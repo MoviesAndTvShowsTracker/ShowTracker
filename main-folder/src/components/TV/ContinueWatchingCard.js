@@ -28,12 +28,12 @@ export default function ContinueWatchingCard({ track, onMark, marking }) {
           {isComplete ? (
             <p className="mt-1 text-xs text-accent font-semibold">Finished</p>
           ) : hasNext ? (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-sm text-muted">
               Next · S{track.nextSeason} E{track.nextEpisode}
               {track.nextEpisodeName ? ` — ${track.nextEpisodeName}` : ''}
             </p>
           ) : (
-            <p className="mt-1 text-xs text-muted">Tap to pick up where you left off</p>
+            <p className="mt-1 text-sm text-muted">Tap to pick up where you left off</p>
           )}
           <div className="mt-2.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-raised">

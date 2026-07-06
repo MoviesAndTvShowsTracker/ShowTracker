@@ -10,6 +10,8 @@ import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
+import { formatLanguage, formatShortDate, releaseFieldLabel } from '../../utils/statsFormat';
+import { movieCertification, pickWatchProviders } from '../../utils/watchRegion';
 
 export default function MovieDetail() {
   const { Id: movieId } = useParams();
@@ -17,6 +19,8 @@ export default function MovieDetail() {
   const [actors, setActors] = useState([]);
   const [crews, setCrews] = useState([]);
   const [watchProviders, setWatchProviders] = useState([]);
+  const [watchRegion, setWatchRegion] = useState(null);
+  const [certification, setCertification] = useState(null);
   const [genres, setGenres] = useState([]);
   const [actorToggle, setActorToggle] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -31,6 +35,8 @@ export default function MovieDetail() {
     setCrews([]);
     setGenres([]);
     setWatchProviders([]);
+    setWatchRegion(null);
+    setCertification(null);
 
     try {
       const movieRes = await fetch(
@@ -46,20 +52,27 @@ export default function MovieDetail() {
       setMovie(movieData);
       setGenres(movieData.genres || []);
 
-      const creditsRes = await fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`, {
-        signal,
-      });
+      const [creditsRes, providersRes, releaseDatesRes] = await Promise.all([
+        fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`, { signal }),
+        fetch(`${API_URL}movie/${movieId}/release_dates?api_key=${API_KEY}`, { signal }),
+      ]);
+
       const creditsData = await creditsRes.json();
       setActors(creditsData.cast || []);
       setCrews(creditsData.crew || []);
 
-      fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`, { signal })
-        .then((r) => r.json())
-        .then((response) => {
-          const india = response.results?.IN;
-          if (india) setWatchProviders(india.flatrate || india.buy || india.rent || []);
-        })
-        .catch(() => {});
+      if (providersRes.ok) {
+        const providersData = await providersRes.json();
+        const { providers, region } = pickWatchProviders(providersData.results);
+        setWatchProviders(providers);
+        setWatchRegion(region);
+      }
+
+      if (releaseDatesRes.ok) {
+        const releaseDatesData = await releaseDatesRes.json();
+        setCertification(movieCertification(releaseDatesData));
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       setError("Couldn't load this film. Check your connection and try again.");
@@ -75,30 +88,19 @@ export default function MovieDetail() {
     return () => controller.abort();
   }, [loadMovie, reloadKey]);
 
-  const convertToReadable = (n) => {
-    const v = Math.abs(Number(n));
-    if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
-    if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
-    if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
-    return v;
-  };
-
   const timeConvert = (num) => {
     const h = Math.floor(num / 60);
     const m = num % 60;
     return `${h}h ${m}m`;
   };
 
-  const airdate = (prop) =>
-    new Date(prop).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
   const infoItems = [
-    ['Title', movie.title],
-    ['Released', movie.release_date && airdate(movie.release_date)],
+    [releaseFieldLabel(movie.release_date), movie.release_date && formatShortDate(movie.release_date)],
     ['Director', crews.filter((v) => v.job === 'Director').map((v) => v.name).join(', ')],
     ['Genre', genres.map((g) => g.name).join(', ')],
     ['Runtime', movie.runtime ? timeConvert(movie.runtime) : null],
-    ['Revenue', movie.revenue ? `$${convertToReadable(movie.revenue)}` : null],
+    ['Language', formatLanguage(movie.original_language)],
+    ['Certification', certification],
   ];
 
   if (loading) {
@@ -154,7 +156,7 @@ export default function MovieDetail() {
                 <span className="text-muted">/ 10</span>
               </div>
               {movie.release_date && (
-                <p className="mt-1 text-xs text-muted">{airdate(movie.release_date)}</p>
+                <p className="mt-1 text-xs text-muted">{formatShortDate(movie.release_date)}</p>
               )}
             </div>
           </div>
@@ -194,6 +196,7 @@ export default function MovieDetail() {
             <DetailInfoGrid
               items={infoItems}
               providers={watchProviders}
+              providersRegion={watchRegion}
               imageUrlPrefix={`${IMAGE_URL}w500`}
             />
           </div>

@@ -4,7 +4,11 @@ var router = express.Router();
 var TvShowTracking = require('../models/tvShowTracking');
 var TvEpisodeWatch = require('../models/tvEpisodeWatch');
 var authenticate = require('../authenticate');
-const { syncTrackingCounts } = require('./tvtracking');
+const { syncTrackingCounts, clearWatchlistForShow } = require('./tvtracking');
+const {
+  deleteWatchedEpisode,
+  deleteWatchedEpisodes,
+} = require('../services/tvTrackingService');
 const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
@@ -42,8 +46,8 @@ router.get('/:tvId', authenticate.verifyUser, async (req, res, next) => {
 router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tvId = String(req.body.tvId);
     const {
-      tvId,
       seasonNumber,
       episodeNumber,
       tmdbEpisodeId,
@@ -92,6 +96,8 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    await clearWatchlistForShow(userId, tvId);
+
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,
       nextEpisode,
@@ -115,8 +121,8 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
 router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tvId = String(req.body.tvId);
     const {
-      tvId,
       episodes,
       tvTitle,
       tvPosterImage,
@@ -142,14 +148,16 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
             episodeNumber: ep.episodeNumber,
           },
           {
-            userFrom: userId,
-            tvId,
-            seasonNumber: ep.seasonNumber,
-            episodeNumber: ep.episodeNumber,
-            tmdbEpisodeId: ep.tmdbEpisodeId,
-            episodeName: ep.episodeName,
-            runtimeMinutes: ep.runtimeMinutes || 0,
-            watchedAt: new Date(),
+            $set: {
+              userFrom: userId,
+              tvId,
+              seasonNumber: ep.seasonNumber,
+              episodeNumber: ep.episodeNumber,
+              tmdbEpisodeId: ep.tmdbEpisodeId,
+              episodeName: ep.episodeName,
+              runtimeMinutes: ep.runtimeMinutes || 0,
+            },
+            $setOnInsert: { watchedAt: new Date() },
           },
           { upsert: true, new: true }
         )
@@ -174,6 +182,8 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    await clearWatchlistForShow(userId, tvId);
+
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,
       nextEpisode,
@@ -197,22 +207,14 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
 router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { tvId, episodes, nextSeason, nextEpisode, nextEpisodeName } = req.body;
+    const tvId = String(req.body.tvId);
+    const { episodes, nextSeason, nextEpisode, nextEpisodeName } = req.body;
 
     if (!Array.isArray(episodes) || !episodes.length) {
       return res.status(400).json({ success: false, message: 'No episodes provided' });
     }
 
-    await Promise.all(
-      episodes.map((ep) =>
-        TvEpisodeWatch.findOneAndDelete({
-          userFrom: userId,
-          tvId,
-          seasonNumber: ep.seasonNumber,
-          episodeNumber: ep.episodeNumber,
-        })
-      )
-    );
+    await deleteWatchedEpisodes(userId, tvId, episodes);
 
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,
@@ -235,15 +237,11 @@ router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => 
 router.post('/unmark', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { tvId, seasonNumber, episodeNumber, nextSeason, nextEpisode, nextEpisodeName } =
+    const tvId = String(req.body.tvId);
+    const { seasonNumber, episodeNumber, nextSeason, nextEpisode, nextEpisodeName } =
       req.body;
 
-    await TvEpisodeWatch.findOneAndDelete({
-      userFrom: userId,
-      tvId,
-      seasonNumber,
-      episodeNumber,
-    });
+    await deleteWatchedEpisode(userId, tvId, seasonNumber, episodeNumber);
 
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,

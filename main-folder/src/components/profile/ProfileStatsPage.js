@@ -268,7 +268,7 @@ export default function ProfileStatsPage() {
           <div className="space-y-4">
             <div className="glass-card p-6 text-center">
               <p className="text-sm font-medium text-ink-bright">Crunching your stats…</p>
-              <p className="mt-1.5 text-xs text-muted">First load can take a moment.</p>
+              <p className="mt-1.5 text-sm text-muted">First load can take a moment.</p>
             </div>
             <div className="h-36 animate-pulse rounded-2xl bg-surface-raised" />
           </div>

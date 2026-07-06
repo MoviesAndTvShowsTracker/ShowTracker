@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, Star } from 'lucide-react';
 import api from '../../api/axios';
 import { tmdbFetch } from '../../utils/tmdb';
+import useConfirmDialog from '../../hooks/useConfirmDialog';
+import {
+  episodeUnmarkConfirm,
+  markSeasonConfirm,
+  markWholeShowConfirm,
+  seasonUnmarkConfirm,
+} from '../../utils/removeConfirm';
 import {
   buildBatchPayload,
   buildMarkPayload,
@@ -13,10 +20,21 @@ import {
   formatEpisodeReleaseLabel,
   isEpisodeAired,
   progressPercent,
+  resolveTrackingSeason,
   watchedSetFromEpisodes,
+  watchedMapFromEpisodes,
 } from '../../utils/tvProgress';
+import { formatShortDate } from '../../utils/statsFormat';
 
-export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initialSeason }) {
+export default function TvSeasonEpisodesPanel({
+  tvShowId,
+  tvShow,
+  seasons,
+  initialSeason,
+  embedded = false,
+  onProgressChange,
+  refreshToken,
+}) {
   const orderedSeasons = useMemo(
     () =>
       [...(seasons || [])]
@@ -25,9 +43,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
     [seasons]
   );
 
-  const [selectedSeason, setSelectedSeason] = useState(
-    initialSeason || orderedSeasons[0]?.season_number || 1
-  );
+  const [selectedSeason, setSelectedSeason] = useState(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState([]);
   const [seasonMeta, setSeasonMeta] = useState(null);
   const [loadingSeason, setLoadingSeason] = useState(false);
@@ -38,6 +54,8 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   const [airedEpisodeCount, setAiredEpisodeCount] = useState(0);
   const [toggling, setToggling] = useState(null);
   const [batching, setBatching] = useState(false);
+  const [seasonDataReady, setSeasonDataReady] = useState(false);
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   const showMeta = useMemo(
     () => ({ ...tvShow, totalEpisodes, tvId: tvShowId }),
@@ -54,22 +72,57 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   }, [tvShowId]);
 
   useEffect(() => {
-    loadWatched();
-    fetchShowEpisodeIndex(tvShowId).then(({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
-      setEpisodeIndex(episodes);
-      setTotalEpisodes(total);
-      setAiredEpisodeCount(aired);
+    setSeasonDataReady(false);
+    setSelectedSeason(null);
+
+    const trackingReq = api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
+      if (r.data.success) setTrack(r.data.tracking || null);
     });
-  }, [tvShowId, loadWatched]);
+    const watchedReq = api.get(`/api/tv/episodes/${tvShowId}`).then((r) => {
+      if (r.data.success) setWatched(r.data.episodes || []);
+    });
+    const indexReq = fetchShowEpisodeIndex(tvShowId).then(
+      ({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
+        setEpisodeIndex(episodes);
+        setTotalEpisodes(total);
+        setAiredEpisodeCount(aired);
+      }
+    );
+
+    Promise.all([trackingReq, watchedReq, indexReq]).finally(() => setSeasonDataReady(true));
+  }, [tvShowId]);
 
   useEffect(() => {
+    if (refreshToken == null) return;
+    loadWatched();
+  }, [refreshToken, loadWatched]);
+
+  const watchedKeys = watchedSetFromEpisodes(watched);
+
+  const contextSeason = useMemo(() => {
+    const season = resolveTrackingSeason(track, episodeIndex, watchedKeys);
+    if (season == null || !orderedSeasons.some((s) => s.season_number === season)) return null;
+    return season;
+  }, [track, episodeIndex, watchedKeys, orderedSeasons]);
+
+  useEffect(() => {
+    if (!seasonDataReady) return;
     if (initialSeason && orderedSeasons.some((s) => s.season_number === initialSeason)) {
       setSelectedSeason(initialSeason);
+      return;
     }
-  }, [initialSeason, orderedSeasons]);
+    if (selectedSeason != null) return;
+    if (contextSeason != null) {
+      setSelectedSeason(contextSeason);
+      return;
+    }
+    if (orderedSeasons.length) {
+      setSelectedSeason(orderedSeasons[0].season_number);
+    }
+  }, [seasonDataReady, initialSeason, contextSeason, orderedSeasons, selectedSeason]);
 
   useEffect(() => {
-    if (!orderedSeasons.length) return;
+    if (!orderedSeasons.length || selectedSeason == null) return;
     if (!orderedSeasons.some((s) => s.season_number === selectedSeason)) {
       setSelectedSeason(orderedSeasons[0].season_number);
     }
@@ -90,7 +143,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
       .finally(() => setLoadingSeason(false));
   }, [tvShowId, selectedSeason]);
 
-  const watchedKeys = watchedSetFromEpisodes(watched);
+  const watchedByKey = useMemo(() => watchedMapFromEpisodes(watched), [watched]);
   const nextKey =
     track?.nextSeason && track?.nextEpisode
       ? episodeKey(track.nextSeason, track.nextEpisode)
@@ -119,17 +172,39 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   const seasonComplete =
     seasonAiredMeta.length > 0 && seasonAiredWatchedCount === seasonAiredMeta.length;
 
+  const unwatchedAiredAll = useMemo(
+    () =>
+      episodeIndex.filter(
+        (ep) =>
+          isEpisodeAired(ep) &&
+          !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+      ),
+    [episodeIndex, watchedKeys]
+  );
+
+  const unwatchedAiredSeason = useMemo(
+    () =>
+      seasonAiredMeta.filter(
+        (ep) => !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+      ),
+    [seasonAiredMeta, watchedKeys]
+  );
+
   const applyResponse = (r) => {
     if (r.data.success) {
       setWatched(r.data.episodes || []);
-      setTrack(r.data.tracking);
+      setTrack(r.data.tracking ?? null);
+      onProgressChange?.(r.data);
     }
   };
 
-  const toggleEpisode = async (episode) => {
+  const watchedInSeasonCount = seasonEpisodesMeta.filter((ep) =>
+    watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+  ).length;
+
+  const performEpisodeToggle = async (episode, isUnmark) => {
     if (!episodeIndex.length) return;
     const key = episodeKey(selectedSeason, episode.episode_number);
-    const isWatched = watchedKeys.has(key);
     setToggling(key);
 
     const epMeta = episodeFromTmdb(selectedSeason, episode);
@@ -139,23 +214,33 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
         epMeta,
         episodeIndex,
         watchedKeys,
-        !isWatched
+        !isUnmark
       );
-      const r = await api.post(isWatched ? '/api/tv/episodes/unmark' : '/api/tv/episodes/mark', payload);
+      const r = await api.post(isUnmark ? '/api/tv/episodes/unmark' : '/api/tv/episodes/mark', payload);
       applyResponse(r);
     } finally {
       setToggling(null);
     }
   };
 
+  const toggleEpisode = (episode) => {
+    const key = episodeKey(selectedSeason, episode.episode_number);
+    const isWatched = watchedKeys.has(key);
+    if (isWatched) {
+      confirm({
+        ...episodeUnmarkConfirm(selectedSeason, episode.episode_number, episode.name),
+        onConfirm: () => performEpisodeToggle(episode, true),
+      });
+      return;
+    }
+    performEpisodeToggle(episode, false);
+  };
+
   const markSeason = async () => {
-    const unwatched = seasonAiredMeta.filter(
-      (ep) => !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
-    );
-    if (!unwatched.length) return;
+    if (!unwatchedAiredSeason.length) return;
     setBatching(true);
     try {
-      const payload = buildBatchPayload(showMeta, unwatched, episodeIndex, watchedKeys, true);
+      const payload = buildBatchPayload(showMeta, unwatchedAiredSeason, episodeIndex, watchedKeys, true);
       const r = await api.post('/api/tv/episodes/mark-batch', payload);
       applyResponse(r);
     } finally {
@@ -179,15 +264,10 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   };
 
   const markAllShow = async () => {
-    const unwatched = episodeIndex.filter(
-      (ep) =>
-        isEpisodeAired(ep) &&
-        !watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
-    );
-    if (!unwatched.length) return;
+    if (!unwatchedAiredAll.length) return;
     setBatching(true);
     try {
-      const payload = buildBatchPayload(showMeta, unwatched, episodeIndex, watchedKeys, true);
+      const payload = buildBatchPayload(showMeta, unwatchedAiredAll, episodeIndex, watchedKeys, true);
       const r = await api.post('/api/tv/episodes/mark-batch', payload);
       applyResponse(r);
     } finally {
@@ -200,19 +280,50 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
 
   if (!orderedSeasons.length) return null;
 
+  const markAllButton =
+    unwatchedAiredAll.length > 0 ? (
+      <button
+        type="button"
+        disabled={batching}
+        onClick={() =>
+          confirm({
+            ...markWholeShowConfirm(unwatchedAiredAll.length),
+            onConfirm: markAllShow,
+          })
+        }
+        className="shrink-0 text-xs font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
+      >
+        Mark whole show
+      </button>
+    ) : null;
+
   return (
-    <section id="episodes" className="mt-8 md:mt-10 scroll-mt-24">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h3 className="section-title">Episodes</h3>
-        {track && (
-          <span className="text-xs text-muted">
-            {track.watchedEpisodeCount || 0}/{showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes} aired
-            {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
-              ? ` · ${showProgress.totalEpisodes} total`
-              : ''}
-          </span>
-        )}
-      </div>
+    <section
+      id={embedded ? undefined : 'episodes'}
+      className={embedded ? 'mt-0' : 'mt-8 scroll-mt-24 md:mt-10'}
+    >
+      {!embedded ? (
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h3 className="section-title">Episodes</h3>
+          <div className="flex flex-wrap items-center gap-3">
+            {track && (
+              <span className="text-xs text-muted">
+                {track.watchedEpisodeCount || 0}/
+                {showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes}{' '}
+                aired
+                {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
+                  ? ` · ${showProgress.totalEpisodes} total`
+                  : ''}
+              </span>
+            )}
+            {markAllButton}
+          </div>
+        </div>
+      ) : (
+        unwatchedAiredAll.length > 0 && (
+          <div className="mb-3 flex items-center justify-end">{markAllButton}</div>
+        )
+      )}
 
       <div className="glass-card space-y-4 p-4 sm:p-5">
         <div>
@@ -223,7 +334,8 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
             <select
               id="season-select"
               className="input-field min-h-[48px] appearance-none pr-10"
-              value={selectedSeason}
+              value={selectedSeason ?? orderedSeasons[0]?.season_number ?? 1}
+              disabled={selectedSeason == null}
               onChange={(e) => setSelectedSeason(Number(e.target.value))}
             >
               {orderedSeasons.map((s) => (
@@ -258,8 +370,13 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
           {!seasonComplete ? (
             <button
               type="button"
-              disabled={batching || !seasonEpisodesMeta.length}
-              onClick={markSeason}
+              disabled={batching || !unwatchedAiredSeason.length}
+              onClick={() =>
+                confirm({
+                  ...markSeasonConfirm(selectedSeason, unwatchedAiredSeason.length),
+                  onConfirm: markSeason,
+                })
+              }
               className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-xs disabled:opacity-50"
             >
               Mark season
@@ -268,23 +385,20 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
             <button
               type="button"
               disabled={batching}
-              onClick={unmarkSeason}
+              onClick={() =>
+                confirm({
+                  ...seasonUnmarkConfirm(selectedSeason, watchedInSeasonCount),
+                  onConfirm: unmarkSeason,
+                })
+              }
               className="btn-ghost !min-h-[40px] border border-border !px-3 !py-2 !text-xs disabled:opacity-50"
             >
               Unmark season
             </button>
           )}
-          <button
-            type="button"
-            disabled={batching}
-            onClick={markAllShow}
-            className="btn-primary !min-h-[40px] !px-3 !py-2 !text-xs disabled:opacity-50"
-          >
-            Mark all
-          </button>
         </div>
 
-        {loadingSeason ? (
+        {loadingSeason || !seasonDataReady || selectedSeason == null ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-raised" />
@@ -299,6 +413,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
               const releaseLabel = !aired ? formatEpisodeReleaseLabel(episode.air_date) : null;
               const isWatched = watchedKeys.has(key);
               const isNext = aired && key === nextKey;
+              const watchedAt = watchedByKey.get(key)?.watchedAt;
 
               return (
                 <article
@@ -334,8 +449,13 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
-                      {episode.air_date ? airdate(episode.air_date) : '—'}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                      {episode.air_date && <span>Aired {airdate(episode.air_date)}</span>}
+                      {isWatched && watchedAt && (
+                        <span className="font-medium text-accent">
+                          Watched {formatShortDate(watchedAt)}
+                        </span>
+                      )}
                       {episode.runtime > 0 && <span>{episode.runtime} min</span>}
                       {episode.vote_average > 0 && (
                         <span className="inline-flex items-center gap-0.5">
@@ -351,6 +471,8 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
           </div>
         )}
       </div>
+
+      {confirmDialog}
     </section>
   );
 }

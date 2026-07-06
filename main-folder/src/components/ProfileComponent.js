@@ -14,6 +14,12 @@ import ProfileStats from './profile/ProfileStats';
 import TvLibrarySummary from './profile/TvLibrarySummary';
 import ProfileJumpNav from './profile/ProfileJumpNav';
 import BackNav from './ui/BackNav';
+import useConfirmDialog from '../hooks/useConfirmDialog';
+import {
+  favoriteRemoveConfirm,
+  watchedFilmRemoveConfirm,
+  watchedTvRemoveConfirm,
+} from '../utils/removeConfirm';
 
 const emptyFilm = (browse) => (
   <>
@@ -36,6 +42,7 @@ const emptyTv = (browse) => (
 export default function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [favoritedMovies, setFavoritedMovies] = useState([]);
   const [favoritedShows, setFavoritedShows] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
@@ -198,17 +205,33 @@ export default function Profile() {
     [favoritedMovies, favoritedShows, watchedMovies, watchedShows]
   );
 
-  const removeFavoriteFilm = (movieId) =>
-    api.post('/api/favorite/removeFromFavorite', { movieId }).then(fetchFavoriteMovies);
+  const removeFavoriteFilm = (m) =>
+    confirm({
+      ...favoriteRemoveConfirm(m.movieTitle),
+      onConfirm: () =>
+        api.post('/api/favorite/removeFromFavorite', { movieId: m.movieId }).then(fetchFavoriteMovies),
+    });
 
-  const removeFavoriteShow = (tvId) =>
-    api.post('/api/tv/favorite/removeFromFavorite', { tvId }).then(fetchFavoriteShows);
+  const removeFavoriteShow = (s) =>
+    confirm({
+      ...favoriteRemoveConfirm(s.tvTitle),
+      onConfirm: () =>
+        api.post('/api/tv/favorite/removeFromFavorite', { tvId: s.tvId }).then(fetchFavoriteShows),
+    });
 
-  const removeWatchedFilm = (movieId) =>
-    api.post('/api/watch/removeFromWatched', { movieId }).then(fetchWatchedMovies);
+  const removeWatchedFilm = (m) =>
+    confirm({
+      ...watchedFilmRemoveConfirm(m.movieTitle),
+      onConfirm: () =>
+        api.post('/api/watch/removeFromWatched', { movieId: m.movieId }).then(fetchWatchedMovies),
+    });
 
-  const removeWatchedShow = (tvId) =>
-    api.post('/api/tv/watch/removeFromWatched', { tvId }).then(fetchWatchedShows);
+  const removeWatchedShow = (s) =>
+    confirm({
+      ...watchedTvRemoveConfirm(s.tvTitle),
+      onConfirm: () =>
+        api.post('/api/tv/watch/removeFromWatched', { tvId: s.tvId }).then(fetchWatchedShows),
+    });
 
   const filmTile = (m, onRemove) => (
     <PosterTile
@@ -248,7 +271,7 @@ export default function Profile() {
           </div>
         ) : (
           userInfo && (
-            <div className="space-y-8 md:space-y-10">
+            <div className="space-y-10 md:space-y-12">
               {loadError && (
                 <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
                   {loadError}
@@ -331,7 +354,7 @@ export default function Profile() {
                       actionLabel="View all"
                       empty={emptyFilm('Browse films')}
                     >
-                      {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m.movieId)))}
+                      {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m)))}
                     </PosterRail>
 
                     <PosterRail
@@ -340,7 +363,7 @@ export default function Profile() {
                       actionLabel="View all"
                       empty={emptyFilm('Find a film')}
                     >
-                      {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m.movieId)))}
+                      {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m)))}
                     </PosterRail>
                   </div>
 
@@ -351,7 +374,7 @@ export default function Profile() {
                       actionLabel="View all"
                       empty={emptyTv('Browse TV')}
                     >
-                      {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s.tvId)))}
+                      {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s)))}
                     </PosterRail>
 
                     <PosterRail
@@ -360,7 +383,7 @@ export default function Profile() {
                       actionLabel="View all"
                       empty={emptyTv('Browse TV')}
                     >
-                      {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s.tvId)))}
+                      {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s)))}
                     </PosterRail>
                   </div>
                 </div>
@@ -421,6 +444,7 @@ export default function Profile() {
       >
         <p className="text-sm text-muted">Your lists and history will be here when you return.</p>
       </Dialog>
+      {confirmDialog}
     </>
   );
 }

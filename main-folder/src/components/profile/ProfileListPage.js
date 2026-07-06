@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { fetchTvWatchlist } from '../../api/tvWatchlist';
 import { IMAGE_URL } from '../../config/keys';
 import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
 import PosterTile from '../ui/PosterTile';
+import { formatShortDate } from '../../utils/statsFormat';
+import useConfirmDialog from '../../hooks/useConfirmDialog';
+import { profileListRemoveConfirm } from '../../utils/removeConfirm';
 
 async function fetchListItems(listKey) {
   switch (listKey) {
@@ -29,10 +33,8 @@ async function fetchListItems(listKey) {
       const r = await api.post('/api/watchlist/getMovieWatchlist', {});
       return r.data.success ? r.data.watchlist || [] : [];
     }
-    case 'tv-watchlist': {
-      const r = await api.post('/api/tv/watchlist/getTvWatchlist', {});
-      return r.data.success ? r.data.watchlist || [] : [];
-    }
+    case 'tv-watchlist':
+      return fetchTvWatchlist();
     default:
       return null;
   }
@@ -69,6 +71,7 @@ const REMOVABLE = new Set([
 export default function ProfileListPage() {
   const { listKey } = useParams();
   const config = PROFILE_LISTS[listKey];
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,8 +95,11 @@ export default function ProfileListPage() {
   const isMovie = config.kind === 'movie';
   const canRemove = REMOVABLE.has(listKey);
 
-  const handleRemove = (id) => {
-    removeFromList(listKey, id).then(load);
+  const handleRemove = (id, title) => {
+    confirm({
+      ...profileListRemoveConfirm(listKey, title),
+      onConfirm: () => removeFromList(listKey, id).then(load),
+    });
   };
 
   return (
@@ -137,9 +143,14 @@ export default function ProfileListPage() {
                   to={`/movies/${item.movieId}`}
                   poster={item.moviePosterImage}
                   title={item.movieTitle}
+                  subtitle={
+                    listKey === 'watched-films' && item.watchedAt
+                      ? formatShortDate(item.watchedAt)
+                      : undefined
+                  }
                   imageUrlPrefix={`${IMAGE_URL}w342`}
                   size="fill"
-                  onRemove={canRemove ? () => handleRemove(item.movieId) : undefined}
+                  onRemove={canRemove ? () => handleRemove(item.movieId, item.movieTitle) : undefined}
                 />
               ) : (
                 <PosterTile
@@ -149,13 +160,14 @@ export default function ProfileListPage() {
                   title={item.tvTitle}
                   imageUrlPrefix={`${IMAGE_URL}w342`}
                   size="fill"
-                  onRemove={canRemove ? () => handleRemove(item.tvId) : undefined}
+                  onRemove={canRemove ? () => handleRemove(item.tvId, item.tvTitle) : undefined}
                 />
               )
             )}
           </div>
         )}
       </div>
+      {confirmDialog}
     </>
   );
 }
