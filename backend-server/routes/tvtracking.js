@@ -3,7 +3,12 @@ const bodyParser = require('body-parser');
 var router = express.Router();
 var TvShowTracking = require('../models/tvShowTracking');
 var TvEpisodeWatch = require('../models/tvEpisodeWatch');
-const { clearWatchlistForShow } = require('../services/tvWatchlistService');
+const { clearWatchlistForShow, normTvId } = require('../services/tvWatchlistService');
+const {
+  findTracking,
+  getWatchedEpisodesForShow,
+  resolveShowTracking,
+} = require('../services/tvTrackingService');
 var authenticate = require('../authenticate');
 const {
   autoPauseStaleTracks,
@@ -15,16 +20,23 @@ const {
 router.use(bodyParser.json());
 
 async function syncTrackingCounts(userId, tvId, extra = {}) {
-  const watched = await TvEpisodeWatch.find({ userFrom: userId, tvId }).sort({
-    seasonNumber: 1,
-    episodeNumber: 1,
-  });
+  const watched = await getWatchedEpisodesForShow(userId, tvId);
   const last = watched[watched.length - 1];
   const count = watched.length;
 
+  const tracking = await findTracking(userId, tvId);
+  if (!tracking) {
+    return null;
+  }
+
+  if (count === 0) {
+    await TvShowTracking.deleteOne({ _id: tracking._id });
+    return null;
+  }
+
   const patch = {
     watchedEpisodeCount: count,
-    lastWatchedAt: count ? new Date() : null,
+    lastWatchedAt: new Date(),
     ...extra,
   };
 
@@ -33,52 +45,47 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
     patch.lastEpisode = last.episodeNumber;
   }
 
-  const tracking = await TvShowTracking.findOne({ userFrom: userId, tvId });
-  if (tracking) {
-    const progressTotal =
-      extra.airedEpisodeCount ?? tracking.airedEpisodeCount ?? tracking.totalEpisodes;
-    const hasUnreleased =
-      tracking.totalEpisodes > 0 && progressTotal < tracking.totalEpisodes;
+  const progressTotal =
+    extra.airedEpisodeCount ?? tracking.airedEpisodeCount ?? tracking.totalEpisodes;
+  const hasUnreleased =
+    tracking.totalEpisodes > 0 && progressTotal < tracking.totalEpisodes;
 
-    if (progressTotal > 0 && count >= progressTotal) {
-      if (hasUnreleased && count < tracking.totalEpisodes) {
-        patch.status = 'watching';
-        if (!extra.nextSeason && !('nextSeason' in extra)) {
-          patch.nextSeason = null;
-          patch.nextEpisode = null;
-          patch.nextEpisodeName = null;
-        }
-      } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
-        patch.status = 'completed';
+  if (progressTotal > 0 && count >= progressTotal) {
+    if (hasUnreleased && count < tracking.totalEpisodes) {
+      patch.status = 'watching';
+      if (!extra.nextSeason && !('nextSeason' in extra)) {
         patch.nextSeason = null;
         patch.nextEpisode = null;
         patch.nextEpisodeName = null;
       }
-    } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
-      patch.status = 'watching';
     } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
       patch.status = 'completed';
       patch.nextSeason = null;
       patch.nextEpisode = null;
       patch.nextEpisodeName = null;
-    } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
-      patch.status = 'watching';
     }
-
-    if (extra.airedEpisodeCount != null) {
-      patch.airedEpisodeCount = extra.airedEpisodeCount;
-    }
-
-    if (tracking.status === 'paused' && count > 0) {
-      patch.status = 'watching';
-    }
-
-    Object.assign(tracking, patch);
-    await tracking.save();
-    return tracking;
+  } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
+    patch.status = 'watching';
+  } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
+    patch.status = 'completed';
+    patch.nextSeason = null;
+    patch.nextEpisode = null;
+    patch.nextEpisodeName = null;
+  } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
+    patch.status = 'watching';
   }
 
-  return null;
+  if (extra.airedEpisodeCount != null) {
+    patch.airedEpisodeCount = extra.airedEpisodeCount;
+  }
+
+  if (tracking.status === 'paused' && count > 0) {
+    patch.status = 'watching';
+  }
+
+  Object.assign(tracking, patch);
+  await tracking.save();
+  return tracking;
 }
 
 router.post('/start', authenticate.verifyUser, async (req, res, next) => {
@@ -116,6 +123,7 @@ router.get('/continue', authenticate.verifyUser, async (req, res, next) => {
     const tracks = await TvShowTracking.find({
       userFrom: req.user._id,
       status: 'watching',
+      watchedEpisodeCount: { $gt: 0 },
     })
       .sort({ lastWatchedAt: -1, updatedAt: -1 })
       .limit(24);
@@ -182,11 +190,8 @@ router.post('/resume', authenticate.verifyUser, async (req, res, next) => {
 
 router.get('/show/:tvId', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const tracking = await TvShowTracking.findOne({
-      userFrom: req.user._id,
-      tvId: req.params.tvId,
-    });
-    res.status(200).json({ success: true, tracking: tracking || null });
+    const tracking = await resolveShowTracking(req.user._id, req.params.tvId);
+    res.status(200).json({ success: true, tracking });
   } catch (err) {
     next(err);
   }

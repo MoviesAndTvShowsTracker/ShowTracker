@@ -5,6 +5,10 @@ var TvShowTracking = require('../models/tvShowTracking');
 var TvEpisodeWatch = require('../models/tvEpisodeWatch');
 var authenticate = require('../authenticate');
 const { syncTrackingCounts, clearWatchlistForShow } = require('./tvtracking');
+const {
+  deleteWatchedEpisode,
+  deleteWatchedEpisodes,
+} = require('../services/tvTrackingService');
 const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
@@ -203,22 +207,14 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
 router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { tvId, episodes, nextSeason, nextEpisode, nextEpisodeName } = req.body;
+    const tvId = String(req.body.tvId);
+    const { episodes, nextSeason, nextEpisode, nextEpisodeName } = req.body;
 
     if (!Array.isArray(episodes) || !episodes.length) {
       return res.status(400).json({ success: false, message: 'No episodes provided' });
     }
 
-    await Promise.all(
-      episodes.map((ep) =>
-        TvEpisodeWatch.findOneAndDelete({
-          userFrom: userId,
-          tvId,
-          seasonNumber: ep.seasonNumber,
-          episodeNumber: ep.episodeNumber,
-        })
-      )
-    );
+    await deleteWatchedEpisodes(userId, tvId, episodes);
 
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,
@@ -241,15 +237,11 @@ router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => 
 router.post('/unmark', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { tvId, seasonNumber, episodeNumber, nextSeason, nextEpisode, nextEpisodeName } =
+    const tvId = String(req.body.tvId);
+    const { seasonNumber, episodeNumber, nextSeason, nextEpisode, nextEpisodeName } =
       req.body;
 
-    await TvEpisodeWatch.findOneAndDelete({
-      userFrom: userId,
-      tvId,
-      seasonNumber,
-      episodeNumber,
-    });
+    await deleteWatchedEpisode(userId, tvId, seasonNumber, episodeNumber);
 
     const tracking = await syncTrackingCounts(userId, tvId, {
       nextSeason,

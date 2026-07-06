@@ -5,7 +5,9 @@ import { Bookmark, Film, MoreVertical, Star, Tv } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import { useAuth } from '../../context/AuthContext';
+import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { useAnchoredPopover } from '../../hooks/useAnchoredPopover';
+import { watchlistRemoveConfirm } from '../../utils/removeConfirm';
 
 function yearFrom(item, mediaType) {
   const date = mediaType === 'tv' ? item.first_air_date : item.release_date || item.first_air_date;
@@ -14,6 +16,7 @@ function yearFrom(item, mediaType) {
 
 export default function SearchResultTile({ item, mediaType }) {
   const { isAuthenticated } = useAuth();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const type = mediaType || item.media_type;
   const isTv = type === 'tv';
   const title = isTv ? item.name : item.title;
@@ -69,9 +72,7 @@ export default function SearchResultTile({ item, mediaType }) {
     setTimeout(() => setHint(''), 1800);
   };
 
-  const toggleWatchlist = async (e) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
+  const applyWatchlistChange = async () => {
     if (!isAuthenticated || busy) return;
     setBusy(true);
     setMenuOpen(false);
@@ -113,6 +114,21 @@ export default function SearchResultTile({ item, mediaType }) {
     }
   };
 
+  const toggleWatchlist = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (!isAuthenticated || busy) return;
+    if (watchlisted) {
+      setMenuOpen(false);
+      confirm({
+        ...watchlistRemoveConfirm(title),
+        onConfirm: applyWatchlistChange,
+      });
+      return;
+    }
+    applyWatchlistChange();
+  };
+
   const startTracking = async (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
@@ -146,6 +162,7 @@ export default function SearchResultTile({ item, mediaType }) {
         : 'right-1.5 top-1.5';
 
   return (
+    <>
     <article className={`group relative ${menuOpen ? 'z-40' : ''}`}>
       <div className="relative">
         <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 hover:-translate-y-0.5 hover:shadow-poster-hover">
@@ -277,5 +294,7 @@ export default function SearchResultTile({ item, mediaType }) {
         )}
       </Link>
     </article>
+    {confirmDialog}
+    </>
   );
 }

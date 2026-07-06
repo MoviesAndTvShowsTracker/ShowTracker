@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import api from '../../api/axios';
 import { deriveShowProgress, fetchShowEpisodeIndex } from '../../utils/tvProgress';
 
 const BANNER_STYLES = {
@@ -62,19 +61,14 @@ function BannerContent({ track, progress, styles, isComplete, isPaused, caughtUp
   );
 }
 
-export default function TvTrackingBanner({ tvId, refreshKey = 0 }) {
-  const [track, setTrack] = useState(null);
+export default function TvTrackingBanner({ tvId, track }) {
   const [progress, setProgress] = useState(null);
 
   useEffect(() => {
-    api.get(`/api/tv/tracking/show/${tvId}`).then((r) => {
-      if (r.data.success && r.data.tracking) setTrack(r.data.tracking);
-      else setTrack(null);
-    });
-  }, [tvId, refreshKey]);
-
-  useEffect(() => {
-    if (!track) return;
+    if (!track) {
+      setProgress(null);
+      return;
+    }
     fetchShowEpisodeIndex(tvId)
       .then(({ episodes }) => setProgress(deriveShowProgress(track, episodes)))
       .catch(() => setProgress(null));

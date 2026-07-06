@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { fetchTvShowDiary } from '../../api/tvShowDiary';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
 import TvTrackingBanner from './TvTrackingBanner';
 import TvTrackingStatusAction from './TvTrackingStatusAction';
+import TvDiarySkeleton from './TvDiarySkeleton';
 import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
@@ -34,15 +36,28 @@ export default function TvDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
-  const [trackingRev, setTrackingRev] = useState(0);
+  const [diary, setDiary] = useState(null);
 
-  const bumpTrackingUi = useCallback(() => {
-    setTrackingRev((k) => k + 1);
+  const patchDiary = useCallback((patch) => {
+    setDiary((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
+  const handleProgressChange = useCallback((data) => {
+    if (!data || !('tracking' in data)) return;
+    setDiary((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        tracking: data.tracking ?? null,
+        watchlisted: data.tracking ? false : current.watchlisted,
+      };
+    });
   }, []);
 
   const loadShow = useCallback(async (signal) => {
     setLoading(true);
     setError('');
+    setDiary(null);
     setTvShow({});
     setCreatedBy([]);
     setGenres([]);
@@ -53,6 +68,7 @@ export default function TvDetail() {
     setCertification(null);
 
     try {
+      const diaryPromise = fetchTvShowDiary(tvShowId);
       const showRes = await fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`, {
         signal,
       });
@@ -67,11 +83,14 @@ export default function TvDetail() {
       setGenres(showData.genres || []);
       setSeasons(showData.seasons || []);
 
-      const [creditsRes, providersRes, ratingsRes] = await Promise.all([
+      const [creditsRes, providersRes, ratingsRes, diaryData] = await Promise.all([
         fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, { signal }),
         fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal }),
         fetch(`${API_URL}tv/${tvShowId}/content_ratings?api_key=${API_KEY}`, { signal }),
+        diaryPromise,
       ]);
+
+      if (!signal.aborted) setDiary(diaryData);
 
       const creditsData = await creditsRes.json();
       setCrews(creditsData.cast || []);
@@ -193,15 +212,26 @@ export default function TvDetail() {
 
         {tvShow.name && (
           <section className="mb-5 md:mb-8">
-            <TvTrackingStatusAction
-              tvId={tvShowId}
-              refreshKey={trackingRev}
-              onStatusChange={bumpTrackingUi}
-              className="mb-1"
-            />
-            <TvTrackingBanner tvId={tvShowId} refreshKey={trackingRev} />
-            <h2 className="section-title mb-3 md:hidden">Your diary</h2>
-            <TvFavorites tvId={tvShowId} tvInfo={tvShow} refreshKey={trackingRev} />
+            {!diary ? (
+              <TvDiarySkeleton />
+            ) : (
+              <>
+                <TvTrackingStatusAction
+                  tvId={tvShowId}
+                  track={diary.tracking}
+                  onStatusChange={handleProgressChange}
+                  className="mb-1"
+                />
+                <TvTrackingBanner tvId={tvShowId} track={diary.tracking} />
+                <h2 className="section-title mb-3 md:hidden">Your diary</h2>
+                <TvFavorites
+                  tvId={tvShowId}
+                  tvInfo={tvShow}
+                  diary={diary}
+                  onDiaryPatch={patchDiary}
+                />
+              </>
+            )}
           </section>
         )}
 
@@ -269,7 +299,7 @@ export default function TvDetail() {
             tvShow={tvShow}
             seasons={seasons}
             initialSeason={initialSeason}
-            onProgressChange={bumpTrackingUi}
+            onProgressChange={handleProgressChange}
           />
         )}
 

@@ -3,9 +3,16 @@ import { Bookmark, Check, Heart } from 'lucide-react';
 import api from '../../api/axios';
 import { clearSessionStats } from '../../utils/statsCache';
 import { formatShortDate } from '../../utils/statsFormat';
+import {
+  favoriteRemoveConfirm,
+  watchlistRemoveConfirm,
+  watchedFilmRemoveConfirm,
+} from '../../utils/removeConfirm';
+import useConfirmDialog from '../../hooks/useConfirmDialog';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 
 export default function Favorite({ movieId, movieInfo }) {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [favoriteNumber, setFavoriteNumber] = useState(0);
   const [favorited, setFavorited] = useState(false);
   const [watched, setWatched] = useState(false);
@@ -20,6 +27,7 @@ export default function Favorite({ movieId, movieInfo }) {
     movieRuntime: movieInfo.runtime,
   };
 
+  const movieTitle = movieInfo.title || 'this film';
   const watchedDateLabel = watchedAt ? formatShortDate(watchedAt) : null;
 
   useEffect(() => {
@@ -41,33 +49,64 @@ export default function Favorite({ movieId, movieInfo }) {
   }, [movieId]);
 
   const toggleFavorite = () => {
-    const endpoint = favorited ? '/api/favorite/removeFromFavorite' : '/api/favorite/addToFavorite';
-    api.post(endpoint, payload).then((r) => {
+    if (favorited) {
+      confirm({
+        ...favoriteRemoveConfirm(movieTitle),
+        onConfirm: () =>
+          api.post('/api/favorite/removeFromFavorite', payload).then((r) => {
+            if (r.data.success) {
+              setFavoriteNumber(favoriteNumber - 1);
+              setFavorited(false);
+            }
+          }),
+      });
+      return;
+    }
+    api.post('/api/favorite/addToFavorite', payload).then((r) => {
       if (r.data.success) {
-        setFavoriteNumber(favorited ? favoriteNumber - 1 : favoriteNumber + 1);
-        setFavorited(!favorited);
+        setFavoriteNumber(favoriteNumber + 1);
+        setFavorited(true);
       }
     });
   };
 
   const toggleWatched = () => {
-    const endpoint = watched ? '/api/watch/removeFromWatched' : '/api/watch/addToWatch';
-    api.post(endpoint, payload).then((r) => {
+    if (watched) {
+      confirm({
+        ...watchedFilmRemoveConfirm(movieTitle),
+        onConfirm: () =>
+          api.post('/api/watch/removeFromWatched', payload).then((r) => {
+            if (r.data.success) {
+              setWatched(false);
+              setWatchedAt(null);
+              clearSessionStats();
+            }
+          }),
+      });
+      return;
+    }
+    api.post('/api/watch/addToWatch', payload).then((r) => {
       if (r.data.success) {
-        const nowWatched = !watched;
-        setWatched(nowWatched);
-        setWatchedAt(nowWatched ? r.data.watchedAt || new Date().toISOString() : null);
+        setWatched(true);
+        setWatchedAt(r.data.watchedAt || new Date().toISOString());
         clearSessionStats();
       }
     });
   };
 
   const toggleWatchlist = () => {
-    const endpoint = watchlisted
-      ? '/api/watchlist/removeFromWatchlist'
-      : '/api/watchlist/addToWatchlist';
-    api.post(endpoint, payload).then((r) => {
-      if (r.data.success) setWatchlisted(!watchlisted);
+    if (watchlisted) {
+      confirm({
+        ...watchlistRemoveConfirm(movieTitle),
+        onConfirm: () =>
+          api.post('/api/watchlist/removeFromWatchlist', payload).then((r) => {
+            if (r.data.success) setWatchlisted(false);
+          }),
+      });
+      return;
+    }
+    api.post('/api/watchlist/addToWatchlist', payload).then((r) => {
+      if (r.data.success) setWatchlisted(true);
     });
   };
 
@@ -100,6 +139,7 @@ export default function Favorite({ movieId, movieInfo }) {
           />
         )}
       </ActionStrip>
+      {confirmDialog}
     </div>
   );
 }

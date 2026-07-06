@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, ChevronDown, ChevronRight, List } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
@@ -54,6 +54,7 @@ function ShowQuickLinks({ tvShowId, episodesOpen, onEpisodesClick, isMobile }) {
 
 export default function TvContinue() {
   const { Id: tvShowId } = useParams();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [track, setTrack] = useState(null);
   const [showMeta, setShowMeta] = useState(null);
@@ -64,7 +65,6 @@ export default function TvContinue() {
   const [episodesOpen, setEpisodesOpen] = useState(false);
   const [episodesEverOpened, setEpisodesEverOpened] = useState(false);
   const [episodesRefresh, setEpisodesRefresh] = useState(null);
-  const [statusUiRev, setStatusUiRev] = useState(0);
 
   const load = () => {
     setLoading(true);
@@ -92,8 +92,15 @@ export default function TvContinue() {
 
   const handleProgressChange = (data) => {
     setWatched(data.episodes || []);
-    if (data.tracking) setTrack(data.tracking);
-    setStatusUiRev((k) => k + 1);
+    const nextTrack = data.tracking ?? null;
+    setTrack(nextTrack);
+    if (!nextTrack && !(data.episodes || []).length) {
+      navigate(`/tv/${tvShowId}`, { replace: true });
+    }
+  };
+
+  const handleTrackingStatusChange = (data) => {
+    if (data && 'tracking' in data) setTrack(data.tracking ?? null);
   };
 
   const watchedKeys = watchedSetFromEpisodes(watched);
@@ -136,13 +143,6 @@ export default function TvContinue() {
     } else {
       setEpisodesOpen((open) => !open);
     }
-  };
-
-  const handleTrackingStatusChange = () => {
-    api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
-      if (r.data.success) setTrack(r.data.tracking || null);
-    });
-    setStatusUiRev((k) => k + 1);
   };
 
   const episodesPanel = showMeta ? (
@@ -210,8 +210,8 @@ export default function TvContinue() {
 
             <TvTrackingStatusAction
               tvId={tvShowId}
+              track={track}
               navigateOnStop
-              refreshKey={statusUiRev}
               onStatusChange={handleTrackingStatusChange}
             />
 

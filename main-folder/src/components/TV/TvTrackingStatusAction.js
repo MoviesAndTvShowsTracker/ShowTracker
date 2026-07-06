@@ -7,23 +7,24 @@ import { deriveShowProgress, fetchShowEpisodeIndex } from '../../utils/tvProgres
 
 export default function TvTrackingStatusAction({
   tvId,
+  track: trackProp,
   navigateOnStop = false,
   onStatusChange,
   className = 'mt-4',
-  refreshKey = 0,
 }) {
   const navigate = useNavigate();
-  const [track, setTrack] = useState(null);
+  const [fetchedTrack, setFetchedTrack] = useState(null);
   const [progress, setProgress] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const fetchKey = reloadKey + refreshKey;
+  const selfLoaded = trackProp === undefined;
+  const track = selfLoaded ? fetchedTrack : trackProp;
 
   useEffect(() => {
+    if (!selfLoaded) return;
     api.get(`/api/tv/tracking/show/${tvId}`).then((r) => {
-      if (r.data.success) setTrack(r.data.tracking || null);
+      if (r.data.success) setFetchedTrack(r.data.tracking || null);
     });
-  }, [tvId, fetchKey]);
+  }, [tvId, selfLoaded]);
 
   useEffect(() => {
     if (!track) {
@@ -33,14 +34,13 @@ export default function TvTrackingStatusAction({
     fetchShowEpisodeIndex(tvId)
       .then(({ episodes }) => setProgress(deriveShowProgress(track, episodes)))
       .catch(() => setProgress(null));
-  }, [track, tvId, fetchKey]);
+  }, [track, tvId]);
 
   const isComplete = progress?.isComplete ?? track?.status === 'completed';
 
   const applyStatusChange = (nextTrack) => {
-    if (nextTrack) setTrack(nextTrack);
-    else setReloadKey((k) => k + 1);
-    onStatusChange?.();
+    if (selfLoaded) setFetchedTrack(nextTrack || null);
+    onStatusChange?.({ tracking: nextTrack ?? null });
   };
 
   const stopWatching = async () => {
