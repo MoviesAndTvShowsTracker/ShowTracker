@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
+import { fetchTvWatchlist } from '../../api/tvWatchlist';
 import { IMAGE_URL } from '../../config/keys';
 import { profileListPath } from '../../config/profileLists';
 import PosterRail from '../ui/PosterRail';
@@ -16,7 +17,7 @@ const CONFIG = {
     basePath: '/movies',
   },
   tv: {
-    endpoint: '/api/tv/watchlist/getTvWatchlist',
+    fetch: fetchTvWatchlist,
     listKey: 'tv-watchlist',
     title: 'Your watchlist',
     idKey: 'tvId',
@@ -33,11 +34,10 @@ export default function MyWatchlistRail({ type }) {
 
   useEffect(() => {
     setLoading(true);
-    api
-      .post(CONFIG[type].endpoint, {})
-      .then((r) => {
-        if (r.data.success) setItems(r.data.watchlist || []);
-      })
+    const cfg = CONFIG[type];
+    const load = cfg.fetch || (() => api.post(cfg.endpoint, {}).then((r) => r.data.watchlist || []));
+    load()
+      .then((watchlist) => setItems(watchlist || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [type]);

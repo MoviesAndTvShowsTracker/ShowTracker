@@ -13,12 +13,21 @@ import {
   formatEpisodeReleaseLabel,
   isEpisodeAired,
   progressPercent,
+  resolveTrackingSeason,
   watchedSetFromEpisodes,
   watchedMapFromEpisodes,
 } from '../../utils/tvProgress';
 import { formatShortDate } from '../../utils/statsFormat';
 
-export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initialSeason }) {
+export default function TvSeasonEpisodesPanel({
+  tvShowId,
+  tvShow,
+  seasons,
+  initialSeason,
+  embedded = false,
+  onProgressChange,
+  refreshToken,
+}) {
   const orderedSeasons = useMemo(
     () =>
       [...(seasons || [])]
@@ -27,9 +36,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
     [seasons]
   );
 
-  const [selectedSeason, setSelectedSeason] = useState(
-    initialSeason || orderedSeasons[0]?.season_number || 1
-  );
+  const [selectedSeason, setSelectedSeason] = useState(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState([]);
   const [seasonMeta, setSeasonMeta] = useState(null);
   const [loadingSeason, setLoadingSeason] = useState(false);
@@ -40,6 +47,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   const [airedEpisodeCount, setAiredEpisodeCount] = useState(0);
   const [toggling, setToggling] = useState(null);
   const [batching, setBatching] = useState(false);
+  const [seasonDataReady, setSeasonDataReady] = useState(false);
 
   const showMeta = useMemo(
     () => ({ ...tvShow, totalEpisodes, tvId: tvShowId }),
@@ -56,22 +64,57 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   }, [tvShowId]);
 
   useEffect(() => {
-    loadWatched();
-    fetchShowEpisodeIndex(tvShowId).then(({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
-      setEpisodeIndex(episodes);
-      setTotalEpisodes(total);
-      setAiredEpisodeCount(aired);
+    setSeasonDataReady(false);
+    setSelectedSeason(null);
+
+    const trackingReq = api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
+      if (r.data.success) setTrack(r.data.tracking || null);
     });
-  }, [tvShowId, loadWatched]);
+    const watchedReq = api.get(`/api/tv/episodes/${tvShowId}`).then((r) => {
+      if (r.data.success) setWatched(r.data.episodes || []);
+    });
+    const indexReq = fetchShowEpisodeIndex(tvShowId).then(
+      ({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
+        setEpisodeIndex(episodes);
+        setTotalEpisodes(total);
+        setAiredEpisodeCount(aired);
+      }
+    );
+
+    Promise.all([trackingReq, watchedReq, indexReq]).finally(() => setSeasonDataReady(true));
+  }, [tvShowId]);
 
   useEffect(() => {
+    if (refreshToken == null) return;
+    loadWatched();
+  }, [refreshToken, loadWatched]);
+
+  const watchedKeys = watchedSetFromEpisodes(watched);
+
+  const contextSeason = useMemo(() => {
+    const season = resolveTrackingSeason(track, episodeIndex, watchedKeys);
+    if (season == null || !orderedSeasons.some((s) => s.season_number === season)) return null;
+    return season;
+  }, [track, episodeIndex, watchedKeys, orderedSeasons]);
+
+  useEffect(() => {
+    if (!seasonDataReady) return;
     if (initialSeason && orderedSeasons.some((s) => s.season_number === initialSeason)) {
       setSelectedSeason(initialSeason);
+      return;
     }
-  }, [initialSeason, orderedSeasons]);
+    if (selectedSeason != null) return;
+    if (contextSeason != null) {
+      setSelectedSeason(contextSeason);
+      return;
+    }
+    if (orderedSeasons.length) {
+      setSelectedSeason(orderedSeasons[0].season_number);
+    }
+  }, [seasonDataReady, initialSeason, contextSeason, orderedSeasons, selectedSeason]);
 
   useEffect(() => {
-    if (!orderedSeasons.length) return;
+    if (!orderedSeasons.length || selectedSeason == null) return;
     if (!orderedSeasons.some((s) => s.season_number === selectedSeason)) {
       setSelectedSeason(orderedSeasons[0].season_number);
     }
@@ -92,7 +135,6 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
       .finally(() => setLoadingSeason(false));
   }, [tvShowId, selectedSeason]);
 
-  const watchedKeys = watchedSetFromEpisodes(watched);
   const watchedByKey = useMemo(() => watchedMapFromEpisodes(watched), [watched]);
   const nextKey =
     track?.nextSeason && track?.nextEpisode
@@ -126,6 +168,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
     if (r.data.success) {
       setWatched(r.data.episodes || []);
       setTrack(r.data.tracking);
+      onProgressChange?.(r.data);
     }
   };
 
@@ -204,18 +247,23 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
   if (!orderedSeasons.length) return null;
 
   return (
-    <section id="episodes" className="mt-8 md:mt-10 scroll-mt-24">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h3 className="section-title">Episodes</h3>
-        {track && (
-          <span className="text-xs text-muted">
-            {track.watchedEpisodeCount || 0}/{showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes} aired
-            {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
-              ? ` · ${showProgress.totalEpisodes} total`
-              : ''}
-          </span>
-        )}
-      </div>
+    <section
+      id={embedded ? undefined : 'episodes'}
+      className={embedded ? 'mt-0' : 'mt-8 scroll-mt-24 md:mt-10'}
+    >
+      {!embedded && (
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h3 className="section-title">Episodes</h3>
+          {track && (
+            <span className="text-xs text-muted">
+              {track.watchedEpisodeCount || 0}/{showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes} aired
+              {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
+                ? ` · ${showProgress.totalEpisodes} total`
+                : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="glass-card space-y-4 p-4 sm:p-5">
         <div>
@@ -226,7 +274,8 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
             <select
               id="season-select"
               className="input-field min-h-[48px] appearance-none pr-10"
-              value={selectedSeason}
+              value={selectedSeason ?? orderedSeasons[0]?.season_number ?? 1}
+              disabled={selectedSeason == null}
               onChange={(e) => setSelectedSeason(Number(e.target.value))}
             >
               {orderedSeasons.map((s) => (
@@ -287,7 +336,7 @@ export default function TvSeasonEpisodesPanel({ tvShowId, tvShow, seasons, initi
           </button>
         </div>
 
-        {loadingSeason ? (
+        {loadingSeason || !seasonDataReady || selectedSeason == null ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-raised" />

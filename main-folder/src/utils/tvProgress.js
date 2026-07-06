@@ -148,6 +148,28 @@ export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now 
   };
 }
 
+/** Pick the season the user is currently on (next up, last watched, etc.). */
+export function resolveTrackingSeason(track, episodeIndex = [], watchedKeys = null) {
+  if (!track) return null;
+
+  const progress = deriveShowProgress(track, episodeIndex, watchedKeys);
+  const nextEp =
+    track.nextSeason && track.nextEpisode && episodeIndex.length
+      ? episodeIndex.find(
+          (e) =>
+            e.seasonNumber === track.nextSeason && e.episodeNumber === track.nextEpisode
+        )
+      : progress.nextAired;
+
+  return (
+    nextEp?.seasonNumber ??
+    progress.nextUnaired?.seasonNumber ??
+    track.nextSeason ??
+    track.lastSeason ??
+    null
+  );
+}
+
 export function buildBatchPayload(showMeta, episodesToMark, episodeIndex, watchedKeys, marking = true) {
   const keys = new Set(watchedKeys);
   episodesToMark.forEach((ep) => {

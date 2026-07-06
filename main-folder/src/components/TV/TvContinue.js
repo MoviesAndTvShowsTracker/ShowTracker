@@ -1,28 +1,70 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, ChevronRight, List, PauseCircle, PlayCircle } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { Check, ChevronDown, ChevronRight, List } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
-import { tvLibraryPath } from '../../config/tvLibrary';
+import useIsMobile from '../../hooks/useIsMobile';
 import {
   buildMarkPayload,
   deriveShowProgress,
   fetchShowEpisodeIndex,
+  resolveTrackingSeason,
   watchedSetFromEpisodes,
 } from '../../utils/tvProgress';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
+import Dialog from '../ui/Dialog';
+import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
+import TvTrackingStatusAction from './TvTrackingStatusAction';
+import { formatShortDate } from '../../utils/statsFormat';
+
+const menuRowClass =
+  'flex min-h-[48px] w-full items-center gap-3 px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-surface-raised/50 active:bg-surface-raised/70';
+
+function ShowQuickLinks({ tvShowId, episodesOpen, onEpisodesClick, isMobile }) {
+  return (
+    <div className="mt-5 overflow-hidden rounded-xl border border-border">
+      <Link to={`/tv/${tvShowId}`} className={`${menuRowClass} border-b border-border`}>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+        <span className="flex-1">Show details</span>
+      </Link>
+      <button
+        type="button"
+        onClick={onEpisodesClick}
+        aria-haspopup={isMobile ? 'dialog' : undefined}
+        aria-expanded={episodesOpen}
+        className={`${menuRowClass}${episodesOpen ? ' bg-surface-raised/60' : ''}`}
+      >
+        <List className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+        <span className="flex-1 text-left">Episodes</span>
+        {isMobile ? (
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted/50" aria-hidden />
+        ) : (
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted/50 transition-transform duration-300 ${
+              episodesOpen ? 'rotate-180' : ''
+            }`}
+            aria-hidden
+          />
+        )}
+      </button>
+    </div>
+  );
+}
 
 export default function TvContinue() {
   const { Id: tvShowId } = useParams();
-  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [track, setTrack] = useState(null);
   const [showMeta, setShowMeta] = useState(null);
   const [episodeIndex, setEpisodeIndex] = useState([]);
   const [watched, setWatched] = useState([]);
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
-  const [statusBusy, setStatusBusy] = useState(false);
+  const [episodesOpen, setEpisodesOpen] = useState(false);
+  const [episodesEverOpened, setEpisodesEverOpened] = useState(false);
+  const [episodesRefresh, setEpisodesRefresh] = useState(null);
+  const [statusUiRev, setStatusUiRev] = useState(0);
 
   const load = () => {
     setLoading(true);
@@ -42,9 +84,17 @@ export default function TvContinue() {
 
   useEffect(() => {
     load();
+    setEpisodesOpen(false);
+    setEpisodesEverOpened(false);
     window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvShowId]);
+
+  const handleProgressChange = (data) => {
+    setWatched(data.episodes || []);
+    if (data.tracking) setTrack(data.tracking);
+    setStatusUiRev((k) => k + 1);
+  };
 
   const watchedKeys = watchedSetFromEpisodes(watched);
   const progress = deriveShowProgress(track, episodeIndex, watchedKeys);
@@ -56,6 +106,7 @@ export default function TvContinue() {
       : progress.nextAired;
 
   const { pct, caughtUpWithAired, upcomingLabel, nextUnaired, isComplete } = progress;
+  const episodesSeason = resolveTrackingSeason(track, episodeIndex, watchedKeys) ?? 1;
 
   const markNext = async () => {
     if (!nextEp || !showMeta) return;
@@ -70,35 +121,41 @@ export default function TvContinue() {
       );
       const r = await api.post('/api/tv/episodes/mark', payload);
       if (r.data.success) {
-        setTrack(r.data.tracking);
-        setWatched(r.data.episodes || []);
+        handleProgressChange(r.data);
+        setEpisodesRefresh((n) => (n ?? 0) + 1);
       }
     } finally {
       setMarking(false);
     }
   };
 
-  const stopWatching = async () => {
-    setStatusBusy(true);
-    try {
-      const r = await api.post('/api/tv/tracking/stop', { tvId: tvShowId, status: 'paused' });
-      if (r.data.success) navigate(tvLibraryPath('stopped'));
-    } finally {
-      setStatusBusy(false);
+  const handleEpisodesClick = () => {
+    if (isMobile) {
+      setEpisodesEverOpened(true);
+      setEpisodesOpen(true);
+    } else {
+      setEpisodesOpen((open) => !open);
     }
   };
 
-  const resumeWatching = async () => {
-    setStatusBusy(true);
-    try {
-      const r = await api.post('/api/tv/tracking/resume', { tvId: tvShowId });
-      if (r.data.success) {
-        setTrack(r.data.tracking);
-      }
-    } finally {
-      setStatusBusy(false);
-    }
+  const handleTrackingStatusChange = () => {
+    api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
+      if (r.data.success) setTrack(r.data.tracking || null);
+    });
+    setStatusUiRev((k) => k + 1);
   };
+
+  const episodesPanel = showMeta ? (
+    <TvSeasonEpisodesPanel
+      embedded
+      tvShowId={tvShowId}
+      tvShow={showMeta}
+      seasons={showMeta.seasons || []}
+      initialSeason={episodesSeason}
+      refreshToken={episodesRefresh}
+      onProgressChange={handleProgressChange}
+    />
+  ) : null;
 
   if (loading) {
     return (
@@ -151,12 +208,16 @@ export default function TvContinue() {
               </div>
             </div>
 
+            <TvTrackingStatusAction
+              tvId={tvShowId}
+              navigateOnStop
+              refreshKey={statusUiRev}
+              onStatusChange={handleTrackingStatusChange}
+            />
+
             {isComplete ? (
-              <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5 text-center">
+              <div className="mt-6 rounded-xl border border-link/30 bg-link/10 px-4 py-5 text-center">
                 <p className="font-serif text-lg text-ink-bright">You&apos;ve finished this show</p>
-                <Link to={`/tv/${tvShowId}`} className="btn-secondary mt-4 inline-flex">
-                  View show page
-                </Link>
               </div>
             ) : caughtUpWithAired && upcomingLabel ? (
               <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5">
@@ -171,9 +232,6 @@ export default function TvContinue() {
                     <span className="font-medium text-ink">{upcomingLabel}</span>
                   </p>
                 )}
-                <Link to={`/tv/${tvShowId}`} className="btn-secondary mt-5 inline-flex">
-                  View show page
-                </Link>
               </div>
             ) : nextEp ? (
               <div className="mt-6 rounded-xl border border-border bg-surface-raised/40 p-4 sm:p-5">
@@ -182,8 +240,15 @@ export default function TvContinue() {
                   S{nextEp.seasonNumber} · E{nextEp.episodeNumber}
                 </h2>
                 <p className="mt-1 text-sm text-muted">{nextEp.episodeName}</p>
-                {nextEp.runtimeMinutes > 0 && (
-                  <p className="mt-1 text-xs text-muted">{nextEp.runtimeMinutes} min</p>
+                {(nextEp.airDate || nextEp.runtimeMinutes > 0) && (
+                  <p className="mt-1 text-xs text-muted">
+                    {[
+                      nextEp.airDate && `Aired ${formatShortDate(nextEp.airDate)}`,
+                      nextEp.runtimeMinutes > 0 && `${nextEp.runtimeMinutes} min`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
                 )}
                 <button
                   type="button"
@@ -198,59 +263,35 @@ export default function TvContinue() {
             ) : (
               <div className="mt-6">
                 <p className="text-sm text-muted">Choose a season to start tracking.</p>
-                <Link to={`/tv/${tvShowId}`} className="btn-primary mt-4 inline-flex">
-                  View seasons
-                </Link>
               </div>
             )}
 
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              <Link
-                to={`/tv/${tvShowId}`}
-                className="btn-secondary flex min-h-[44px] flex-1 items-center justify-center gap-2"
-              >
-                <ChevronRight className="h-4 w-4" />
-                Show details
-              </Link>
-              {nextEp && (
-                <Link
-                  to={`/tv/${tvShowId}/${nextEp.seasonNumber}/episodes`}
-                  className="btn-ghost flex min-h-[44px] flex-1 items-center justify-center gap-2 border border-border"
-                >
-                  <List className="h-4 w-4" />
-                  All episodes
-                </Link>
-              )}
-            </div>
+            <ShowQuickLinks
+              tvShowId={tvShowId}
+              episodesOpen={episodesOpen}
+              onEpisodesClick={handleEpisodesClick}
+              isMobile={isMobile}
+            />
 
-            {track && !isComplete && (
-              <div className="mt-4 border-t border-border pt-4">
-                {track.status === 'paused' ? (
-                  <button
-                    type="button"
-                    disabled={statusBusy}
-                    onClick={resumeWatching}
-                    className="btn-secondary inline-flex w-full gap-2 sm:w-auto disabled:opacity-50"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                    {statusBusy ? 'Saving…' : 'Resume watching'}
-                  </button>
-                ) : track.status === 'watching' ? (
-                  <button
-                    type="button"
-                    disabled={statusBusy}
-                    onClick={stopWatching}
-                    className="btn-ghost inline-flex w-full gap-2 border border-border text-muted hover:text-ink sm:w-auto disabled:opacity-50"
-                  >
-                    <PauseCircle className="h-4 w-4" />
-                    {statusBusy ? 'Saving…' : 'Move to stopped'}
-                  </button>
-                ) : null}
-              </div>
+            {episodesOpen && !isMobile && episodesPanel && (
+              <div className="mt-4 border-t border-border pt-4">{episodesPanel}</div>
             )}
           </div>
         </div>
       </div>
+
+      {isMobile && episodesEverOpened && showMeta && (
+        <Dialog
+          open={episodesOpen}
+          onClose={() => setEpisodesOpen(false)}
+          title="Episodes"
+          sheet
+          wide
+          bodyClassName="px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          {episodesPanel}
+        </Dialog>
+      )}
     </>
   );
 }

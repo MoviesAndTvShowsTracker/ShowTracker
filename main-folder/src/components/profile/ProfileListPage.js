@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { fetchTvWatchlist } from '../../api/tvWatchlist';
 import { IMAGE_URL } from '../../config/keys';
 import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
@@ -30,10 +31,8 @@ async function fetchListItems(listKey) {
       const r = await api.post('/api/watchlist/getMovieWatchlist', {});
       return r.data.success ? r.data.watchlist || [] : [];
     }
-    case 'tv-watchlist': {
-      const r = await api.post('/api/tv/watchlist/getTvWatchlist', {});
-      return r.data.success ? r.data.watchlist || [] : [];
-    }
+    case 'tv-watchlist':
+      return fetchTvWatchlist();
     default:
       return null;
   }

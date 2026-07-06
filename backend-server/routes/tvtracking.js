@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 var router = express.Router();
 var TvShowTracking = require('../models/tvShowTracking');
 var TvEpisodeWatch = require('../models/tvEpisodeWatch');
+const { clearWatchlistForShow } = require('../services/tvWatchlistService');
 var authenticate = require('../authenticate');
 const {
   autoPauseStaleTracks,
@@ -83,9 +84,10 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
 router.post('/start', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tvId = String(req.body.tvId);
     const data = {
       userFrom: userId,
-      tvId: req.body.tvId,
+      tvId,
       tvTitle: req.body.tvTitle,
       tvPosterImage: req.body.tvPosterImage,
       tvBackdropImage: req.body.tvBackdropImage,
@@ -94,10 +96,12 @@ router.post('/start', authenticate.verifyUser, async (req, res, next) => {
     };
 
     const tracking = await TvShowTracking.findOneAndUpdate(
-      { userFrom: userId, tvId: req.body.tvId },
+      { userFrom: userId, tvId },
       data,
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    await clearWatchlistForShow(userId, tvId);
 
     res.status(200).json({ success: true, tracking });
   } catch (err) {
@@ -225,3 +229,4 @@ router.post('/update-next', authenticate.verifyUser, async (req, res, next) => {
 
 module.exports = router;
 module.exports.syncTrackingCounts = syncTrackingCounts;
+module.exports.clearWatchlistForShow = clearWatchlistForShow;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tv } from 'lucide-react';
 import api from '../api/axios';
+import { fetchTvWatchlist } from '../api/tvWatchlist';
 import { clearSessionStats } from '../utils/statsCache';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_URL } from '../config/keys';
@@ -65,7 +66,7 @@ export default function HomeDashboard() {
       const [
         continueRes,
         movies,
-        tv,
+        tvWatchlistItems,
         recapRes,
         watchedMovies,
         watchedTv,
@@ -74,7 +75,7 @@ export default function HomeDashboard() {
       ] = await Promise.all([
         api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
         api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
-        api.post('/api/tv/watchlist/getTvWatchlist', {}).catch(() => ({ data: { success: false } })),
+        fetchTvWatchlist().catch(() => []),
         api.get('/api/stats/week-recap').catch(() => ({ data: { success: false } })),
         api.post('/api/watch/getWatchMovie', {}).catch(() => ({ data: { success: false } })),
         api.post('/api/tv/watch/getWatchTv', {}).catch(() => ({ data: { success: false } })),
@@ -84,7 +85,7 @@ export default function HomeDashboard() {
 
       const nextTracks = continueRes.data.success ? continueRes.data.tracks || [] : [];
       const nextMovieWatchlist = movies.data.success ? movies.data.watchlist || [] : [];
-      const nextTvWatchlist = tv.data.success ? tv.data.watchlist || [] : [];
+      const nextTvWatchlist = tvWatchlistItems;
       const nextWatchedMovies = watchedMovies.data.success ? watchedMovies.data.watch || [] : [];
       const nextWatchedTv = watchedTv.data.success ? watchedTv.data.watch || [] : [];
       const nextFavoriteMovies = favoriteMovies.data.success ? favoriteMovies.data.favorites || [] : [];

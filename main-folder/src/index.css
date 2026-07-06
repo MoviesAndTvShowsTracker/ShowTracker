@@ -70,7 +70,8 @@
       animation: none !important;
       transition: none !important;
     }
-    .app-dialog[open] {
+    .app-dialog[open],
+    .app-dialog-host[open] {
       animation: none !important;
     }
   }
@@ -244,14 +245,31 @@
     @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface/80 text-muted shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:text-accent cursor-pointer;
   }
 
-  .app-dialog[open] {
-    animation: dialog-sheet-up 0.28s ease-out;
+  .app-dialog-host:not([open]) {
+    display: none !important;
+  }
+
+  .app-dialog-host[open] {
+    animation: dialog-backdrop-in 0.22s ease-out;
+  }
+
+  .app-dialog-host[open] .app-dialog-panel {
+    animation: dialog-sheet-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   @media (min-width: 768px) {
-    .app-dialog[open] {
-      animation: dialog-fade-in 0.2s ease-out;
+    .app-dialog-host[open] .app-dialog-panel {
+      animation: dialog-fade-in 0.22s ease-out;
     }
+  }
+}
+
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

@@ -6,6 +6,7 @@ import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
 import TvFavorites from './TvFavorites';
 import TvTrackingBanner from './TvTrackingBanner';
+import TvTrackingStatusAction from './TvTrackingStatusAction';
 import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import PageTitle from '../../utils/PageTitle';
 import DetailInfoGrid from '../ui/DetailInfoGrid';
@@ -33,6 +34,11 @@ export default function TvDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [trackingRev, setTrackingRev] = useState(0);
+
+  const bumpTrackingUi = useCallback(() => {
+    setTrackingRev((k) => k + 1);
+  }, []);
 
   const loadShow = useCallback(async (signal) => {
     setLoading(true);
@@ -187,9 +193,15 @@ export default function TvDetail() {
 
         {tvShow.name && (
           <section className="mb-5 md:mb-8">
-            <TvTrackingBanner tvId={tvShowId} />
+            <TvTrackingStatusAction
+              tvId={tvShowId}
+              refreshKey={trackingRev}
+              onStatusChange={bumpTrackingUi}
+              className="mb-1"
+            />
+            <TvTrackingBanner tvId={tvShowId} refreshKey={trackingRev} />
             <h2 className="section-title mb-3 md:hidden">Your diary</h2>
-            <TvFavorites tvId={tvShowId} tvInfo={tvShow} />
+            <TvFavorites tvId={tvShowId} tvInfo={tvShow} refreshKey={trackingRev} />
           </section>
         )}
 
@@ -257,6 +269,7 @@ export default function TvDetail() {
             tvShow={tvShow}
             seasons={seasons}
             initialSeason={initialSeason}
+            onProgressChange={bumpTrackingUi}
           />
         )}
 
