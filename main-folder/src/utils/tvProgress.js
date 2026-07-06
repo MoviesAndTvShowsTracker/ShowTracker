@@ -114,6 +114,34 @@ export function progressPercent(watchedCount, totalEpisodes) {
   return Math.min(100, Math.round((watchedCount / totalEpisodes) * 100));
 }
 
+/** Progress from tracking record only — no TMDB (for library grids with many shows). */
+export function deriveProgressFromTrack(track) {
+  if (!track) return null;
+
+  const watchedCount = track.watchedEpisodeCount || 0;
+  const airedTotal = track.airedEpisodeCount || track.totalEpisodes || 0;
+  const totalEpisodes = track.totalEpisodes || 0;
+  const progressTotal = airedTotal || totalEpisodes;
+  const pct = progressPercent(watchedCount, progressTotal);
+  const caughtUpWithAired =
+    airedTotal > 0 && watchedCount >= airedTotal && totalEpisodes > airedTotal;
+  const isComplete =
+    track.status === 'completed' ||
+    (totalEpisodes > 0 && watchedCount >= totalEpisodes);
+
+  return {
+    airedTotal,
+    totalEpisodes,
+    pct,
+    caughtUpWithAired,
+    fullyComplete: isComplete,
+    nextAired: null,
+    nextUnaired: null,
+    upcomingLabel: null,
+    isComplete,
+  };
+}
+
 /** Progress vs aired episodes only; handles catch-up and upcoming releases. */
 export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now = new Date()) {
   const watchedCount = watchedKeys?.size ?? track?.watchedEpisodeCount ?? 0;
