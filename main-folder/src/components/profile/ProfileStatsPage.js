@@ -227,7 +227,7 @@ export default function ProfileStatsPage() {
 
   const libraryCells = [
     { label: 'Watching', value: formatCount(lib?.watching), icon: PlayCircle },
-    { label: 'Stopped', value: formatCount(lib?.stopped), icon: PauseCircle },
+    { label: 'Paused', value: formatCount(lib?.stopped), icon: PauseCircle },
     { label: 'Finished', value: formatCount(lib?.finished), icon: Award },
     { label: 'Backlog', value: formatCount(lib?.backlog), icon: Layers },
     { label: 'Caught up', value: formatCount(lib?.caughtUp), icon: Timer },
@@ -254,7 +254,7 @@ export default function ProfileStatsPage() {
         </div>
 
         <header className="mb-6 sm:mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Your diary</p>
+          <p className="section-title text-accent">Your diary</p>
           <h1 className="page-title mt-1.5 text-2xl sm:mt-2 sm:text-3xl">Stats</h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
             {stats?.memberSince && <span>Member since {formatMemberSince(stats.memberSince)}</span>}

@@ -21,8 +21,12 @@ export default function LandingPage() {
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [genreResults, setGenreResults] = useState([]);
   const [genreLoading, setGenreLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError(false);
     Promise.all([
       tmdbFetch('trending/movie/week'),
       tmdbFetch('trending/movie/day'),
@@ -45,9 +49,9 @@ export default function LandingPage() {
         setPopularPage(pop.page || 1);
         setGenres(filterCuratedGenres(genreList.genres || [], 'movie'));
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selectedGenre) {
@@ -82,17 +86,33 @@ export default function LandingPage() {
       <PageTitle title="Browse films" />
 
       {loading ? (
-        <div className="h-52 animate-pulse bg-surface sm:h-64 md:h-80" />
+        <div
+          className="h-52 animate-pulse bg-surface sm:h-64 md:h-80"
+          aria-busy="true"
+          aria-label="Loading featured films"
+        />
       ) : (
         <HeroCarousel slides={hero} />
       )}
 
       <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
+        {loadError && (
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+            Couldn&apos;t reach the film catalog.{' '}
+            <button
+              type="button"
+              onClick={() => setReloadKey((key) => key + 1)}
+              className="focus-ring font-semibold underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
         <header>
-          <p className="section-title">Discover</p>
+          <p className="section-title">Films</p>
           <h1 className="page-title mt-1">Films</h1>
           <p className="mt-2 max-w-lg text-sm text-muted">
-            What&apos;s trending, in theaters near you, coming soon, and the highest rated — explore by genre.
+            Trending this week, in theaters now, coming soon, and the classics — pick a genre or scroll the rails.
           </p>
         </header>
 
@@ -108,7 +128,7 @@ export default function LandingPage() {
               {genreLoading ? `${selectedGenreName}…` : selectedGenreName}
             </h2>
             {genreLoading ? (
-              <div className="poster-rail">
+              <div className="poster-rail" aria-busy="true" aria-label="Loading genre">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]" />
                 ))}
@@ -149,13 +169,18 @@ export default function LandingPage() {
             <p className="mt-1 text-sm text-muted">The full catalog — load more as you scroll.</p>
           </div>
           <div className="poster-grid">
-            {popular.map((movie) => (
-              <GridCard
+            {popular.map((movie, index) => (
+              <div
                 key={movie.id}
-                image={movie.poster_path ? `${IMAGE_URL}w342${movie.poster_path}` : ''}
-                movieId={movie.id}
-                movieTitle={movie.title}
-              />
+                className="animate-fade-up opacity-0"
+                style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+              >
+                <GridCard
+                  image={movie.poster_path ? `${IMAGE_URL}w342${movie.poster_path}` : ''}
+                  movieId={movie.id}
+                  movieTitle={movie.title}
+                />
+              </div>
             ))}
           </div>
           <div className="text-center">

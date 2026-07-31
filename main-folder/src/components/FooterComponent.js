@@ -8,12 +8,12 @@ export default function Footer() {
         <p className="text-xs text-muted">
           &copy; {new Date().getFullYear()} {BRAND_NAME} — {BRAND_TAGLINE}
         </p>
-        <nav className="flex flex-wrap justify-center gap-5 text-xs font-bold uppercase tracking-widest text-muted">
-          <Link to="/" className="transition-colors hover:text-ink-bright cursor-pointer">Home</Link>
-          <Link to="/movies" className="transition-colors hover:text-ink-bright cursor-pointer">Films</Link>
-          <Link to="/tv" className="transition-colors hover:text-ink-bright cursor-pointer">TV</Link>
-          <Link to="/search" className="transition-colors hover:text-ink-bright cursor-pointer">Search</Link>
-          <Link to="/login" className="transition-colors hover:text-ink-bright cursor-pointer">Sign in</Link>
+        <nav aria-label="Footer" className="flex flex-wrap justify-center gap-5 text-xs font-bold uppercase tracking-widest text-muted">
+          <Link to="/" className="focus-ring transition-colors hover:text-ink-bright cursor-pointer">Home</Link>
+          <Link to="/movies" className="focus-ring transition-colors hover:text-ink-bright cursor-pointer">Films</Link>
+          <Link to="/tv" className="focus-ring transition-colors hover:text-ink-bright cursor-pointer">TV</Link>
+          <Link to="/search" className="focus-ring transition-colors hover:text-ink-bright cursor-pointer">Search</Link>
+          <Link to="/login" className="focus-ring transition-colors hover:text-ink-bright cursor-pointer">Sign in</Link>
         </nav>
       </div>
     </footer>

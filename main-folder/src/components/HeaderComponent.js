@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Film, Home, LogIn, LogOut, Moon, Search, Settings, Sun, Tv, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,7 @@ import { BRAND_NAME } from '../config/brand';
 import { displayName } from '../utils/displayUser';
 
 const desktopLink = ({ isActive }) =>
-  `nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
+  `focus-ring nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
     isActive ? 'text-accent' : 'text-muted hover:text-ink-bright'
   }`;
 
@@ -22,9 +22,20 @@ export default function Header() {
   const location = useLocation();
   const [showLogout, setShowLogout] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const firstMenuItemRef = useRef(null);
 
   const homeTo = isAuthenticated ? '/home' : '/';
   const showMobileNav = !hideMobileBottomNav(location.pathname);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    firstMenuItemRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -36,7 +47,7 @@ export default function Header() {
     <>
       <header className="app-header">
         <div className="mx-auto flex max-w-content items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <NavLink to={homeTo} end className="inline-flex shrink-0 items-center gap-2 cursor-pointer">
+          <NavLink to={homeTo} end className="focus-ring inline-flex shrink-0 items-center gap-2 cursor-pointer">
             <MarqueeLogo className="h-8 w-8 shrink-0 text-ink-bright" />
             <span className="font-serif text-xl font-semibold tracking-tight text-ink-bright">{BRAND_NAME}</span>
           </NavLink>
@@ -95,9 +106,10 @@ export default function Header() {
                       <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
                       <div className="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass backdrop-blur-xl">
                         <NavLink
+                          ref={firstMenuItemRef}
                           to="/profile"
                           onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                          className="focus-ring flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
                         >
                           <User className="h-4 w-4" />
                           Profile
@@ -105,7 +117,7 @@ export default function Header() {
                         <NavLink
                           to="/settings"
                           onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                          className="focus-ring flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-surface-raised cursor-pointer"
                         >
                           <Settings className="h-4 w-4" />
                           Settings
@@ -116,7 +128,7 @@ export default function Header() {
                             setMenuOpen(false);
                             setShowLogout(true);
                           }}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-ink hover:bg-surface-raised cursor-pointer"
+                          className="focus-ring flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-ink hover:bg-surface-raised cursor-pointer"
                         >
                           <LogOut className="h-4 w-4" />
                           Sign out

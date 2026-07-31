@@ -17,7 +17,7 @@ function yearFrom(item, mediaType) {
 function libraryLabel(track) {
   if (!track) return null;
   if (track.status === 'completed') return 'Finished';
-  if (track.status === 'paused') return 'Stopped';
+  if (track.status === 'paused') return 'Paused';
   return 'Watching';
 }
 
@@ -161,7 +161,7 @@ export default function SearchResultTile({ item, mediaType }) {
     <>
       <article className={`group relative ${menuOpen ? 'z-40' : ''}`}>
         <div className="relative">
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 hover:-translate-y-0.5 hover:shadow-poster-hover">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover">
             <Link to={to} className="block cursor-pointer">
               <img
                 src={`${IMAGE_URL}w342${item.poster_path}`}
@@ -197,7 +197,7 @@ export default function SearchResultTile({ item, mediaType }) {
                 }}
                 aria-label={`Actions for ${title}`}
                 aria-expanded={menuOpen}
-                className="absolute right-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-canvas/95 text-ink-bright shadow-sm backdrop-blur-sm md:hidden cursor-pointer"
+                className="focus-ring absolute right-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-canvas/95 text-ink-bright shadow-sm backdrop-blur-sm md:hidden cursor-pointer"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -227,7 +227,7 @@ export default function SearchResultTile({ item, mediaType }) {
                     }`}
                   >
                     <Bookmark className="h-3.5 w-3.5" />
-                    {watchlisted ? 'Listed' : 'List'}
+                    {watchlisted ? 'Listed' : 'Watchlist'}
                   </button>
                 )}
               </div>
@@ -246,14 +246,14 @@ export default function SearchResultTile({ item, mediaType }) {
                 style={menuStyle ?? { position: 'fixed', top: 0, left: 0, zIndex: 60, visibility: 'hidden' }}
                 role="menu"
                 aria-label={`Actions for ${title}`}
-                className="w-max min-w-[10.5rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass md:hidden"
+                className="animate-soft-rise w-max min-w-[10.5rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-border bg-surface py-1 opacity-0 shadow-glass md:hidden"
               >
                 {isTv && inLibrary ? (
                   <button
                     type="button"
                     role="menuitem"
                     onClick={goContinue}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink active:bg-surface-raised cursor-pointer"
+                    className="focus-ring flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink active:bg-surface-raised cursor-pointer"
                   >
                     <ChevronRight className="h-4 w-4 shrink-0 text-link" />
                     <span className="whitespace-nowrap">
@@ -266,7 +266,7 @@ export default function SearchResultTile({ item, mediaType }) {
                     role="menuitem"
                     onClick={toggleWatchlist}
                     disabled={busy}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink active:bg-surface-raised cursor-pointer disabled:opacity-50"
+                    className="focus-ring flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink active:bg-surface-raised cursor-pointer disabled:opacity-50"
                   >
                     <Bookmark className="h-4 w-4 shrink-0 text-accent" />
                     <span className="whitespace-nowrap">

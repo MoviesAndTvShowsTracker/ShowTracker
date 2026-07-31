@@ -17,11 +17,12 @@ export default function GenreChips({ genres, selectedId, onSelect, label = 'Brow
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+          className={`focus-ring shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer ${
             selectedId == null
               ? 'border-accent bg-accent/15 text-accent'
               : 'border-border bg-surface text-muted hover:border-muted hover:text-ink'
           }`}
+          aria-pressed={selectedId == null}
         >
           All
         </button>
@@ -30,11 +31,12 @@ export default function GenreChips({ genres, selectedId, onSelect, label = 'Brow
             key={genre.id}
             type="button"
             onClick={() => onSelect(genre.id)}
-            className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+            className={`focus-ring shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer ${
               selectedId === genre.id
                 ? 'border-accent bg-accent/15 text-accent'
                 : 'border-border bg-surface text-muted hover:border-muted hover:text-ink'
             }`}
+            aria-pressed={selectedId === genre.id}
           >
             {genre.name}
           </button>

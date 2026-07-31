@@ -67,7 +67,7 @@ export default function Signup() {
           <MarqueeLogo className="h-9 w-9 text-ink-bright" />
           <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Join {BRAND_NAME}</p>
+        <p className="section-title text-accent">Join {BRAND_NAME}</p>
         <h1 className="page-title mt-2">Start your watch diary</h1>
         <p className="mt-2 text-sm text-muted">
           Track films, save favorites, and build watchlists — free forever.
@@ -97,7 +97,7 @@ export default function Signup() {
                 />
               </div>
             ))}
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={submitting || googleSubmitting}

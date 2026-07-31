@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bookmark, Check, Film, Heart, Sparkles, Tv } from 'lucide-react';
+import { Bookmark, Check, Film, Heart, Sparkles } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import PosterRail from '../ui/PosterRail';
 import PosterTile from '../ui/PosterTile';
@@ -32,15 +32,18 @@ const STEPS = [
 export default function ProfileEmptyState({ name }) {
   const [trendingFilms, setTrendingFilms] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`)
-      .then((r) => r.json())
-      .then((d) => setTrendingFilms((d.results || []).slice(0, 10)));
-
-    fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`)
-      .then((r) => r.json())
-      .then((d) => setTrendingTv((d.results || []).slice(0, 10)));
+    Promise.all([
+      fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`).then((r) => r.json()),
+      fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`).then((r) => r.json()),
+    ])
+      .then(([films, tv]) => {
+        setTrendingFilms((films.results || []).slice(0, 10));
+        setTrendingTv((tv.results || []).slice(0, 10));
+      })
+      .finally(() => setTrendingLoading(false));
   }, []);
 
   return (
@@ -116,7 +119,15 @@ export default function ProfileEmptyState({ name }) {
       </section>
 
       <PosterRail title="Trending films — tap to start" actionTo="/movies">
-        {trendingFilms.map(
+        {trendingLoading
+          ? [1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                aria-hidden
+              />
+            ))
+          : trendingFilms.map(
           (m) =>
             m.poster_path && (
               <PosterTile
@@ -127,11 +138,19 @@ export default function ProfileEmptyState({ name }) {
                 imageUrlPrefix={`${IMAGE_URL}w342`}
               />
             )
-        )}
+            )}
       </PosterRail>
 
       <PosterRail title="Trending TV — tap to start" actionTo="/tv">
-        {trendingTv.map(
+        {trendingLoading
+          ? [1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                aria-hidden
+              />
+            ))
+          : trendingTv.map(
           (s) =>
             s.poster_path && (
               <PosterTile
@@ -142,7 +161,7 @@ export default function ProfileEmptyState({ name }) {
                 imageUrlPrefix={`${IMAGE_URL}w342`}
               />
             )
-        )}
+            )}
       </PosterRail>
     </div>
   );

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Check, Play } from 'lucide-react';
 import { IMAGE_URL } from '../../config/keys';
 import useShowProgress from '../../hooks/useShowProgress';
+import MarkFab from '../ui/MarkFab';
 
 function formatLastWatched(date) {
   if (!date) return null;
@@ -45,7 +45,7 @@ export default function TvLibraryTile({
           className="block cursor-pointer"
           aria-label={track.tvTitle}
         >
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-transform duration-200 active:scale-[0.98]">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.98]">
             {track.tvPosterImage ? (
               <img
                 src={`${IMAGE_URL}w342${track.tvPosterImage}`}
@@ -57,8 +57,14 @@ export default function TvLibraryTile({
               <div className="aspect-[2/3] w-full bg-surface-raised" />
             )}
 
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40" aria-hidden>
-              <div className="h-full bg-accent transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div
+              className="progress-track absolute inset-x-0 bottom-0 h-1 rounded-none bg-black/40"
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="progress-fill rounded-none" style={{ width: `${pct}%` }} />
             </div>
 
             {isComplete && (
@@ -73,42 +79,37 @@ export default function TvLibraryTile({
             )}
             {isStopped && !isComplete && (
               <span className="absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted">
-                Stopped
+                Paused
               </span>
             )}
           </div>
         </Link>
 
         {canMark && (
-          <button
-            type="button"
+          <MarkFab
             disabled={marking}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onMark(track);
             }}
-            aria-label={`Mark S${track.nextSeason} E${track.nextEpisode} watched`}
-            className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-sm transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer"
-          >
-            <Check className="h-4 w-4" strokeWidth={2.5} />
-          </button>
+            ariaLabel={`Mark S${track.nextSeason} E${track.nextEpisode} watched`}
+            className="absolute right-1 top-1"
+          />
         )}
 
         {isStopped && onResume && (
-          <button
-            type="button"
+          <MarkFab
+            icon="play"
             disabled={resuming}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onResume(track);
             }}
-            aria-label={`Resume ${track.tvTitle}`}
-            className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-sm transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer"
-          >
-            <Play className="h-4 w-4 fill-current" />
-          </button>
+            ariaLabel={`Resume ${track.tvTitle}`}
+            className="absolute right-1 top-1"
+          />
         )}
       </div>
 

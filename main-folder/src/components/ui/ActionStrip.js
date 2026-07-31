@@ -2,7 +2,7 @@ const VARIANT_ACTIVE = {
   default: 'border-accent/60 bg-accent/15 text-accent shadow-glass backdrop-blur-md',
   accent: 'border-accent/60 bg-accent/15 text-accent shadow-glass backdrop-blur-md',
   success: 'border-link/50 bg-link/12 text-link shadow-glass backdrop-blur-md',
-  warning: 'border-amber-500/50 bg-amber-500/12 text-amber-700 dark:text-amber-400 shadow-glass backdrop-blur-md',
+  warning: 'border-accent/50 bg-accent/15 text-accent shadow-glass backdrop-blur-md',
 };
 
 export function ActionButton({
@@ -17,7 +17,7 @@ export function ActionButton({
   static: isStatic = false,
 }) {
   const activeClass = VARIANT_ACTIVE[variant] || VARIANT_ACTIVE.default;
-  const className = `flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-all duration-300 min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
+  const className = `focus-ring flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-all duration-300 min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
     isStatic
       ? `cursor-default ${active ? activeClass : 'border-border bg-surface/80 text-ink shadow-glass backdrop-blur-md'}`
       : `cursor-pointer ${

@@ -21,8 +21,12 @@ export default function TvLandingPage() {
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [genreResults, setGenreResults] = useState([]);
   const [genreLoading, setGenreLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError(false);
     Promise.all([
       tmdbFetch('trending/tv/week'),
       tmdbFetch('trending/tv/day'),
@@ -45,9 +49,9 @@ export default function TvLandingPage() {
         setPopularPage(pop.page || 1);
         setGenres(filterCuratedGenres(genreList.genres || [], 'tv'));
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selectedGenre) {
@@ -81,17 +85,33 @@ export default function TvLandingPage() {
       <PageTitle title="Browse TV" />
 
       {loading ? (
-        <div className="h-52 animate-pulse bg-surface sm:h-64 md:h-80" />
+        <div
+          className="h-52 animate-pulse bg-surface sm:h-64 md:h-80"
+          aria-busy="true"
+          aria-label="Loading featured TV shows"
+        />
       ) : (
         <HeroCarousel slides={hero} />
       )}
 
       <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
+        {loadError && (
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+            Couldn&apos;t reach the TV catalog.{' '}
+            <button
+              type="button"
+              onClick={() => setReloadKey((key) => key + 1)}
+              className="focus-ring font-semibold underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
         <header>
-          <p className="section-title">Discover</p>
+          <p className="section-title">Series</p>
           <h1 className="page-title mt-1">TV shows</h1>
           <p className="mt-2 max-w-lg text-sm text-muted">
-            Trending series, what&apos;s on the air, airing today, and the highest rated — explore by genre.
+            Trending series, what&apos;s on the air tonight, and the ones people can&apos;t stop talking about.
           </p>
         </header>
 
@@ -107,7 +127,7 @@ export default function TvLandingPage() {
               {genreLoading ? `${selectedGenreName}…` : selectedGenreName}
             </h2>
             {genreLoading ? (
-              <div className="poster-rail">
+              <div className="poster-rail" aria-busy="true" aria-label="Loading genre">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]" />
                 ))}
@@ -148,13 +168,18 @@ export default function TvLandingPage() {
             <p className="mt-1 text-sm text-muted">The full catalog — load more as you scroll.</p>
           </div>
           <div className="poster-grid">
-            {popular.map((show) => (
-              <TvGridCard
+            {popular.map((show, index) => (
+              <div
                 key={show.id}
-                image={show.poster_path ? `${IMAGE_URL}w342${show.poster_path}` : ''}
-                tvShowId={show.id}
-                tvShowTitle={show.name}
-              />
+                className="animate-fade-up opacity-0"
+                style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+              >
+                <TvGridCard
+                  image={show.poster_path ? `${IMAGE_URL}w342${show.poster_path}` : ''}
+                  tvShowId={show.id}
+                  tvShowTitle={show.name}
+                />
+              </div>
             ))}
           </div>
           <div className="text-center">

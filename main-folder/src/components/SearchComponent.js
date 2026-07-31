@@ -106,7 +106,7 @@ export default function SearchBox() {
       setHasSearched(true);
 
       if (!raw.length && !append) {
-        setError(`No results for “${trimmed}”. Try another spelling or browse trending below.`);
+        setError(`No results for “${trimmed}”. Try another spelling — or browse what's trending below.`);
       }
 
       setSearchParams({ q: trimmed, type: searchType }, { replace: true });
@@ -241,17 +241,14 @@ export default function SearchBox() {
               )}
             </div>
 
-            <div className="mt-3 flex gap-1 rounded-xl border border-border/60 bg-surface/60 p-1 backdrop-blur-md">
+            <div className="seg-tabs mt-3" role="tablist" aria-label="Search type">
               {TABS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => handleTabChange(id)}
-                  className={`flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    type === id
-                      ? 'bg-accent text-on-accent shadow-sm'
-                      : 'text-muted hover:bg-surface-raised hover:text-ink-bright'
-                  }`}
+                  className={`seg-tab gap-1.5 ${type === id ? 'seg-tab--active' : ''}`}
+                  aria-pressed={type === id}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {label}
@@ -299,7 +296,7 @@ export default function SearchBox() {
           )}
 
           {loading && (
-            <div className="poster-grid mt-6">
+            <div className="poster-grid mt-6" aria-busy="true" aria-label="Loading search results">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="animate-pulse rounded-xl bg-surface-raised aspect-[2/3]" />
               ))}
@@ -307,7 +304,7 @@ export default function SearchBox() {
           )}
 
           {!loading && error && (
-            <p className="mt-6 rounded-xl border border-border bg-surface-raised/50 px-4 py-3 text-sm text-muted">
+            <p className="mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
               {error}
             </p>
           )}
@@ -363,7 +360,7 @@ export default function SearchBox() {
           {showDiscovery && (
             <div className="mt-4 space-y-10 md:mt-6">
               <p className="text-sm text-muted">
-                Search TMDB for films and TV — or pick something trending to get started.
+                Search films, TV, and cast — or start with what&apos;s trending.
               </p>
 
               <PosterRail title="Trending films" actionTo="/movies" actionLabel="Browse films">

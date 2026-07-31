@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
 import { IMAGE_URL } from '../../config/keys';
 import useShowProgress from '../../hooks/useShowProgress';
+import MarkFab from '../ui/MarkFab';
 
 const TILE_WIDTH = 'w-[108px] sm:w-[120px]';
 
@@ -21,7 +21,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
           className="block cursor-pointer"
           aria-label={`${track.tvTitle}${hasNext ? `, next S${track.nextSeason} E${track.nextEpisode}` : ''}`}
         >
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-transform duration-200 active:scale-[0.98]">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.98]">
             {track.tvPosterImage ? (
               <img
                 src={`${IMAGE_URL}w342${track.tvPosterImage}`}
@@ -33,9 +33,15 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
               <div className="aspect-[2/3] w-full bg-surface-raised" />
             )}
 
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40" aria-hidden>
+            <div
+              className="progress-track absolute inset-x-0 bottom-0 h-1 rounded-none bg-black/40"
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
-                className="h-full bg-accent transition-all duration-500"
+                className="progress-fill rounded-none"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -54,19 +60,17 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
         </Link>
 
         {canMark && (
-          <button
-            type="button"
+          <MarkFab
+            size="lg"
             disabled={marking}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onMark(track);
             }}
-            aria-label={`Mark S${track.nextSeason} E${track.nextEpisode} watched`}
-            className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-sm transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer"
-          >
-            <Check className="h-4 w-4" strokeWidth={2.5} />
-          </button>
+            ariaLabel={`Mark S${track.nextSeason} E${track.nextEpisode} watched`}
+            className="absolute right-1 top-1"
+          />
         )}
       </div>
 

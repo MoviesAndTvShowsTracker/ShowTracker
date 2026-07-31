@@ -13,7 +13,7 @@ const TABS = [
 ];
 
 const mobileLink = ({ isActive }) =>
-  `relative z-[1] flex w-full flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 cursor-pointer min-h-[44px] ${
+  `focus-ring relative z-[1] flex w-full flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 cursor-pointer min-h-[44px] ${
     isActive ? 'text-accent' : 'text-muted active:text-ink'
   }`;
 

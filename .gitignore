@@ -120,3 +120,5 @@ uiux-designer/
 .env.development
 .env.example
 gdpr-data/
+.agents/
+.skills-lock.json

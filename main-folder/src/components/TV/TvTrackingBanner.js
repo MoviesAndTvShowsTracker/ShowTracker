@@ -10,10 +10,10 @@ const BANNER_STYLES = {
     bar: 'bg-link',
   },
   stopped: {
-    wrap: 'border-amber-500/35 bg-amber-500/10 hover:bg-amber-500/15',
-    label: 'text-amber-700 dark:text-amber-400',
-    bar: 'bg-amber-500',
-    chevron: 'text-amber-600 dark:text-amber-400',
+    wrap: 'border-accent/35 bg-accent/10 hover:bg-accent/15',
+    label: 'text-accent',
+    bar: 'bg-accent',
+    chevron: 'text-accent',
   },
   default: {
     wrap: 'border-accent/30 bg-accent/10 hover:bg-accent/15',
@@ -28,10 +28,10 @@ function BannerContent({ track, progress, styles, isComplete, isPaused, caughtUp
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <p className={`text-[10px] font-bold uppercase tracking-widest ${styles.label}`}>
-          {isComplete ? 'Completed' : isPaused ? 'Stopped' : caughtUp ? 'Caught up' : 'Watching'}
+          {isComplete ? 'Completed' : isPaused ? 'Paused' : caughtUp ? 'Caught up' : 'Watching'}
         </p>
         {isPaused ? (
-          <p className="mt-1 text-sm font-medium text-ink-bright">Paused — mark an episode to resume</p>
+          <p className="mt-1 text-sm font-medium text-ink-bright">Mark an episode to resume</p>
         ) : isComplete ? (
           <p className="mt-1 text-sm font-medium text-ink-bright">All episodes logged</p>
         ) : caughtUp && progress.upcomingLabel ? (
@@ -50,8 +50,17 @@ function BannerContent({ track, progress, styles, isComplete, isPaused, caughtUp
           <p className="mt-1 text-sm text-muted">Continue your progress</p>
         )}
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-raised">
-            <div className={`h-full rounded-full ${styles.bar}`} style={{ width: `${pct}%` }} />
+          <div
+            className="progress-track h-1 flex-1"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={`progress-fill ${isComplete ? 'progress-fill--link' : styles.bar}`}
+              style={{ width: `${pct}%` }}
+            />
           </div>
           <span className="text-[10px] font-bold text-muted">{pct}%</span>
         </div>

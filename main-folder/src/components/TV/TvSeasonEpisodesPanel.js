@@ -12,7 +12,6 @@ import {
 import {
   buildBatchPayload,
   buildMarkPayload,
-  countAiredEpisodes,
   deriveShowProgress,
   episodeFromTmdb,
   episodeKey,
@@ -158,10 +157,6 @@ export default function TvSeasonEpisodesPanel({
     () => seasonEpisodesMeta.filter((ep) => isEpisodeAired(ep)),
     [seasonEpisodesMeta]
   );
-
-  const seasonWatchedCount = seasonEpisodesMeta.filter((ep) =>
-    watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
-  ).length;
 
   const seasonAiredWatchedCount = seasonAiredMeta.filter((ep) =>
     watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
@@ -355,9 +350,18 @@ export default function TvSeasonEpisodesPanel({
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-auto flex min-w-[8rem] flex-1 items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-raised">
+            <div
+              className="progress-track flex-1"
+              role="progressbar"
+              aria-valuenow={progressPercent(
+                seasonAiredWatchedCount,
+                seasonAiredMeta.length || seasonEpisodesMeta.length
+              )}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
-                className="h-full rounded-full bg-accent transition-all duration-300"
+                className="progress-fill"
                 style={{
                   width: `${progressPercent(seasonAiredWatchedCount, seasonAiredMeta.length || seasonEpisodesMeta.length)}%`,
                 }}
@@ -399,7 +403,7 @@ export default function TvSeasonEpisodesPanel({
         </div>
 
         {loadingSeason || !seasonDataReady || selectedSeason == null ? (
-          <div className="space-y-2">
+          <div className="space-y-2" aria-busy="true" aria-label="Loading episodes">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-raised" />
             ))}

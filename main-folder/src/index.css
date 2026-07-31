@@ -16,6 +16,8 @@
   --accent: 196 92 38;
   --accent-hover: 163 74 30;
   --link: 42 107 94;
+  --danger: 178 58 42;
+  --danger-hover: 148 46 30;
   --on-accent: 255 250 245;
   --shadow-poster: 0 4px 18px rgba(44, 40, 37, 0.12);
   --shadow-poster-hover: 0 10px 28px rgba(196, 92, 38, 0.18);
@@ -39,6 +41,8 @@
   --accent: 232 146 74;
   --accent-hover: 212 122 50;
   --link: 91 168 154;
+  --danger: 224 118 96;
+  --danger-hover: 204 96 74;
   --on-accent: 26 23 20;
   --shadow-poster: 0 6px 24px rgba(0, 0, 0, 0.45);
   --shadow-poster-hover: 0 12px 32px rgba(232, 146, 74, 0.15);
@@ -66,7 +70,9 @@
     .bento-card,
     .glass-card,
     .page-tab-enter,
-    .mobile-nav-indicator {
+    .mobile-nav-indicator,
+    .progress-fill,
+    .collapsible-grid {
       animation: none !important;
       transition: none !important;
     }
@@ -239,6 +245,50 @@
 
   .hero-band {
     @apply relative overflow-hidden border-b border-border/60;
+  }
+
+  .hero-overlay {
+    background-image: linear-gradient(
+      to top,
+      rgb(var(--canvas) / 0.95) 0%,
+      rgb(var(--canvas) / 0.55) 45%,
+      rgb(var(--canvas) / 0.1) 100%
+    );
+  }
+
+  .progress-track {
+    @apply relative h-1.5 overflow-hidden rounded-full bg-surface-raised;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-accent;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .progress-fill--link {
+    @apply bg-link;
+  }
+
+  .seg-tabs {
+    @apply flex gap-1 rounded-xl border border-border/60 bg-surface/60 p-1 shadow-glass backdrop-blur-md;
+  }
+
+  .seg-tab {
+    @apply flex min-h-[40px] flex-1 items-center justify-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted transition-colors duration-200 hover:text-ink cursor-pointer;
+  }
+
+  .seg-tab--active {
+    @apply bg-accent text-on-accent shadow-sm;
+  }
+
+  .focus-ring,
+  .seg-tab {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+
+  .collapsible-grid {
+    display: grid;
+    transition: grid-template-rows 220ms ease-out;
   }
 
   .theme-toggle {

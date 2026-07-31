@@ -21,7 +21,7 @@ export default function ResetPassword() {
       <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
         <PageTitle title="Reset password" />
         <div className="mx-auto max-w-md text-center">
-          <p className="text-sm text-red-400">This reset link is missing or invalid.</p>
+          <p className="text-sm text-danger">This reset link is missing or invalid.</p>
           <Link to="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-link hover:text-ink-bright">
             Request a new link
           </Link>
@@ -69,7 +69,7 @@ export default function ResetPassword() {
           <MarqueeLogo className="h-9 w-9 text-ink-bright" />
           <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Almost there</p>
+        <p className="section-title text-accent">Almost there</p>
         <h1 className="page-title mt-2">Choose a new password</h1>
         <p className="mt-2 text-sm text-muted">Enter a new password for your account.</p>
 
@@ -103,7 +103,7 @@ export default function ResetPassword() {
                 disabled={submitting}
               />
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
               {submitting ? 'Updating…' : 'Update password'}
             </button>

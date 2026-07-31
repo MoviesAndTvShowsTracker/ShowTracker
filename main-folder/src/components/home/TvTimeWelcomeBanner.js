@@ -7,7 +7,7 @@ export default function TvTimeWelcomeBanner({ visible, onDismiss }) {
   if (!visible) return null;
 
   return (
-    <section className="mb-8 rounded-2xl border border-accent/30 bg-accent/10 p-5 sm:p-6">
+    <section className="animate-fade-up mb-8 rounded-2xl border border-accent/30 bg-accent/10 p-5 opacity-0 sm:p-6">
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20 text-accent">
           <Upload className="h-5 w-5" />
@@ -49,7 +49,7 @@ export default function TvTimeWelcomeBanner({ visible, onDismiss }) {
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 rounded-lg p-1 text-muted transition-colors hover:bg-surface-raised hover:text-ink"
+          className="focus-ring shrink-0 rounded-lg p-1 text-muted transition-colors hover:bg-surface-raised hover:text-ink"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

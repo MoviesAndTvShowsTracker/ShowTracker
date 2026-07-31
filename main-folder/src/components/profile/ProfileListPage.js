@@ -6,6 +6,7 @@ import { IMAGE_URL } from '../../config/keys';
 import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
+import EmptyState from '../ui/EmptyState';
 import PosterTile from '../ui/PosterTile';
 import { formatShortDate } from '../../utils/statsFormat';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
@@ -119,21 +120,20 @@ export default function ProfileListPage() {
         </header>
 
         {loading ? (
-          <div className="poster-grid">
+          <div className="poster-grid" aria-busy="true" aria-label="Loading list">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface-raised" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="glass-card p-8 text-center">
-            <p className="text-sm text-muted">{config.empty}</p>
+          <EmptyState description={config.empty}>
             <Link
               to={isMovie ? '/movies' : '/tv'}
-              className="btn-primary mt-5 inline-flex"
+              className="btn-primary"
             >
               Browse {isMovie ? 'films' : 'TV'}
             </Link>
-          </div>
+          </EmptyState>
         ) : (
           <div className="poster-grid">
             {items.map((item) =>

@@ -126,7 +126,7 @@ export default function Settings() {
         <BackNav fallback="/profile" label="Back to profile" className="mb-4" />
 
         <header className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Account</p>
+          <p className="section-title text-accent">Account</p>
           <h1 className="page-title mt-2">Settings</h1>
           <p className="mt-2 text-sm text-muted">
             Signed in as <span className="font-medium text-ink">{user?.email || displayName(user)}</span>
@@ -191,7 +191,7 @@ export default function Settings() {
                   autoComplete="tel"
                 />
               </div>
-              {profileError && <p className="text-sm text-red-400">{profileError}</p>}
+              {profileError && <p className="text-sm text-danger">{profileError}</p>}
               {profileMessage && <p className="text-sm text-accent">{profileMessage}</p>}
               <button type="submit" disabled={profileSaving} className="btn-primary w-full sm:w-auto">
                 {profileSaving ? 'Saving…' : 'Save profile'}
@@ -242,7 +242,7 @@ export default function Settings() {
                 />
               </div>
               <div className="sticky bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-20 -mx-5 space-y-2 border-t border-border/60 bg-surface/95 px-5 py-3 backdrop-blur-xl lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
-                {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
+                {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
                 {passwordMessage && <p className="text-sm text-accent">{passwordMessage}</p>}
                 <button type="submit" disabled={passwordSaving} className="btn-primary w-full sm:w-auto">
                   {passwordSaving ? 'Updating…' : 'Change password'}

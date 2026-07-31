@@ -16,6 +16,8 @@ module.exports = {
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
         link: 'rgb(var(--link) / <alpha-value>)',
+        danger: 'rgb(var(--danger) / <alpha-value>)',
+        'danger-hover': 'rgb(var(--danger-hover) / <alpha-value>)',
         'on-accent': 'rgb(var(--on-accent) / <alpha-value>)',
       },
       fontFamily: {

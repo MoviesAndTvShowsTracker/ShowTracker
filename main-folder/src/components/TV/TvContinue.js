@@ -159,8 +159,18 @@ export default function TvContinue() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-content px-4 py-10">
-        <div className="h-48 animate-pulse rounded-2xl bg-surface-raised" />
+      <div className="mx-auto max-w-content px-4 py-10" aria-busy="true" aria-label="Loading show progress">
+        <div className="glass-card animate-pulse overflow-hidden">
+          <div className="h-32 bg-surface-raised sm:h-40" />
+          <div className="flex gap-4 p-4 sm:p-6">
+            <div className="h-28 w-[4.5rem] shrink-0 rounded-xl bg-surface-raised" />
+            <div className="flex-1 space-y-3">
+              <div className="h-6 w-2/3 rounded-lg bg-surface-raised" />
+              <div className="h-2 w-full rounded-full bg-surface-raised" />
+              <div className="h-4 w-1/2 rounded-lg bg-surface-raised" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -193,8 +203,14 @@ export default function TvContinue() {
               <div className="min-w-0 flex-1">
                 <h1 className="font-serif text-xl text-ink-bright sm:text-2xl">{showMeta?.name}</h1>
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-raised">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                  <div
+                    className="progress-track flex-1"
+                    role="progressbar"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div className="progress-fill" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="text-xs font-bold text-muted">{pct}%</span>
                 </div>
@@ -273,8 +289,16 @@ export default function TvContinue() {
               isMobile={isMobile}
             />
 
-            {episodesOpen && !isMobile && episodesPanel && (
-              <div className="mt-4 border-t border-border pt-4">{episodesPanel}</div>
+            {!isMobile && episodesPanel && (
+              <div
+                className="collapsible-grid"
+                style={{ gridTemplateRows: episodesOpen ? '1fr' : '0fr' }}
+                aria-hidden={!episodesOpen}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="mt-4 border-t border-border pt-4">{episodesPanel}</div>
+                </div>
+              </div>
             )}
           </div>
         </div>

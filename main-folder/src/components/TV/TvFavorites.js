@@ -90,8 +90,8 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
           active
           onClick={goToProgress}
           icon={PauseCircle}
-          label="Stopped"
-          compactLabel="Stopped"
+          label="Paused"
+          compactLabel="Paused"
           variant="warning"
         />
       );

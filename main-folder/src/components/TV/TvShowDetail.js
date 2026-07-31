@@ -15,6 +15,7 @@ import DetailInfoGrid from '../ui/DetailInfoGrid';
 import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
+import PosterTile from '../ui/PosterTile';
 import { formatLanguage, formatShortDate, premiereFieldLabel } from '../../utils/statsFormat';
 import { pickWatchProviders, tvCertification } from '../../utils/watchRegion';
 
@@ -265,33 +266,43 @@ export default function TvDetail() {
         </div>
 
         <div className="mt-6 text-center md:mt-8">
-          <button type="button" onClick={() => setActorToggle(!actorToggle)} className="btn-secondary w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setActorToggle(!actorToggle)}
+            className="btn-secondary w-full sm:w-auto"
+            aria-expanded={actorToggle}
+            aria-controls="tv-cast-panel"
+          >
             {actorToggle ? 'Hide cast' : 'Show cast'}
           </button>
         </div>
 
-        {actorToggle && (
-          <div className="mt-6">
-            <h3 className="section-title mb-3">Cast</h3>
-            <div className="poster-rail">
-              {crews.map(
-                (crew) =>
-                  crew.profile_path && (
-                    <article key={crew.id} className="w-[88px] shrink-0 sm:w-[100px]">
-                      <img
-                        className="aspect-[2/3] w-full rounded-xl object-cover"
-                        alt={crew.name}
-                        src={`${IMAGE_URL}original${crew.profile_path}`}
-                        loading="lazy"
-                      />
-                      <p className="mt-1.5 line-clamp-1 text-xs font-medium">{crew.name}</p>
-                      <p className="line-clamp-1 text-[10px] text-muted">as {crew.character}</p>
-                    </article>
-                  )
-              )}
+        <div
+          id="tv-cast-panel"
+          className="collapsible-grid"
+          style={{ gridTemplateRows: actorToggle ? '1fr' : '0fr' }}
+          aria-hidden={!actorToggle}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="mt-6">
+              <h3 className="section-title mb-3">Cast</h3>
+              <div className="poster-rail">
+                {crews
+                  .filter((actor) => actor.profile_path)
+                  .map((actor) => (
+                    <PosterTile
+                      key={actor.id}
+                      poster={actor.profile_path}
+                      title={actor.name}
+                      subtitle={actor.character ? `as ${actor.character}` : undefined}
+                      imageUrlPrefix={`${IMAGE_URL}w185`}
+                      size="sm"
+                    />
+                  ))}
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
         {tvShow.name && (
           <TvSeasonEpisodesPanel

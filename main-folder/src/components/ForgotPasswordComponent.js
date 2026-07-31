@@ -99,7 +99,7 @@ export default function ForgotPassword() {
           </div>
         ) : (
           <>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Account recovery</p>
+            <p className="section-title text-accent">Account recovery</p>
             <h1 className="page-title mt-2">Reset your password</h1>
             <p className="mt-2 text-sm text-muted">
               Enter your email and we&apos;ll send you a link to choose a new password.
@@ -121,7 +121,7 @@ export default function ForgotPassword() {
                     disabled={submitting}
                   />
                 </div>
-                {error && <p className="text-sm text-red-400">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
                 <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
                   {submitting ? 'Sending…' : 'Send reset link'}
                 </button>

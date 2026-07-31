@@ -319,7 +319,7 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={() => setShowLogout(true)}
-                  className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400/40 hover:text-red-400 cursor-pointer"
+                  className="focus-ring flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-danger/40 hover:text-danger cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />
                   Sign out
@@ -423,7 +423,7 @@ export default function Profile() {
               setPhoneError('');
             }}
           />
-          {phoneError && <p className="mt-2 text-sm text-red-400">{phoneError}</p>}
+          {phoneError && <p className="mt-2 text-sm text-danger">{phoneError}</p>}
         </form>
       </Dialog>
 

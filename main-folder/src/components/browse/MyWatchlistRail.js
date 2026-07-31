@@ -42,7 +42,21 @@ export default function MyWatchlistRail({ type }) {
       .finally(() => setLoading(false));
   }, [type]);
 
-  if (loading || !items.length) return null;
+  if (loading) {
+    return (
+      <PosterRail title={cfg.title}>
+        {[1, 2, 3, 4].map((item) => (
+          <div
+            key={item}
+            className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+            aria-hidden
+          />
+        ))}
+      </PosterRail>
+    );
+  }
+
+  if (!items.length) return null;
 
   return (
     <PosterRail

@@ -8,10 +8,10 @@ export const TV_LIBRARY_TABS = {
   },
   stopped: {
     key: 'stopped',
-    title: 'Stopped',
+    title: 'Paused',
     description:
       'Shows moved here after 90 days without activity. Caught-up and finished shows stay in their lists.',
-    empty: 'No stopped shows. Inactive shows move here automatically after 90 days.',
+    empty: 'No paused shows. Inactive shows move here automatically after 90 days.',
     status: 'paused',
   },
   finished: {

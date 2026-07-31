@@ -13,16 +13,27 @@ export default function Home() {
   const { isAuthenticated } = useAuth();
   const [trendingMovies, setTrendingMovies] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
+  const [trendingError, setTrendingError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`)
-      .then((r) => r.json())
-      .then((d) => setTrendingMovies((d.results || []).slice(0, 16)));
-
-    fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`)
-      .then((r) => r.json())
-      .then((d) => setTrendingTv((d.results || []).slice(0, 16)));
-  }, []);
+    setTrendingError(false);
+    Promise.all([
+      fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`).then((r) => {
+        if (!r.ok) throw new Error('movies');
+        return r.json();
+      }),
+      fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`).then((r) => {
+        if (!r.ok) throw new Error('tv');
+        return r.json();
+      }),
+    ])
+      .then(([movies, tv]) => {
+        setTrendingMovies((movies.results || []).slice(0, 16));
+        setTrendingTv((tv.results || []).slice(0, 16));
+      })
+      .catch(() => setTrendingError(true));
+  }, [reloadKey]);
 
   if (isAuthenticated) return <Navigate to="/home" replace />;
 
@@ -107,8 +118,8 @@ export default function Home() {
             <BentoCard
               to="/search"
               icon={Search}
-              title="Discover"
-              description="Search TMDB's catalog. Find new releases, classics, and hidden gems to add to your lists."
+              title="Find your next watch"
+              description="Search films and TV, from new releases to old favorites, then add them to your diary."
               delay={240}
             />
           </div>
@@ -145,6 +156,18 @@ export default function Home() {
 
         {/* Trending rails */}
         <div className="space-y-12 md:space-y-16">
+          {trendingError && (
+            <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+              Couldn&apos;t load trending titles.{' '}
+              <button
+                type="button"
+                onClick={() => setReloadKey((key) => key + 1)}
+                className="focus-ring font-semibold underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
           <PosterRail title="Trending this week — films" actionTo="/movies" actionLabel="All films">
             {trendingMovies.map(
               (m) =>

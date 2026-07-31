@@ -133,7 +133,7 @@ export default function TvTimeImportSection() {
             />
           </label>
           {uploadError && (
-            <p className="flex items-start gap-2 text-sm text-red-400">
+            <p className="flex items-start gap-2 text-sm text-danger">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {uploadError}
             </p>
@@ -180,9 +180,9 @@ export default function TvTimeImportSection() {
       )}
 
       {isFailed && (
-        <div className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-4">
+        <div className="mt-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-4">
           <div className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
             <div>
               <p className="font-semibold text-ink-bright">Import failed</p>
               <p className="mt-1 text-sm text-muted">{job.errorMessage || 'Something went wrong.'}</p>

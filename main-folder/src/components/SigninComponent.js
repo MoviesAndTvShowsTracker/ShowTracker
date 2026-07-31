@@ -57,7 +57,7 @@ export default function Signin() {
           <MarqueeLogo className="h-9 w-9 text-ink-bright" />
           <span className="font-serif text-2xl font-semibold text-ink-bright">{BRAND_NAME}</span>
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Welcome back</p>
+        <p className="section-title text-accent">Welcome back</p>
         <h1 className="page-title mt-2">Sign in to your diary</h1>
         <p className="mt-2 text-sm text-muted">
           Access your watched list, favorites, and watchlists.
@@ -110,7 +110,7 @@ export default function Signin() {
             {passwordReset && (
               <p className="text-sm text-accent">Password updated. Sign in with your new password.</p>
             )}
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={submitting || googleSubmitting}

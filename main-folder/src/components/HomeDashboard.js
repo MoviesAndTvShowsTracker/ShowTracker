@@ -23,6 +23,7 @@ import TvTimeWelcomeBanner, {
 } from './home/TvTimeWelcomeBanner';
 import WeeklyRecapCard from './home/WeeklyRecapCard';
 import PwaInstallBanner from './home/PwaInstallBanner';
+import EmptyState from './ui/EmptyState';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 
@@ -213,16 +214,15 @@ export default function HomeDashboard() {
               ))}
             </div>
           ) : (
-            <div className="glass-card p-6 text-center sm:p-8">
-              <Tv className="mx-auto h-8 w-8 text-accent/70" />
-              <p className="mt-3 font-serif text-lg text-ink-bright">Nothing in progress yet</p>
-              <p className="mt-2 text-sm text-muted">
-                Open a TV show and mark an episode watched — tracking starts automatically.
-              </p>
-              <Link to="/tv" className="btn-primary mt-5 inline-flex">
+            <EmptyState
+              icon={Tv}
+              title="Nothing in progress yet"
+              description="Open a TV show and mark an episode watched — tracking starts automatically."
+            >
+              <Link to="/tv" className="btn-primary">
                 Browse TV
               </Link>
-            </div>
+            </EmptyState>
           )}
         </section>
 

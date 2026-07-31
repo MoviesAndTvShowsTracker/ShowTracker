@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BRAND_NAME } from '../../config/brand';
 import { dismissPwaPrompt, isPwaDismissed, isStandalonePwa } from '../../utils/pwa';
 
@@ -50,7 +50,7 @@ export default function PwaInstallBanner() {
   if (!visible) return null;
 
   return (
-    <div className="mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="animate-fade-up mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 opacity-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink-bright">Install {BRAND_NAME}</p>
         <p className="mt-0.5 text-xs text-muted">Add to your home screen for quick access.</p>

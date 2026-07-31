@@ -14,6 +14,7 @@ import {
 } from '../../utils/tvProgress';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
+import EmptyState from '../ui/EmptyState';
 import TvLibraryTile from './TvLibraryTile';
 
 export default function TvLibraryPage() {
@@ -106,7 +107,7 @@ export default function TvLibraryPage() {
         <BackNav to="/home" label="Back to home" className="mb-4" />
 
         <header className="mb-6 md:mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent">Your shows</p>
+          <p className="section-title text-accent">Your shows</p>
           <h1 className="page-title mt-2">TV library</h1>
           <p className="mt-2 max-w-xl text-sm text-muted">{config.description}</p>
           {tab === 'stopped' && (
@@ -118,7 +119,7 @@ export default function TvLibraryPage() {
         </header>
 
         <nav
-          className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface/60 p-1"
+          className="seg-tabs mb-6 overflow-x-auto"
           aria-label="Library tabs"
         >
           {TV_LIBRARY_TAB_ORDER.map((key) => {
@@ -130,11 +131,7 @@ export default function TvLibraryPage() {
                 key={key}
                 to={tvLibraryPath(key)}
                 replace
-                className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                  active
-                    ? 'bg-accent text-on-accent shadow-sm'
-                    : 'text-muted hover:text-ink-bright'
-                }`}
+                className={`seg-tab shrink-0 gap-2 px-4 ${active ? 'seg-tab--active' : ''}`}
                 aria-current={active ? 'page' : undefined}
               >
                 {t.title}
@@ -151,27 +148,24 @@ export default function TvLibraryPage() {
         </nav>
 
         {loading ? (
-          <div className="poster-grid">
+          <div className="poster-grid" aria-busy="true" aria-label="Loading TV library">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface-raised" />
             ))}
           </div>
         ) : tracks.length === 0 ? (
-          <div className="glass-card p-8 text-center sm:p-10">
-            <Tv className="mx-auto h-8 w-8 text-accent/70" />
-            <p className="mt-3 font-serif text-lg text-ink-bright">No shows here</p>
-            <p className="mt-2 text-sm text-muted">{config.empty}</p>
+          <EmptyState icon={Tv} title="No shows here" description={config.empty} className="sm:p-10">
             {tab === 'watching' && (
-              <Link to="/tv" className="btn-primary mt-5 inline-flex">
+              <Link to="/tv" className="btn-primary">
                 Browse TV
               </Link>
             )}
             {tab === 'stopped' && counts.watching > 0 && (
-              <Link to={tvLibraryPath('watching')} className="btn-secondary mt-5 inline-flex">
+              <Link to={tvLibraryPath('watching')} className="btn-secondary">
                 View watching list
               </Link>
             )}
-          </div>
+          </EmptyState>
         ) : (
           <>
             <p className="mb-4 text-sm text-muted">
