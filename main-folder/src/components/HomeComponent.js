@@ -157,7 +157,7 @@ export default function Home() {
         {/* Trending rails */}
         <div className="space-y-12 md:space-y-16">
           {trendingError && (
-            <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+            <div className="state-enter rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
               Couldn&apos;t load trending titles.{' '}
               <button
                 type="button"

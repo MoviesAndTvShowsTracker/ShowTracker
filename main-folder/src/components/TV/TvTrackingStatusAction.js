@@ -69,13 +69,13 @@ export default function TvTrackingStatusAction({
   if (!track || isComplete || track.status === 'dropped') return null;
 
   return (
-    <div className={`flex justify-end ${className}`}>
+    <div key={track.status} className={`state-enter flex justify-end ${className}`}>
       {track.status === 'paused' ? (
         <button
           type="button"
           disabled={busy}
           onClick={resumeWatching}
-          className="focus-ring inline-flex min-h-[40px] items-center gap-1.5 px-1 text-sm font-medium text-link transition-colors hover:text-link/80 disabled:opacity-50"
+          className="focus-ring pressable inline-flex min-h-[40px] items-center gap-1.5 px-1 text-sm font-medium text-link transition-colors hover:text-link/80 disabled:opacity-50"
         >
           <PlayCircle className="h-4 w-4" />
           {busy ? 'Saving…' : 'Resume watching'}
@@ -85,7 +85,7 @@ export default function TvTrackingStatusAction({
           type="button"
           disabled={busy}
           onClick={stopWatching}
-          className="focus-ring inline-flex min-h-[40px] items-center gap-1.5 px-1 text-sm font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
+          className="focus-ring pressable inline-flex min-h-[40px] items-center gap-1.5 px-1 text-sm font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
         >
           <PauseCircle className="h-4 w-4" />
           {busy ? 'Saving…' : 'Pause'}

@@ -96,7 +96,7 @@ export default function TvLandingPage() {
 
       <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
         {loadError && (
-          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+          <div className="state-enter rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             Couldn&apos;t reach the TV catalog.{' '}
             <button
               type="button"

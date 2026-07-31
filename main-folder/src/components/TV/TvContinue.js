@@ -210,7 +210,7 @@ export default function TvContinue() {
                     aria-valuemin={0}
                     aria-valuemax={100}
                   >
-                    <div className="progress-fill" style={{ width: `${pct}%` }} />
+                    <div className="progress-fill" style={{ '--progress': pct / 100 }} />
                   </div>
                   <span className="text-xs font-bold text-muted">{pct}%</span>
                 </div>
@@ -232,11 +232,17 @@ export default function TvContinue() {
             />
 
             {isComplete ? (
-              <div className="mt-6 rounded-xl border border-link/30 bg-link/10 px-4 py-5 text-center">
+              <div
+                key="finished"
+                className="state-enter mt-6 rounded-xl border border-link/30 bg-link/10 px-4 py-5 text-center"
+              >
                 <p className="font-serif text-lg text-ink-bright">You&apos;ve finished this show</p>
               </div>
             ) : caughtUpWithAired && upcomingLabel ? (
-              <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5">
+              <div
+                key="caught-up"
+                className="state-enter mt-6 rounded-xl border border-accent/30 bg-accent/10 px-4 py-5"
+              >
                 <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Caught up</p>
                 <p className="mt-2 font-serif text-lg text-ink-bright">
                   You&apos;re up to date on all aired episodes
@@ -250,7 +256,10 @@ export default function TvContinue() {
                 )}
               </div>
             ) : nextEp ? (
-              <div className="mt-6 rounded-xl border border-border bg-surface-raised/40 p-4 sm:p-5">
+              <div
+                key={`next-${nextEp.seasonNumber}-${nextEp.episodeNumber}`}
+                className="state-enter mt-6 rounded-xl border border-border bg-surface-raised/40 p-4 sm:p-5"
+              >
                 <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Up next</p>
                 <h2 className="mt-2 font-serif text-lg text-ink-bright sm:text-xl">
                   S{nextEp.seasonNumber} · E{nextEp.episodeNumber}
@@ -277,7 +286,7 @@ export default function TvContinue() {
                 </button>
               </div>
             ) : (
-              <div className="mt-6">
+              <div key="pick-season" className="state-enter mt-6">
                 <p className="text-sm text-muted">Choose a season to start tracking.</p>
               </div>
             )}

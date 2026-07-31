@@ -148,13 +148,24 @@ export default function TvLibraryPage() {
         </nav>
 
         {loading ? (
-          <div className="poster-grid" aria-busy="true" aria-label="Loading TV library">
+          <div
+            key={`${tab}-loading`}
+            className="state-enter poster-grid"
+            aria-busy="true"
+            aria-label="Loading TV library"
+          >
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface-raised" />
             ))}
           </div>
         ) : tracks.length === 0 ? (
-          <EmptyState icon={Tv} title="No shows here" description={config.empty} className="sm:p-10">
+          <EmptyState
+            key={`${tab}-empty`}
+            icon={Tv}
+            title="No shows here"
+            description={config.empty}
+            className="sm:p-10"
+          >
             {tab === 'watching' && (
               <Link to="/tv" className="btn-primary">
                 Browse TV
@@ -167,7 +178,7 @@ export default function TvLibraryPage() {
             )}
           </EmptyState>
         ) : (
-          <>
+          <div key={`${tab}-grid`} className="state-enter">
             <p className="mb-4 text-sm text-muted">
               {tracks.length} {tracks.length === 1 ? 'show' : 'shows'}
               {tab === 'watching' && ' · tap check to log next episode'}
@@ -185,7 +196,7 @@ export default function TvLibraryPage() {
                 />
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </>

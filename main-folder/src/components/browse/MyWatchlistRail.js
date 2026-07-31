@@ -44,36 +44,40 @@ export default function MyWatchlistRail({ type }) {
 
   if (loading) {
     return (
-      <PosterRail title={cfg.title}>
-        {[1, 2, 3, 4].map((item) => (
-          <div
-            key={item}
-            className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
-            aria-hidden
-          />
-        ))}
-      </PosterRail>
+      <div className="state-enter">
+        <PosterRail title={cfg.title}>
+          {[1, 2, 3, 4].map((item) => (
+            <div
+              key={item}
+              className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+              aria-hidden
+            />
+          ))}
+        </PosterRail>
+      </div>
     );
   }
 
   if (!items.length) return null;
 
   return (
-    <PosterRail
-      title={cfg.title}
-      actionTo={profileListPath(cfg.listKey)}
-      actionLabel="View all"
-    >
-      {items.map((item) => (
-        <PosterTile
-          key={item[cfg.idKey]}
-          to={`${cfg.basePath}/${item[cfg.idKey]}`}
-          poster={item[cfg.posterKey]}
-          title={item[cfg.titleKey]}
-          imageUrlPrefix={`${IMAGE_URL}w342`}
-          size="sm"
-        />
-      ))}
-    </PosterRail>
+    <div className="state-enter">
+      <PosterRail
+        title={cfg.title}
+        actionTo={profileListPath(cfg.listKey)}
+        actionLabel="View all"
+      >
+        {items.map((item) => (
+          <PosterTile
+            key={item[cfg.idKey]}
+            to={`${cfg.basePath}/${item[cfg.idKey]}`}
+            poster={item[cfg.posterKey]}
+            title={item[cfg.titleKey]}
+            imageUrlPrefix={`${IMAGE_URL}w342`}
+            size="sm"
+          />
+        ))}
+      </PosterRail>
+    </div>
   );
 }

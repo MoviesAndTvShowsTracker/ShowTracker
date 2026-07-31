@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BRAND_NAME } from '../../config/brand';
 import { dismissPwaPrompt, isPwaDismissed, isStandalonePwa } from '../../utils/pwa';
+import useAnimatedPresence from '../../hooks/useAnimatedPresence';
 
 export default function PwaInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [visible, setVisible] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const presence = useAnimatedPresence(visible, 140);
 
   useEffect(() => {
     if (isStandalonePwa() || isPwaDismissed()) return;
@@ -47,10 +49,14 @@ export default function PwaInstallBanner() {
     setVisible(false);
   }, []);
 
-  if (!visible) return null;
+  if (!presence.rendered) return null;
 
   return (
-    <div className="animate-fade-up mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 opacity-0 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={`notice-presence mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
+        presence.exiting ? 'is-exiting' : ''
+      }`}
+    >
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink-bright">Install {BRAND_NAME}</p>
         <p className="mt-0.5 text-xs text-muted">Add to your home screen for quick access.</p>

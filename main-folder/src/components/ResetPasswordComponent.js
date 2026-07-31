@@ -21,7 +21,7 @@ export default function ResetPassword() {
       <div className="mx-auto max-w-content px-4 py-10 sm:px-6 md:py-16">
         <PageTitle title="Reset password" />
         <div className="mx-auto max-w-md text-center">
-          <p className="text-sm text-danger">This reset link is missing or invalid.</p>
+          <p className="state-enter text-sm text-danger">This reset link is missing or invalid.</p>
           <Link to="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-link hover:text-ink-bright">
             Request a new link
           </Link>
@@ -103,7 +103,7 @@ export default function ResetPassword() {
                 disabled={submitting}
               />
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <p className="state-enter text-sm text-danger">{error}</p>}
             <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
               {submitting ? 'Updating…' : 'Update password'}
             </button>

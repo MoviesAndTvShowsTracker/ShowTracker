@@ -101,12 +101,12 @@ export default function TvTimeImportSection() {
       </ol>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted">
+        <div className="state-enter flex items-center gap-2 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
           Checking import status…
         </div>
       ) : isActive ? (
-        <div className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-4">
+        <div className="state-enter rounded-xl border border-accent/30 bg-accent/10 px-4 py-4">
           <div className="flex items-start gap-3">
             <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-accent" />
             <div>
@@ -119,8 +119,8 @@ export default function TvTimeImportSection() {
           </div>
         </div>
       ) : showUploadForm ? (
-        <form onSubmit={onUpload} className="space-y-3">
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface/50 px-4 py-8 transition-colors hover:border-accent/40 hover:bg-accent/5">
+        <form onSubmit={onUpload} className="state-enter space-y-3">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface/50 px-4 py-8 transition-all duration-200 hover:border-accent/40 hover:bg-accent/5 active:scale-[0.99]">
             <Upload className="mb-2 h-8 w-8 text-muted" />
             <span className="text-sm font-medium text-ink">Choose TV Time export .zip</span>
             <span className="mt-1 text-xs text-muted">Max 50 MB · replaces your current diary</span>
@@ -133,7 +133,7 @@ export default function TvTimeImportSection() {
             />
           </label>
           {uploadError && (
-            <p className="flex items-start gap-2 text-sm text-danger">
+            <p className="state-enter flex items-start gap-2 text-sm text-danger">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {uploadError}
             </p>
@@ -145,7 +145,7 @@ export default function TvTimeImportSection() {
       ) : null}
 
       {isDone && report && (
-        <div className="mt-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
+        <div className="state-enter mt-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
           <div className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
             <div className="min-w-0">
@@ -180,7 +180,7 @@ export default function TvTimeImportSection() {
       )}
 
       {isFailed && (
-        <div className="mt-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-4">
+        <div className="state-enter mt-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-4">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
             <div>

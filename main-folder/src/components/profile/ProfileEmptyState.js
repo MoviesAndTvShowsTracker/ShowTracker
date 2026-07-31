@@ -48,7 +48,7 @@ export default function ProfileEmptyState({ name }) {
 
   return (
     <div className="space-y-10 md:space-y-12">
-      <section className="glass-card relative overflow-hidden p-6 sm:p-8 md:p-10">
+      <section className="glass-card animate-fade-up relative overflow-hidden p-6 opacity-0 sm:p-8 md:p-10">
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full opacity-30 blur-3xl"
           style={{ background: 'var(--bg-glow-1)' }}
@@ -80,7 +80,11 @@ export default function ProfileEmptyState({ name }) {
         <h2 className="section-title">How it works</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {STEPS.map(({ icon: Icon, title, text, to, label }, i) => (
-            <article key={title} className="glass-card flex flex-col p-4 sm:p-5">
+            <article
+              key={title}
+              className="glass-card animate-fade-up flex flex-col p-4 opacity-0 sm:p-5"
+              style={{ animationDelay: `${120 + i * 80}ms` }}
+            >
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 text-sm font-bold text-accent">
                 {i + 1}
               </span>

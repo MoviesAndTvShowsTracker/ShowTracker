@@ -194,7 +194,7 @@ export default function HomeDashboard() {
           </div>
 
           {loading ? (
-            <div className="poster-rail">
+            <div key="continue-loading" className="state-enter poster-rail">
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
@@ -203,7 +203,7 @@ export default function HomeDashboard() {
               ))}
             </div>
           ) : tracks.length > 0 ? (
-            <div className="poster-rail">
+            <div key="continue-rail" className="state-enter poster-rail">
               {tracks.map((track) => (
                 <ContinueWatchingTile
                   key={track.tvId}

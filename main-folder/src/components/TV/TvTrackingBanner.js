@@ -59,7 +59,7 @@ function BannerContent({ track, progress, styles, isComplete, isPaused, caughtUp
           >
             <div
               className={`progress-fill ${isComplete ? 'progress-fill--link' : styles.bar}`}
-              style={{ width: `${pct}%` }}
+              style={{ '--progress': pct / 100 }}
             />
           </div>
           <span className="text-[10px] font-bold text-muted">{pct}%</span>

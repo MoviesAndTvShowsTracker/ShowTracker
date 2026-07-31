@@ -17,7 +17,7 @@ export default function MarkFab({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`focus-ring inline-flex ${dimensions} items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-glass transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50 cursor-pointer ${className}`}
+      className={`focus-ring inline-flex ${dimensions} items-center justify-center rounded-full border border-border/80 bg-canvas/95 text-accent shadow-glass transition-all duration-200 hover:bg-accent hover:text-on-accent active:scale-90 disabled:opacity-50 disabled:active:scale-100 cursor-pointer ${className}`}
     >
       <Icon className={`h-4 w-4 ${icon === 'play' ? 'fill-current' : ''}`} strokeWidth={2.5} aria-hidden />
     </button>

@@ -110,7 +110,7 @@ export default function Signin() {
             {passwordReset && (
               <p className="text-sm text-accent">Password updated. Sign in with your new password.</p>
             )}
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <p className="state-enter text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={submitting || googleSubmitting}

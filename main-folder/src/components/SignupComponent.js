@@ -97,7 +97,7 @@ export default function Signup() {
                 />
               </div>
             ))}
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <p className="state-enter text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={submitting || googleSubmitting}

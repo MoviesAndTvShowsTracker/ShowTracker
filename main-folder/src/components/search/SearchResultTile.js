@@ -7,6 +7,7 @@ import { IMAGE_URL } from '../../config/keys';
 import { useAuth } from '../../context/AuthContext';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { useAnchoredPopover } from '../../hooks/useAnchoredPopover';
+import useAnimatedPresence from '../../hooks/useAnimatedPresence';
 import { watchlistRemoveConfirm } from '../../utils/removeConfirm';
 
 function yearFrom(item, mediaType) {
@@ -37,9 +38,10 @@ export default function SearchResultTile({ item, mediaType }) {
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuPresence = useAnimatedPresence(menuOpen);
   const buttonRef = useRef(null);
   const popoverRef = useRef(null);
-  const menuStyle = useAnchoredPopover(menuOpen, buttonRef, popoverRef);
+  const menuStyle = useAnchoredPopover(menuPresence.rendered, buttonRef, popoverRef);
 
   const inLibrary = Boolean(track);
 
@@ -161,7 +163,7 @@ export default function SearchResultTile({ item, mediaType }) {
     <>
       <article className={`group relative ${menuOpen ? 'z-40' : ''}`}>
         <div className="relative">
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.97]">
             <Link to={to} className="block cursor-pointer">
               <img
                 src={`${IMAGE_URL}w342${item.poster_path}`}
@@ -234,10 +236,12 @@ export default function SearchResultTile({ item, mediaType }) {
             )}
           </div>
 
-          {isAuthenticated && menuOpen && typeof document !== 'undefined' && createPortal(
+          {isAuthenticated && menuPresence.rendered && typeof document !== 'undefined' && createPortal(
             <>
               <div
-                className="fixed inset-0 z-[55] bg-canvas/20 md:hidden"
+                className={`popover-backdrop fixed inset-0 z-[55] bg-canvas/20 md:hidden ${
+                  menuPresence.exiting ? 'is-exiting' : ''
+                }`}
                 aria-hidden
                 onClick={() => setMenuOpen(false)}
               />
@@ -246,7 +250,9 @@ export default function SearchResultTile({ item, mediaType }) {
                 style={menuStyle ?? { position: 'fixed', top: 0, left: 0, zIndex: 60, visibility: 'hidden' }}
                 role="menu"
                 aria-label={`Actions for ${title}`}
-                className="animate-soft-rise w-max min-w-[10.5rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-border bg-surface py-1 opacity-0 shadow-glass md:hidden"
+                className={`menu-pop w-max min-w-[10.5rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass md:hidden ${
+                  menuPresence.exiting ? 'is-exiting' : ''
+                }`}
               >
                 {isTv && inLibrary ? (
                   <button

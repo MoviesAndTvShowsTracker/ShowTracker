@@ -45,7 +45,7 @@ export default function TvLibraryTile({
           className="block cursor-pointer"
           aria-label={track.tvTitle}
         >
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.98]">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.97]">
             {track.tvPosterImage ? (
               <img
                 src={`${IMAGE_URL}w342${track.tvPosterImage}`}
@@ -64,7 +64,7 @@ export default function TvLibraryTile({
               aria-valuemin={0}
               aria-valuemax={100}
             >
-              <div className="progress-fill rounded-none" style={{ width: `${pct}%` }} />
+              <div className="progress-fill rounded-none" style={{ '--progress': pct / 100 }} />
             </div>
 
             {isComplete && (

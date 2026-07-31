@@ -20,7 +20,7 @@ function StatCard({ icon: Icon, label, value, detail, loading, className = '' })
         {loading ? (
           <div className="mt-1 h-7 w-12 animate-pulse rounded-md bg-border/60 sm:h-8" />
         ) : (
-          <p className="font-serif text-2xl leading-none text-ink-bright sm:text-3xl">{value}</p>
+          <p className="state-enter font-serif text-2xl leading-none text-ink-bright sm:text-3xl">{value}</p>
         )}
         {detail && <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted sm:text-[11px]">{detail}</p>}
       </div>
@@ -72,7 +72,7 @@ export default function ProfileStats({
         <h2 className="section-title">Your stats</h2>
         <Link
           to="/profile/stats"
-          className="inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-link transition-colors hover:text-ink-bright cursor-pointer"
+          className="pressable inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-link transition-colors hover:text-ink-bright cursor-pointer"
           aria-label="See all stats"
         >
           See all

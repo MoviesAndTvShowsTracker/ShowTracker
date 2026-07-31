@@ -17,10 +17,10 @@ export function ActionButton({
   static: isStatic = false,
 }) {
   const activeClass = VARIANT_ACTIVE[variant] || VARIANT_ACTIVE.default;
-  const className = `focus-ring flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-all duration-300 min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
+  const className = `focus-ring flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-all duration-200 min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
     isStatic
       ? `cursor-default ${active ? activeClass : 'border-border bg-surface/80 text-ink shadow-glass backdrop-blur-md'}`
-      : `cursor-pointer ${
+      : `cursor-pointer active:scale-[0.96] ${
           active
             ? activeClass
             : 'border-border bg-surface/80 text-ink shadow-glass backdrop-blur-md hover:border-accent/30 hover:bg-surface md:hover:scale-[1.02]'
@@ -29,7 +29,13 @@ export function ActionButton({
 
   const content = (
     <>
-      {Icon && <Icon className="h-5 w-5 shrink-0 md:h-4 md:w-4" aria-hidden="true" />}
+      {Icon && (
+        <Icon
+          key={active ? 'active' : 'inactive'}
+          className={`h-5 w-5 shrink-0 md:h-4 md:w-4 ${active ? 'check-pop' : ''}`}
+          aria-hidden="true"
+        />
+      )}
       <span className="flex flex-col items-center gap-0.5 md:flex-row md:gap-2">
         <span className="text-[10px] font-bold uppercase tracking-wide leading-tight text-center md:text-sm md:normal-case md:tracking-normal md:font-medium">
           <span className="md:hidden">{compactLabel || label}</span>
@@ -42,7 +48,12 @@ export function ActionButton({
         )}
       </span>
       {badge != null && (
-        <span className="rounded-full bg-canvas px-1.5 py-0.5 text-[10px] font-bold md:ml-0">{badge}</span>
+        <span
+          key={badge}
+          className="state-enter rounded-full bg-canvas px-1.5 py-0.5 text-[10px] font-bold md:ml-0"
+        >
+          {badge}
+        </span>
       )}
     </>
   );

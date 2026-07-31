@@ -21,7 +21,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
           className="block cursor-pointer"
           aria-label={`${track.tvTitle}${hasNext ? `, next S${track.nextSeason} E${track.nextEpisode}` : ''}`}
         >
-          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.98]">
+          <div className="relative overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-poster-hover active:scale-[0.97]">
             {track.tvPosterImage ? (
               <img
                 src={`${IMAGE_URL}w342${track.tvPosterImage}`}
@@ -42,7 +42,7 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
             >
               <div
                 className="progress-fill rounded-none"
-                style={{ width: `${pct}%` }}
+                style={{ '--progress': pct / 100 }}
               />
             </div>
 

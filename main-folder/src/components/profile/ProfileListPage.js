@@ -120,7 +120,7 @@ export default function ProfileListPage() {
         </header>
 
         {loading ? (
-          <div className="poster-grid" aria-busy="true" aria-label="Loading list">
+          <div key="list-loading" className="state-enter poster-grid" aria-busy="true" aria-label="Loading list">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface-raised" />
             ))}
@@ -135,7 +135,7 @@ export default function ProfileListPage() {
             </Link>
           </EmptyState>
         ) : (
-          <div className="poster-grid">
+          <div key="list-grid" className="state-enter poster-grid">
             {items.map((item) =>
               isMovie ? (
                 <PosterTile

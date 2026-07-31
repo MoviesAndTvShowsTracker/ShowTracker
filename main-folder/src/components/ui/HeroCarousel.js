@@ -36,7 +36,7 @@ export default function HeroCarousel({ slides = [] }) {
             to={slide.to}
             tabIndex={active ? 0 : -1}
             aria-hidden={!active}
-            className={`absolute inset-0 block cursor-pointer transition-opacity duration-[400ms] ease-out ${
+            className={`absolute inset-0 block cursor-pointer transition-opacity duration-[240ms] ease-out ${
               active ? 'z-[1] opacity-100' : 'pointer-events-none opacity-0'
             }`}
           >
@@ -63,17 +63,17 @@ export default function HeroCarousel({ slides = [] }) {
             type="button"
             onClick={() => setIndex((c) => (c - 1 + valid.length) % valid.length)}
             aria-label="Previous"
-            className="focus-ring absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-surface/90 p-1.5 shadow cursor-pointer"
+            className="focus-ring group absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-surface/90 p-1.5 shadow cursor-pointer"
           >
-            <ChevronLeft className="h-4 w-4 text-ink" />
+            <ChevronLeft className="h-4 w-4 text-ink transition-transform duration-150 group-active:scale-75" />
           </button>
           <button
             type="button"
             onClick={() => setIndex((c) => (c + 1) % valid.length)}
             aria-label="Next"
-            className="focus-ring absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-surface/90 p-1.5 shadow cursor-pointer"
+            className="focus-ring group absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-surface/90 p-1.5 shadow cursor-pointer"
           >
-            <ChevronRight className="h-4 w-4 text-ink" />
+            <ChevronRight className="h-4 w-4 text-ink transition-transform duration-150 group-active:scale-75" />
           </button>
           <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
             {valid.map((_, i) => (
@@ -83,7 +83,9 @@ export default function HeroCarousel({ slides = [] }) {
                 aria-label={`Slide ${i + 1}`}
                 onClick={() => setIndex(i)}
                 aria-current={i === activeIndex ? 'true' : undefined}
-                className={`focus-ring h-1 rounded-full transition-all cursor-pointer ${i === activeIndex ? 'w-4 bg-accent' : 'w-1 bg-muted/60'}`}
+                className={`focus-ring h-1 w-4 origin-center rounded-full transition-[transform,background-color] duration-200 cursor-pointer ${
+                  i === activeIndex ? 'scale-x-100 bg-accent' : 'scale-x-25 bg-muted/60'
+                }`}
               />
             ))}
           </div>

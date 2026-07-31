@@ -21,7 +21,7 @@ export default function PosterTile({
   const widthClass = sizes[size] || sizes.sm;
 
   const posterImage = (
-    <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-300 ease-out hover:shadow-poster-hover hover:scale-[1.04] hover:-translate-y-0.5 ${widthClass}`}>
+    <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:shadow-poster-hover hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 ${widthClass}`}>
       <img
         src={src}
         alt={title || 'Poster'}
@@ -37,7 +37,7 @@ export default function PosterTile({
             onRemove();
           }}
           aria-label={`Remove ${title}`}
-          className="absolute right-1 top-1 hidden h-8 w-8 items-center justify-center rounded-full bg-canvas/80 p-1 text-ink-bright opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:flex cursor-pointer"
+          className="pressable absolute right-1 top-1 hidden h-8 w-8 items-center justify-center rounded-full bg-canvas/80 p-1 text-ink-bright opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 md:flex cursor-pointer"
         >
           <X className="h-3.5 w-3.5" />
         </button>

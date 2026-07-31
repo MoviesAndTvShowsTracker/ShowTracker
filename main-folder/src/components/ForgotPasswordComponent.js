@@ -58,9 +58,10 @@ export default function ForgotPassword() {
         </div>
 
         {sentTo ? (
-          <div className="auth-card mt-8 text-center">
+          <div className="auth-card animate-fade-up mt-8 text-center opacity-0">
             <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent"
+              className="animate-fade-up mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent opacity-0"
+              style={{ animationDelay: '140ms' }}
               aria-hidden
             >
               ✓
@@ -105,7 +106,7 @@ export default function ForgotPassword() {
               Enter your email and we&apos;ll send you a link to choose a new password.
             </p>
 
-            <div className="auth-card mt-8">
+            <div className="auth-card animate-fade-up mt-8 opacity-0">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="email" className="section-title mb-2 block normal-case tracking-wide">
@@ -121,7 +122,7 @@ export default function ForgotPassword() {
                     disabled={submitting}
                   />
                 </div>
-                {error && <p className="text-sm text-danger">{error}</p>}
+                {error && <p className="state-enter text-sm text-danger">{error}</p>}
                 <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
                   {submitting ? 'Sending…' : 'Send reset link'}
                 </button>

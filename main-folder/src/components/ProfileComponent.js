@@ -273,7 +273,7 @@ export default function Profile() {
           userInfo && (
             <div className="space-y-10 md:space-y-12">
               {loadError && (
-                <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+                <p className="state-enter rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
                   {loadError}
                 </p>
               )}
@@ -299,7 +299,7 @@ export default function Profile() {
                     <button
                       type="button"
                       onClick={() => setPhoneDialog(true)}
-                      className="text-link hover:text-ink-bright cursor-pointer"
+                      className="pressable text-link hover:text-ink-bright cursor-pointer"
                       aria-label="Edit phone"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -311,7 +311,7 @@ export default function Profile() {
               <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
                 <Link
                   to="/settings"
-                  className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                  className="pressable flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
                 >
                   <Settings className="h-4 w-4 shrink-0" />
                   Settings
@@ -319,7 +319,7 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={() => setShowLogout(true)}
-                  className="focus-ring flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-danger/40 hover:text-danger cursor-pointer"
+                  className="focus-ring pressable flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-danger/40 hover:text-danger cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />
                   Sign out
@@ -423,7 +423,7 @@ export default function Profile() {
               setPhoneError('');
             }}
           />
-          {phoneError && <p className="mt-2 text-sm text-danger">{phoneError}</p>}
+          {phoneError && <p className="state-enter mt-2 text-sm text-danger">{phoneError}</p>}
         </form>
       </Dialog>
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Dialog from '../components/ui/Dialog';
 
 /**
@@ -8,6 +8,11 @@ import Dialog from '../components/ui/Dialog';
 export default function useConfirmDialog() {
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
+  // The dialog animates out after `pending` clears, so keep the last copy on screen
+  // instead of letting the title and body blank out mid-transition.
+  const lastPending = useRef(null);
+  if (pending) lastPending.current = pending;
+  const shown = pending ?? lastPending.current;
 
   const confirm = useCallback((opts) => {
     setPending(opts);
@@ -32,11 +37,11 @@ export default function useConfirmDialog() {
     <Dialog
       open={Boolean(pending)}
       onClose={close}
-      title={pending?.title ?? ''}
+      title={shown?.title ?? ''}
       footer={
         <>
           <button type="button" onClick={close} disabled={busy} className="btn-secondary">
-            {pending?.cancelLabel ?? 'Cancel'}
+            {shown?.cancelLabel ?? 'Cancel'}
           </button>
           <button
             type="button"
@@ -44,12 +49,12 @@ export default function useConfirmDialog() {
             disabled={busy}
             className="btn-primary disabled:opacity-50"
           >
-            {busy ? 'Saving…' : pending?.confirmLabel ?? 'Confirm'}
+            {busy ? 'Saving…' : shown?.confirmLabel ?? 'Confirm'}
           </button>
         </>
       }
     >
-      {pending?.body && <p className="text-sm text-muted">{pending.body}</p>}
+      {shown?.body && <p className="text-sm text-muted">{shown.body}</p>}
     </Dialog>
   );
 

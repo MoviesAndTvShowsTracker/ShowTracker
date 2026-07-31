@@ -45,7 +45,7 @@ export default function ContinueWatchingCard({ track, onMark, marking }) {
             >
               <div
                 className="progress-fill"
-                style={{ width: `${pct}%` }}
+                style={{ '--progress': pct / 100 }}
               />
             </div>
             <span className="text-[10px] font-bold tabular-nums text-muted">{pct}%</span>

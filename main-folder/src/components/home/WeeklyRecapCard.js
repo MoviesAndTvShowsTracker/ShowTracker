@@ -29,7 +29,7 @@ function recapMessage(recap) {
 export default function WeeklyRecapCard({ recap, loading }) {
   if (loading) {
     return (
-      <div className="mb-6 min-h-[5.5rem] animate-pulse rounded-xl bg-surface-raised" aria-hidden />
+      <div className="state-enter mb-6 min-h-[5.5rem] animate-pulse rounded-xl bg-surface-raised" aria-hidden />
     );
   }
 
@@ -48,7 +48,7 @@ export default function WeeklyRecapCard({ recap, loading }) {
     <Link
       to="/profile/stats"
       onClick={() => clearSessionStats()}
-      className="animate-fade-up mb-6 block min-h-[5.5rem] rounded-xl border border-border/60 bg-surface-raised/30 p-4 opacity-0 transition-colors hover:border-accent/40 hover:bg-surface-raised/50 cursor-pointer"
+      className="state-enter mb-6 block min-h-[5.5rem] rounded-xl border border-border/60 bg-surface-raised/30 p-4 transition-all duration-200 hover:border-accent/40 hover:bg-surface-raised/50 active:scale-[0.99] cursor-pointer"
     >
       <div className="flex items-start gap-3">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">

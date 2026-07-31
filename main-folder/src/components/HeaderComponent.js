@@ -9,11 +9,29 @@ import MobileBottomNav from './MobileBottomNav';
 import MarqueeLogo from './brand/MarqueeLogo';
 import { BRAND_NAME } from '../config/brand';
 import { displayName } from '../utils/displayUser';
+import useAnimatedPresence from '../hooks/useAnimatedPresence';
 
 const desktopLink = ({ isActive }) =>
-  `focus-ring nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
+  `focus-ring pressable nav-link inline-flex min-h-[44px] items-center gap-2 px-3 py-2 cursor-pointer ${
     isActive ? 'text-accent' : 'text-muted hover:text-ink-bright'
   }`;
+
+function ThemeGlyph({ isDark }) {
+  return (
+    <span className="relative h-4 w-4" aria-hidden="true">
+      <Sun
+        className={`theme-glyph-icon absolute inset-0 h-4 w-4 transition-[opacity,transform] duration-200 ${
+          isDark ? 'rotate-0 scale-100 opacity-100' : '-rotate-45 scale-75 opacity-0'
+        }`}
+      />
+      <Moon
+        className={`theme-glyph-icon absolute inset-0 h-4 w-4 transition-[opacity,transform] duration-200 ${
+          isDark ? 'rotate-45 scale-75 opacity-0' : 'rotate-0 scale-100 opacity-100'
+        }`}
+      />
+    </span>
+  );
+}
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -22,20 +40,21 @@ export default function Header() {
   const location = useLocation();
   const [showLogout, setShowLogout] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuPresence = useAnimatedPresence(menuOpen);
   const firstMenuItemRef = useRef(null);
 
   const homeTo = isAuthenticated ? '/home' : '/';
   const showMobileNav = !hideMobileBottomNav(location.pathname);
 
   useEffect(() => {
-    if (!menuOpen) return undefined;
+    if (!menuOpen || !menuPresence.rendered) return undefined;
     firstMenuItemRef.current?.focus();
     const onKeyDown = (event) => {
       if (event.key === 'Escape') setMenuOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [menuOpen]);
+  }, [menuOpen, menuPresence.rendered]);
 
   const handleLogout = async () => {
     await logout();
@@ -59,7 +78,7 @@ export default function Header() {
               className="theme-toggle md:hidden"
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <ThemeGlyph isDark={isDark} />
             </button>
 
             <nav className="hidden items-center md:flex" aria-label="Main">
@@ -101,10 +120,20 @@ export default function Header() {
                     <User className="h-4 w-4" />
                     <span className="max-w-[120px] truncate">{displayName(user)}</span>
                   </button>
-                  {menuOpen && (
+                  {menuPresence.rendered && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                      <div className="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass backdrop-blur-xl">
+                      <div
+                        className={`popover-backdrop fixed inset-0 z-40 ${
+                          menuPresence.exiting ? 'is-exiting' : ''
+                        }`}
+                        onClick={() => setMenuOpen(false)}
+                        aria-hidden="true"
+                      />
+                      <div
+                        className={`menu-pop absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass backdrop-blur-xl ${
+                          menuPresence.exiting ? 'is-exiting' : ''
+                        }`}
+                      >
                         <NavLink
                           ref={firstMenuItemRef}
                           to="/profile"
@@ -144,7 +173,7 @@ export default function Header() {
                 className="theme-toggle ml-2 hidden md:inline-flex"
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                <ThemeGlyph isDark={isDark} />
               </button>
             </nav>
           </div>

@@ -233,7 +233,7 @@ export default function SearchBox() {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
+                  className="pressable absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -272,7 +272,7 @@ export default function SearchBox() {
                     clearRecentSearches();
                     setRecent([]);
                   }}
-                  className="min-h-[44px] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
+                  className="pressable min-h-[44px] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-ink-bright cursor-pointer"
                 >
                   Clear
                 </button>
@@ -283,7 +283,7 @@ export default function SearchBox() {
                     key={`${item.type}-${item.query}`}
                     type="button"
                     onClick={() => handleRecentClick(item)}
-                    className="min-h-[44px] rounded-full border border-border bg-surface/80 px-4 py-2.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
+                    className="pressable min-h-[44px] rounded-full border border-border bg-surface/80 px-4 py-2.5 text-xs font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 cursor-pointer"
                   >
                     {item.query}
                     <span className="ml-1.5 text-[10px] uppercase text-muted">
@@ -296,7 +296,7 @@ export default function SearchBox() {
           )}
 
           {loading && (
-            <div className="poster-grid mt-6" aria-busy="true" aria-label="Loading search results">
+            <div className="state-enter poster-grid mt-6" aria-busy="true" aria-label="Loading search results">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="animate-pulse rounded-xl bg-surface-raised aspect-[2/3]" />
               ))}
@@ -304,13 +304,13 @@ export default function SearchBox() {
           )}
 
           {!loading && error && (
-            <p className="mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <p className="state-enter mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
               {error}
             </p>
           )}
 
           {!loading && hasSearched && results.length > 0 && (
-            <section className="mt-6 md:mt-8">
+            <section key={`${type}-${query.trim()}`} className="state-enter mt-6 md:mt-8">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <h2 className="font-serif text-lg text-ink-bright sm:text-xl">

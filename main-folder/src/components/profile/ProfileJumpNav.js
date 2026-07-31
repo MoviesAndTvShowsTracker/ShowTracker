@@ -24,7 +24,7 @@ export default function ProfileJumpNav({ showLists = true }) {
           key={id}
           type="button"
           onClick={() => scrollTo(id)}
-          className="focus-ring shrink-0 rounded-full border border-border/70 bg-surface/80 px-4 py-2 text-xs font-semibold text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 active:bg-accent/15 cursor-pointer"
+          className="focus-ring pressable shrink-0 rounded-full border border-border/70 bg-surface/80 px-4 py-2 text-xs font-semibold text-ink transition-colors hover:border-accent/40 hover:bg-accent/10 active:bg-accent/15 cursor-pointer"
         >
           {label}
         </button>

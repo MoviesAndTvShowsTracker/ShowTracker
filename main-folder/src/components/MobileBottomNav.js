@@ -13,7 +13,7 @@ const TABS = [
 ];
 
 const mobileLink = ({ isActive }) =>
-  `focus-ring relative z-[1] flex w-full flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 cursor-pointer min-h-[44px] ${
+  `focus-ring pressable relative z-[1] flex w-full flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-bold uppercase tracking-wide transition-colors duration-200 cursor-pointer min-h-[44px] ${
     isActive ? 'text-accent' : 'text-muted active:text-ink'
   }`;
 
@@ -86,6 +86,7 @@ export default function MobileBottomNav() {
         />
         {TABS.map((tab) => {
           const Icon = tab.icon;
+          const active = tab.id === activeId;
           const label = tab.id === 'you' && !isAuthenticated ? tab.altLabel : tab.label;
           return (
             <div
@@ -101,7 +102,12 @@ export default function MobileBottomNav() {
                 end={tab.end}
                 className={mobileLink}
               >
-                <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <Icon
+                  className={`h-[18px] w-[18px] transition-transform duration-200 ${
+                    active ? 'scale-110' : 'scale-100'
+                  }`}
+                  aria-hidden="true"
+                />
                 {label}
               </NavLink>
             </div>

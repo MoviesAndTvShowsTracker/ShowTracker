@@ -64,20 +64,63 @@
     html {
       scroll-behavior: auto;
     }
-    .animate-fade-up,
-    .animate-fade-in,
-    .animate-soft-rise,
     .bento-card,
     .glass-card,
-    .page-tab-enter,
     .mobile-nav-indicator,
     .progress-fill,
     .collapsible-grid {
       animation: none !important;
       transition: none !important;
     }
+    /* Entrance animations are paired with an opacity-0 start state, so killing the
+       animation alone would leave these elements permanently invisible. */
+    .animate-fade-up,
+    .animate-fade-in,
+    .animate-soft-rise,
+    .page-tab-enter {
+      animation: none !important;
+      opacity: 1 !important;
+    }
+    .menu-pop,
+    .popover-backdrop {
+      animation: state-fade 0.12s ease-out both !important;
+    }
+    .menu-pop.is-exiting,
+    .popover-backdrop.is-exiting,
+    .scroll-fab.is-exiting {
+      animation: state-fade-out 0.12s ease-in both !important;
+    }
+    .scroll-fab {
+      animation: state-fade 0.12s ease-out both !important;
+    }
+    .notice-presence {
+      animation: state-fade 0.12s ease-out both !important;
+    }
+    .notice-presence.is-exiting {
+      animation: state-fade-out 0.12s ease-in both !important;
+    }
+    .btn-primary,
+    .btn-secondary,
+    .btn-ghost,
+    .pressable,
+    .seg-tab,
+    .theme-toggle {
+      transform: none !important;
+      transition-duration: 0.01ms !important;
+    }
+    .theme-glyph-icon {
+      transform: none !important;
+      transition-duration: 0.01ms !important;
+    }
+    .state-enter {
+      animation: state-fade 0.12s ease-out both !important;
+    }
+    .check-pop {
+      animation: state-fade 0.12s ease-out both !important;
+    }
     .app-dialog[open],
-    .app-dialog-host[open] {
+    .app-dialog-host[open],
+    .app-dialog-host[open] .app-dialog-panel {
       animation: none !important;
     }
   }
@@ -98,7 +141,7 @@
 
 @layer components {
   .glass-card {
-    @apply rounded-2xl border border-border/60 bg-surface/80 shadow-glass backdrop-blur-xl transition-all duration-300;
+    @apply rounded-2xl border border-border/60 bg-surface/80 shadow-glass backdrop-blur-xl transition-all duration-200;
   }
 
   .glass-card:hover {
@@ -106,19 +149,53 @@
   }
 
   .btn-primary {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl bg-accent px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-on-accent shadow-bento transition-all duration-300 hover:bg-accent-hover hover:shadow-poster-hover hover:scale-[1.02] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent cursor-pointer;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl bg-accent px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-on-accent shadow-bento transition-all duration-200 hover:bg-accent-hover hover:shadow-poster-hover hover:scale-[1.02] active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent cursor-pointer;
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-border bg-surface/80 px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-ink shadow-glass backdrop-blur-md transition-all duration-300 hover:border-accent/40 hover:bg-surface-raised hover:scale-[1.02] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted cursor-pointer;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-border bg-surface/80 px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-ink shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:bg-surface-raised hover:scale-[1.02] active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted cursor-pointer;
   }
 
   .btn-ghost {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl px-3 py-2 text-sm font-medium text-muted transition-all duration-200 hover:bg-surface-raised/60 hover:text-ink-bright cursor-pointer;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl px-3 py-2 text-sm font-medium text-muted transition-all duration-200 hover:bg-surface-raised/60 hover:text-ink-bright active:scale-[0.96] cursor-pointer;
   }
 
   .btn-link {
     @apply text-xs font-bold uppercase tracking-widest text-link transition-colors duration-200 hover:text-ink-bright cursor-pointer;
+  }
+
+  .pressable {
+    transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pressable:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  .state-enter {
+    animation: state-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .scroll-fab {
+    animation: scroll-fab-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .scroll-fab.is-exiting {
+    animation: scroll-fab-out 0.12s ease-in both;
+    pointer-events: none;
+  }
+
+  .notice-presence {
+    animation: notice-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .notice-presence.is-exiting {
+    animation: notice-out 0.14s ease-in forwards;
+    pointer-events: none;
+  }
+
+  .check-pop {
+    animation: check-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   .input-field {
@@ -196,7 +273,7 @@
   }
 
   .bento-card:active {
-    @apply translate-y-0 scale-[0.99];
+    @apply translate-y-0 scale-[0.98];
   }
 
   .app-header {
@@ -216,7 +293,7 @@
   .mobile-nav-indicator {
     @apply absolute left-0 top-1.5 bottom-1.5 rounded-full bg-accent/15;
     transition:
-      transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
       opacity 0.15s ease-out;
     will-change: transform;
   }
@@ -261,8 +338,9 @@
   }
 
   .progress-fill {
-    @apply h-full rounded-full bg-accent;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    @apply h-full w-full origin-left rounded-full bg-accent;
+    transform: scaleX(var(--progress, 0));
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .progress-fill--link {
@@ -274,7 +352,7 @@
   }
 
   .seg-tab {
-    @apply flex min-h-[40px] flex-1 items-center justify-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted transition-colors duration-200 hover:text-ink cursor-pointer;
+    @apply flex min-h-[40px] flex-1 items-center justify-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted transition-all duration-200 hover:text-ink active:scale-[0.96] cursor-pointer;
   }
 
   .seg-tab--active {
@@ -291,8 +369,32 @@
     transition: grid-template-rows 220ms ease-out;
   }
 
+  /* Menus and popovers grow from the control that opened them, so they stay fast and origin-anchored. */
+  .menu-pop {
+    animation: menu-pop 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top right;
+  }
+
+  .menu-pop--top-left {
+    transform-origin: top left;
+  }
+
+  .menu-pop.is-exiting {
+    animation: menu-pop-out 0.12s ease-in forwards;
+    pointer-events: none;
+  }
+
+  .popover-backdrop {
+    animation: state-fade 0.14s ease-out both;
+  }
+
+  .popover-backdrop.is-exiting {
+    animation: state-fade-out 0.12s ease-in both;
+    pointer-events: none;
+  }
+
   .theme-toggle {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface/80 text-muted shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:text-accent cursor-pointer;
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface/80 text-muted shadow-glass backdrop-blur-md transition-all duration-200 hover:border-accent/40 hover:text-accent active:scale-[0.92] cursor-pointer;
   }
 
   .app-dialog-host:not([open]) {
@@ -310,6 +412,21 @@
   @media (min-width: 768px) {
     .app-dialog-host[open] .app-dialog-panel {
       animation: dialog-fade-in 0.22s ease-out;
+    }
+  }
+
+  /* Ordered after the entrance rules so the closing state wins at equal specificity. */
+  .app-dialog-host.is-closing {
+    animation: dialog-backdrop-out 0.22s ease-in forwards;
+  }
+
+  .app-dialog-host.is-closing .app-dialog-panel {
+    animation: dialog-sheet-down 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  @media (min-width: 768px) {
+    .app-dialog-host.is-closing .app-dialog-panel {
+      animation: dialog-fade-out 0.18s ease-out forwards;
     }
   }
 }
@@ -342,6 +459,143 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes menu-pop-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.97);
+  }
+}
+
+@keyframes state-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scroll-fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes notice-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes scroll-fab-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.94);
+  }
+}
+
+@keyframes state-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes state-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dialog-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-sheet-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes dialog-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
   }
 }
 

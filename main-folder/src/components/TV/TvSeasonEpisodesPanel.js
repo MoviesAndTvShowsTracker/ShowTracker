@@ -286,7 +286,7 @@ export default function TvSeasonEpisodesPanel({
             onConfirm: markAllShow,
           })
         }
-        className="shrink-0 text-xs font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
+        className="pressable shrink-0 text-xs font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
       >
         Mark whole show
       </button>
@@ -363,7 +363,11 @@ export default function TvSeasonEpisodesPanel({
               <div
                 className="progress-fill"
                 style={{
-                  width: `${progressPercent(seasonAiredWatchedCount, seasonAiredMeta.length || seasonEpisodesMeta.length)}%`,
+                  '--progress':
+                    progressPercent(
+                      seasonAiredWatchedCount,
+                      seasonAiredMeta.length || seasonEpisodesMeta.length
+                    ) / 100,
                 }}
               />
             </div>
@@ -403,13 +407,13 @@ export default function TvSeasonEpisodesPanel({
         </div>
 
         {loadingSeason || !seasonDataReady || selectedSeason == null ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Loading episodes">
+          <div className="state-enter space-y-2" aria-busy="true" aria-label="Loading episodes">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-raised" />
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div key={selectedSeason} className="state-enter space-y-2">
             {seasonEpisodes.map((episode) => {
               const key = episodeKey(selectedSeason, episode.episode_number);
               const epMeta = episodeFromTmdb(selectedSeason, episode);
@@ -431,13 +435,13 @@ export default function TvSeasonEpisodesPanel({
                     disabled={!aired || toggling === key || batching}
                     onClick={() => toggleEpisode(episode)}
                     aria-label={isWatched ? 'Mark unwatched' : aired ? 'Mark watched' : 'Not released yet'}
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                       isWatched
                         ? 'border-accent bg-accent text-on-accent'
                         : 'border-border bg-surface hover:border-accent/50'
                     }`}
                   >
-                    {isWatched && <Check className="h-5 w-5" strokeWidth={3} />}
+                    {isWatched && <Check className="check-pop h-5 w-5" strokeWidth={3} />}
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-snug">
@@ -456,7 +460,7 @@ export default function TvSeasonEpisodesPanel({
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                       {episode.air_date && <span>Aired {airdate(episode.air_date)}</span>}
                       {isWatched && watchedAt && (
-                        <span className="font-medium text-accent">
+                        <span className="state-enter font-medium text-accent">
                           Watched {formatShortDate(watchedAt)}
                         </span>
                       )}
