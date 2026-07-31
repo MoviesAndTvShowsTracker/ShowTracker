@@ -20,12 +20,12 @@ export default function DecadeChart({ decades }) {
   const top = sorted.reduce((best, d) => (d.count > (best?.count || 0) ? d : best), null);
 
   return (
-    <div className="rounded-xl border border-border/40 bg-surface-raised/20 p-3">
+    <div className="rounded-2xl border border-border/40 bg-surface/70 p-4">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-ink-bright">Films by decade</p>
           {top && (
-            <p className="text-[10px] text-muted">
+            <p className="mt-0.5 text-[10px] text-muted">
               Peak: {top.decade} · {top.count} films
             </p>
           )}

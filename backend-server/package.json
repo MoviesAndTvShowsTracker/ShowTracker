@@ -6,7 +6,8 @@
     "main-folder": "cd ../ && npm start --prefix main-folder",
     "start": "concurrently \"node ./bin/www\" \"npm run main-folder\"",
     "start:api": "node ./bin/www",
-    "import-tvtime": "node scripts/import-tvtime.js"
+    "import-tvtime": "node scripts/import-tvtime.js",
+    "test:stats": "node scripts/test-stats-calendar.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.18",

@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
 import { displayName } from '../utils/displayUser';
 import BackNav from './ui/BackNav';
+import Dialog from './ui/Dialog';
 import TvTimeImportSection from './settings/TvTimeImportSection';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showLogout, setShowLogout] = useState(false);
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
@@ -253,6 +257,21 @@ export default function Settings() {
 
           <TvTimeImportSection />
 
+          <section className="glass-card p-5 sm:p-6">
+            <h2 className="section-title mb-1 normal-case tracking-wide">Session</h2>
+            <p className="mb-4 text-sm text-muted">
+              Your diary stays saved. Sign back in any time to pick it up.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowLogout(true)}
+              className="focus-ring pressable inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-4 text-sm font-medium text-ink transition-colors hover:border-danger/40 hover:text-danger sm:w-auto cursor-pointer"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              Sign out
+            </button>
+          </section>
+
           <p className="text-center text-sm text-muted">
             <Link to="/profile" className="text-link hover:text-ink-bright cursor-pointer">
               View your diary
@@ -260,6 +279,32 @@ export default function Settings() {
           </p>
         </div>
       </div>
+
+      <Dialog
+        open={showLogout}
+        onClose={() => setShowLogout(false)}
+        title="Sign out?"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowLogout(false)} className="btn-secondary">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                setShowLogout(false);
+                navigate('/');
+              }}
+              className="btn-primary"
+            >
+              Sign out
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">Your lists and history will be here when you return.</p>
+      </Dialog>
     </>
   );
 }

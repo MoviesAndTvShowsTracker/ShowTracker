@@ -1,108 +1,81 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Clapperboard, Clock, Layers, Timer, Tv } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { formatCount, formatDuration } from '../../utils/statsFormat';
+import RhythmStrip from './stats/RhythmStrip';
+import { TimeSplitBar } from './stats/StatsPrimitives';
 
-function StatCard({ icon: Icon, label, value, detail, loading, className = '' }) {
-  return (
-    <div
-      className={`flex min-h-[5.5rem] flex-col justify-between rounded-xl border border-border/50 bg-surface-raised/40 p-3 sm:min-h-[6.25rem] sm:p-4 ${className}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[10px] font-bold uppercase leading-tight tracking-widest text-muted">
-          {label}
-        </span>
-        <span className="inline-flex shrink-0 rounded-lg bg-accent/10 p-1 text-accent">
-          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-        </span>
-      </div>
-      <div>
-        {loading ? (
-          <div className="mt-1 h-7 w-12 animate-pulse rounded-md bg-border/60 sm:h-8" />
-        ) : (
-          <p className="state-enter font-serif text-2xl leading-none text-ink-bright sm:text-3xl">{value}</p>
-        )}
-        {detail && <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted sm:text-[11px]">{detail}</p>}
-      </div>
-    </div>
-  );
+function streakLine(streak) {
+  if (!streak) return 'No streak going';
+  return streak === 1 ? '1-day streak' : `${streak}-day streak`;
 }
 
-export default function ProfileStats({
-  filmCount,
-  tvCount,
-  episodeCount,
-  filmMins,
-  tvMins,
-  tvStatsLoading,
-}) {
-  const filmDetail = useMemo(() => {
-    if (!filmCount) return 'Mark films watched';
-    return `${filmCount} film${filmCount !== 1 ? 's' : ''} logged`;
-  }, [filmCount]);
+export default function ProfileStats({ stats, loading, error }) {
+  const overview = stats?.overview;
+  const activity = stats?.activity;
 
-  const tvDetail = useMemo(() => {
-    if (!tvCount) return 'Favorite shows to add';
-    if (episodeCount > 0) return `~${formatCount(episodeCount)} episodes`;
-    return `${tvCount} show${tvCount !== 1 ? 's' : ''} in diary`;
-  }, [tvCount, episodeCount]);
-
-  const episodeDetail = useMemo(() => {
-    if (tvStatsLoading) return 'Calculating…';
-    if (!tvCount) return 'From your TV shows';
-    return 'Across favorited shows';
-  }, [tvStatsLoading, tvCount]);
-
-  const filmTimeDetail = useMemo(() => {
-    if (!filmCount) return 'Favorite or mark watched';
-    if (filmMins > 0) return 'From watched films';
-    return 'Runtime not available';
-  }, [filmCount, filmMins]);
-
-  const tvTimeDetail = useMemo(() => {
-    if (tvStatsLoading) return 'Calculating…';
-    if (!tvCount) return 'Favorite a show to track';
-    if (tvMins > 0) return `~${formatCount(episodeCount)} episodes`;
-    return 'Episode data loading';
-  }, [tvStatsLoading, tvCount, tvMins, episodeCount]);
+  const catalogue = [
+    overview?.filmCount ? `${formatCount(overview.filmCount)} films` : null,
+    overview?.episodeCount ? `${formatCount(overview.episodeCount)} episodes` : null,
+    overview?.tvShowCount ? `${formatCount(overview.tvShowCount)} shows` : null,
+  ].filter(Boolean);
 
   return (
-    <section aria-label="Your stats" className="glass-card overflow-hidden !p-0">
-      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
-        <h2 className="section-title">Your stats</h2>
-        <Link
-          to="/profile/stats"
-          className="pressable inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-link transition-colors hover:text-ink-bright cursor-pointer"
-          aria-label="See all stats"
-        >
-          See all
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
-      <div className="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 md:grid-cols-3 lg:grid-cols-5">
-        <StatCard icon={Clapperboard} label="Films" value={filmCount || '0'} detail={filmDetail} />
-        <StatCard icon={Tv} label="TV shows" value={tvCount || '0'} detail={tvDetail} />
-        <StatCard
-          icon={Clock}
-          label="Film time"
-          value={formatDuration(filmMins)}
-          detail={filmTimeDetail}
-        />
-        <StatCard
-          icon={Timer}
-          label="TV time"
-          value={formatDuration(tvMins)}
-          detail={tvTimeDetail}
-          loading={tvStatsLoading && tvCount > 0}
-        />
-        <StatCard
-          icon={Layers}
-          label="Episodes"
-          value={episodeCount > 0 ? formatCount(episodeCount) : '—'}
-          detail={episodeDetail}
-          loading={tvStatsLoading && tvCount > 0}
-          className="col-span-2 md:col-span-1"
-        />
+    <section aria-label="Your diary at a glance" className="glass-card overflow-hidden">
+      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,18rem)] lg:gap-10">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-4">
+            <p className="section-title text-accent">Estimated watch time</p>
+            <Link
+              to="/profile/stats"
+              className="focus-ring group inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-link hover:text-ink-bright cursor-pointer"
+            >
+              All stats
+              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+
+          {loading && !stats ? (
+            <div className="mt-3 h-11 w-40 animate-pulse rounded-lg bg-border/60" />
+          ) : (
+            <p className="tnum mt-2 font-serif text-[2.75rem] leading-[1.05] text-ink-bright sm:text-5xl">
+              {formatDuration(overview?.totalMins)}
+            </p>
+          )}
+
+          <p className="mt-2 text-sm text-muted">
+            {error
+              ? 'Stats are unavailable right now.'
+              : catalogue.length
+                ? catalogue.join(' · ')
+                : 'Nothing logged yet.'}
+          </p>
+
+          {overview?.totalMins > 0 && (
+            <div className="mt-5">
+              <TimeSplitBar
+                filmShare={overview.filmShare}
+                tvShare={overview.tvShare}
+                filmMins={overview.filmMins}
+                tvMins={overview.tvMins}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 border-t border-border/60 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="section-title">Last 30 days</p>
+            <p className="text-xs font-semibold text-accent">{streakLine(activity?.streak)}</p>
+          </div>
+          <div className="mt-3">
+            <RhythmStrip days={activity?.dailyActivity} />
+          </div>
+          <p className="mt-2 text-[11px] text-muted-dim">
+            {activity?.activeDaysThisYear
+              ? `${activity.activeDaysThisYear} days logged this year`
+              : 'Log something to start the line'}
+          </p>
+        </div>
       </div>
     </section>
   );

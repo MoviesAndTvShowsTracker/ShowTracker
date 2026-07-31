@@ -1,31 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import api from '../../api/axios';
 import { tvLibraryPath } from '../../config/tvLibrary';
+import { formatCount } from '../../utils/statsFormat';
 
 const CARDS = [
-  {
-    key: 'watching',
-    title: 'Watching',
-    icon: PlayCircle,
-    countKey: 'watching',
-    hint: 'In progress',
-  },
-  {
-    key: 'stopped',
-    title: 'Paused',
-    icon: PauseCircle,
-    countKey: 'paused',
-    hint: 'Paused shows',
-  },
-  {
-    key: 'finished',
-    title: 'Finished',
-    icon: CheckCircle2,
-    countKey: 'completed',
-    hint: 'Completed',
-  },
+  { key: 'watching', title: 'Watching', countKey: 'watching' },
+  { key: 'stopped', title: 'Paused', countKey: 'paused' },
+  { key: 'finished', title: 'Finished', countKey: 'completed' },
 ];
 
 export default function TvLibrarySummary() {
@@ -46,36 +29,38 @@ export default function TvLibrarySummary() {
   if (!loading && total === 0) return null;
 
   return (
-    <section aria-label="TV library">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="section-title">TV library</h2>
-          <p className="mt-1 text-sm text-muted">Watching, paused, and finished shows</p>
-        </div>
+    <section aria-label="Your shows">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <h2 className="section-title">Your shows</h2>
         <Link
           to={tvLibraryPath('watching')}
-          className="text-xs font-semibold text-link hover:text-ink-bright cursor-pointer shrink-0"
+          className="shrink-0 text-xs font-semibold text-link hover:text-ink-bright cursor-pointer"
         >
           Open library
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {CARDS.map(({ key, title, icon: Icon, countKey, hint }) => (
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {CARDS.map(({ key, title, countKey }) => (
           <Link
             key={key}
             to={tvLibraryPath(key)}
-            className="glass-card flex min-h-[72px] items-center gap-3 p-4 transition-colors hover:border-accent/30 cursor-pointer"
+            className="group glass-card flex items-end justify-between gap-2 px-3 py-4 transition-colors hover:border-accent/30 sm:px-4 cursor-pointer"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-              <Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink-bright">{title}</p>
-              <p className="text-xs text-muted">
-                {loading ? '…' : `${counts[countKey] || 0} · ${hint}`}
-              </p>
-            </div>
+            <span className="flex min-w-0 flex-col gap-1">
+              {loading ? (
+                <span className="h-7 w-10 animate-pulse rounded-md bg-border/60" />
+              ) : (
+                <span className="tnum font-serif text-2xl leading-none text-ink-bright sm:text-3xl">
+                  {formatCount(counts[countKey] || 0)}
+                </span>
+              )}
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{title}</span>
+            </span>
+            <ArrowUpRight
+              className="hidden h-4 w-4 shrink-0 text-muted-dim transition-colors group-hover:text-accent sm:block"
+              aria-hidden
+            />
           </Link>
         ))}
       </div>

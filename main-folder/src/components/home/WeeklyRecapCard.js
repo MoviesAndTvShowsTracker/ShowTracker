@@ -63,7 +63,7 @@ export default function WeeklyRecapCard({ recap, loading }) {
                 {recap.streak}-day streak
               </span>
             )}
-            {activeWeek && totalMins > 0 && <span>{formatDuration(totalMins)} screen time</span>}
+            {activeWeek && totalMins > 0 && <span>{formatDuration(totalMins)} estimated</span>}
             <span className="text-link">See stats →</span>
           </div>
         </div>

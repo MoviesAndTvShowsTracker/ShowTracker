@@ -11,10 +11,10 @@ export default function GenreBreakdown({ title, subtitle, items, compact = false
   const gap = compact ? 'space-y-1.5' : 'space-y-2';
 
   return (
-    <div className="h-full rounded-xl border border-border/40 bg-surface-raised/20 p-3">
-      <div className="mb-2.5">
+    <div className="h-full rounded-2xl border border-border/40 bg-surface/70 p-4">
+      <div className="mb-3">
         <p className="text-sm font-semibold leading-tight text-ink-bright">{title}</p>
-        {subtitle && <p className="text-[10px] text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-[10px] text-muted">{subtitle}</p>}
       </div>
       <div className={gap}>
         {items.map((genre) => (

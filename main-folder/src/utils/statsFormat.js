@@ -20,7 +20,9 @@ export function formatCount(n) {
 
 export function formatShortDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // Date-only keys (YYYY-MM-DD) should not shift by timezone
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso;
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /** True when an ISO date (YYYY-MM-DD) is after today in local time. */
@@ -54,6 +56,57 @@ export function formatLanguage(code) {
 export function formatMemberSince(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** Local calendar day as YYYY-MM-DD, free of UTC drift. */
+export function toDayKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function todayKey() {
+  return toDayKey(new Date());
+}
+
+export function addDays(dayKey, delta) {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  return toDayKey(date);
+}
+
+/** Monday of the week containing dayKey. */
+export function mondayOf(dayKey) {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return addDays(dayKey, -((date.getDay() + 6) % 7));
+}
+
+export function formatDayLabel(dayKey, options) {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(
+    'en-US',
+    options || { weekday: 'short', month: 'short', day: 'numeric' }
+  );
+}
+
+export function formatMonthLabel(monthKey, withYear = false) {
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', {
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  });
+}
+
+/** Year-over-year change, or null when there is nothing to compare against. */
+export function formatDelta(current, previous) {
+  if (!previous || previous <= 0 || !current) return null;
+  const change = Math.round(((current - previous) / previous) * 100);
+  if (Math.abs(change) < 1) return { text: 'about the same', direction: 'flat' };
+  return {
+    text: `${change > 0 ? '+' : ''}${change}%`,
+    direction: change > 0 ? 'up' : 'down',
+  };
 }
 
 /** ISO week number and year for a date (week starts Monday). */

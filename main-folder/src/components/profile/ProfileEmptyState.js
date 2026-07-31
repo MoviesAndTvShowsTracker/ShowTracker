@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bookmark, Check, Film, Heart, Sparkles } from 'lucide-react';
+import { Check, Film, Heart, Sparkles } from 'lucide-react';
 import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
 import PosterRail from '../ui/PosterRail';
 import PosterTile from '../ui/PosterTile';
@@ -8,22 +8,22 @@ import PosterTile from '../ui/PosterTile';
 const STEPS = [
   {
     icon: Film,
-    title: 'Pick a film or show',
-    text: 'Browse trending titles or search the catalog.',
+    title: 'Browse',
+    text: 'Find a film or show worth tracking.',
     to: '/movies',
     label: 'Browse films',
   },
   {
-    icon: Heart,
-    title: 'Heart TV shows',
-    text: 'Favoriting a show adds it to your watched TV list automatically.',
+    icon: Check,
+    title: 'Log it',
+    text: 'Mark watched — films and episodes become your diary.',
     to: '/tv',
     label: 'Browse TV',
   },
   {
-    icon: Check,
-    title: 'Log films you watch',
-    text: 'Mark films watched and build your diary over time.',
+    icon: Heart,
+    title: 'Save favorites',
+    text: 'Heart titles you love so they stay easy to find.',
     to: '/movies',
     label: 'Start logging',
   },
@@ -48,7 +48,7 @@ export default function ProfileEmptyState({ name }) {
 
   return (
     <div className="space-y-10 md:space-y-12">
-      <section className="glass-card animate-fade-up relative overflow-hidden p-6 opacity-0 sm:p-8 md:p-10">
+      <section className="glass-card animate-fade-up relative overflow-hidden p-6 opacity-0 sm:p-8">
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full opacity-30 blur-3xl"
           style={{ background: 'var(--bg-glow-1)' }}
@@ -62,8 +62,7 @@ export default function ProfileEmptyState({ name }) {
             Your diary is ready for its first entry
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
-            Track films and TV, save favorites, and queue what to watch next. Heart a TV show and
-            it&apos;s added to watched TV — films get logged with one tap.
+            Log what you watch, save favorites, and build a personal screening room over time.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/movies" className="btn-primary">
@@ -99,29 +98,6 @@ export default function ProfileEmptyState({ name }) {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-2 sm:gap-3">
-        {[
-          { icon: Heart, label: 'Favorite films', desc: 'Heart films you love', to: '/movies' },
-          { icon: Check, label: 'Watched films', desc: 'Log viewing history', to: '/movies' },
-          { icon: Heart, label: 'Favorite TV', desc: 'Also adds to watched TV', to: '/tv' },
-          { icon: Bookmark, label: 'Watchlists', desc: 'Queue what\'s next', to: '/movies' },
-        ].map(({ icon: Icon, label, desc, to }) => (
-          <Link
-            key={label}
-            to={to}
-            className="glass-card group flex items-center gap-3 p-4 transition-all hover:border-accent/30 hover:scale-[1.01] cursor-pointer"
-          >
-            <span className="inline-flex rounded-xl bg-accent/10 p-2.5 text-accent transition-colors group-hover:bg-accent/15">
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink-bright">{label}</p>
-              <p className="text-xs text-muted">{desc}</p>
-            </div>
-          </Link>
-        ))}
-      </section>
-
       <PosterRail title="Trending films — tap to start" actionTo="/movies">
         {trendingLoading
           ? [1, 2, 3, 4].map((item) => (
@@ -132,16 +108,16 @@ export default function ProfileEmptyState({ name }) {
               />
             ))
           : trendingFilms.map(
-          (m) =>
-            m.poster_path && (
-              <PosterTile
-                key={m.id}
-                to={`/movies/${m.id}`}
-                poster={m.poster_path}
-                title={m.title}
-                imageUrlPrefix={`${IMAGE_URL}w342`}
-              />
-            )
+              (m) =>
+                m.poster_path && (
+                  <PosterTile
+                    key={m.id}
+                    to={`/movies/${m.id}`}
+                    poster={m.poster_path}
+                    title={m.title}
+                    imageUrlPrefix={`${IMAGE_URL}w342`}
+                  />
+                )
             )}
       </PosterRail>
 
@@ -155,16 +131,16 @@ export default function ProfileEmptyState({ name }) {
               />
             ))
           : trendingTv.map(
-          (s) =>
-            s.poster_path && (
-              <PosterTile
-                key={s.id}
-                to={`/tv/${s.id}`}
-                poster={s.poster_path}
-                title={s.name}
-                imageUrlPrefix={`${IMAGE_URL}w342`}
-              />
-            )
+              (s) =>
+                s.poster_path && (
+                  <PosterTile
+                    key={s.id}
+                    to={`/tv/${s.id}`}
+                    poster={s.poster_path}
+                    title={s.name}
+                    imageUrlPrefix={`${IMAGE_URL}w342`}
+                  />
+                )
             )}
       </PosterRail>
     </div>

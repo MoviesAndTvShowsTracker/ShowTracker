@@ -240,6 +240,46 @@
     flex-shrink: 0;
   }
 
+  /* Stats diary — quirk tickets scroll as a rail on small screens */
+  .stats-quirk-rail {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .stats-quirk-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stats-quirk {
+    width: min(72vw, 16.5rem);
+  }
+
+  @media (min-width: 640px) {
+    .stats-quirk {
+      width: auto;
+    }
+  }
+
+  .stats-diary .animate-soft-rise {
+    animation-fill-mode: both;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .rule-label {
+    @apply flex items-center gap-3;
+  }
+
+  .rule-label::after {
+    content: '';
+    @apply h-px flex-1 bg-border/70;
+  }
+
   .poster-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));

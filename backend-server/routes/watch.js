@@ -38,14 +38,24 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
     });
 
     const runtime = await ensureMovieRuntime(req.body.movieId, req.body.movieRuntime);
+    const watchedAt = req.body.watchedAt || new Date();
+    const movieRuntime = runtime > 0 ? String(runtime) : req.body.movieRuntime || '';
 
-    const watch = new Watch({
-      ...req.body,
-      userFrom: req.user._id,
-      movieRuntime: runtime > 0 ? String(runtime) : req.body.movieRuntime || '',
-      watchedAt: req.body.watchedAt || new Date(),
-    });
-    await watch.save();
+    const watch = await Watch.findOneAndUpdate(
+      { movieId: req.body.movieId, userFrom: req.user._id },
+      {
+        $set: {
+          movieId: req.body.movieId,
+          movieTitle: req.body.movieTitle,
+          movieImage: req.body.movieImage,
+          moviePosterImage: req.body.moviePosterImage,
+          movieRuntime,
+          watchedAt,
+          userFrom: req.user._id,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
     await invalidateUserStats(req.user._id);
     res.status(200).json({ success: true, watchedAt: watch.watchedAt || null });
   } catch (err) {

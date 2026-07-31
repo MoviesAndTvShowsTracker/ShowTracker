@@ -1,251 +1,88 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Award,
-  Clapperboard,
-  Clock,
-  Film,
-  Flame,
-  Layers,
-  PauseCircle,
-  PlayCircle,
-  RefreshCw,
-  Star,
-  Timer,
-  TrendingUp,
-  Tv,
-} from 'lucide-react';
-import api from '../../api/axios';
-import { tvLibraryPath } from '../../config/tvLibrary';
+import { Clapperboard, RefreshCw } from 'lucide-react';
 import {
   formatCount,
+  formatDelta,
   formatDuration,
   formatMemberSince,
-  formatShortDate,
 } from '../../utils/statsFormat';
-import { readSessionStats, writeSessionStats } from '../../utils/statsCache';
 import PageTitle from '../../utils/PageTitle';
 import BackNav from '../ui/BackNav';
-import WeeklyTrendChart from './stats/WeeklyTrendChart';
+import useDashboardStats from '../../hooks/useDashboardStats';
+import RhythmExplorer from './stats/RhythmExplorer';
 import GenreBreakdown from './stats/GenreBreakdown';
 import DecadeChart from './stats/DecadeChart';
+import { RuntimeCoverageNote, TimeSplitBar } from './stats/StatsPrimitives';
+import { buildQuirkTickets, screenDaysLine, storyInsight } from './stats/statsStory';
 
-function Section({ title, description, children, action }) {
+function QuirkTicket({ ticket }) {
   return (
-    <section className="glass-card overflow-hidden !p-0">
-      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-3 py-3 sm:px-5 sm:py-4">
-        <div className="min-w-0">
-          <h2 className="section-title text-base sm:text-lg">{title}</h2>
-          {description && (
-            <p className="mt-1 text-xs text-muted sm:text-sm">{description}</p>
-          )}
-        </div>
-        {action}
-      </div>
-      <div className="space-y-3 p-3 sm:space-y-4 sm:p-5">{children}</div>
-    </section>
-  );
-}
-
-/** Letterboxd-style dense stat cell — works in 3-up grids on mobile */
-function StatCell({ label, value, sub, icon: Icon }) {
-  return (
-    <div className="rounded-lg border border-border/45 bg-surface-raised/30 px-2 py-2 text-center sm:rounded-xl sm:px-2.5 sm:py-2.5">
-      {Icon && (
-        <Icon className="mx-auto mb-0.5 h-3 w-3 text-accent/80 sm:mb-1 sm:h-3.5 sm:w-3.5" aria-hidden />
-      )}
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted sm:text-[11px]">
-        {label}
+    <article className="stats-quirk shrink-0 snap-start rounded-2xl border border-border/50 bg-surface/70 p-4 sm:min-w-0 sm:snap-none">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent">{ticket.kicker}</p>
+      <p className="tnum mt-2 font-serif text-2xl leading-none text-ink-bright sm:text-[1.85rem]">
+        {ticket.headline}
       </p>
-      <p className="mt-0.5 font-serif text-base leading-none text-ink-bright sm:text-lg">{value}</p>
-      {sub && (
-        <p className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-muted-dim sm:line-clamp-2 sm:text-xs">
-          {sub}
-        </p>
-      )}
-    </div>
+      <p className="mt-2 text-sm leading-snug text-ink">{ticket.line}</p>
+      {ticket.meta && <p className="mt-2 text-[11px] text-muted">{ticket.meta}</p>}
+    </article>
   );
 }
 
-function StatStrip({ items, className = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' }) {
-  return (
-    <div className={`grid gap-1.5 sm:gap-2 ${className}`}>
-      {items.map((item) => (
-        <StatCell key={item.label} {...item} />
-      ))}
-    </div>
-  );
-}
-
-function TimeSplitBar({ filmShare, tvShare, filmMins, tvMins }) {
-  if (!filmShare && !tvShare) {
-    return <p className="text-xs text-muted sm:text-sm">Log episodes or films to see your split.</p>;
-  }
-  return (
-    <div className="rounded-xl border border-border/30 bg-canvas/40 p-3 sm:p-4">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-muted">Film vs TV</p>
-      <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-surface-raised sm:mt-3 sm:h-3">
-        {filmShare > 0 && <div className="bg-link/80" style={{ width: `${filmShare}%` }} />}
-        {tvShare > 0 && <div className="bg-accent" style={{ width: `${tvShare}%` }} />}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted sm:text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-link/80" />
-          Films {filmShare}% · {formatDuration(filmMins)}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-accent" />
-          TV {tvShare}% · {formatDuration(tvMins)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function FilmHighlight({ film, label }) {
-  if (!film) return null;
+function SpotlightLink({ to, kicker, title, meta, tone = 'accent' }) {
+  if (!title) return null;
+  const toneClass = tone === 'link' ? 'text-link' : 'text-accent';
+  const hoverClass = tone === 'link' ? 'hover:border-link/40' : 'hover:border-accent/40';
   return (
     <Link
-      to={`/movies/${film.movieId}`}
-      className="block rounded-xl border border-border/40 bg-surface-raised/25 p-3 transition-colors hover:border-link/40 cursor-pointer sm:p-4"
+      to={to}
+      className={`focus-ring pressable block rounded-2xl border border-border/50 bg-surface-raised/30 p-4 transition-colors cursor-pointer ${hoverClass}`}
     >
-      <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{label}</p>
-      <p className="mt-1.5 line-clamp-2 font-serif text-base leading-snug text-ink-bright sm:text-lg">
-        {film.movieTitle}
-      </p>
-      <p className="mt-0.5 text-xs font-medium text-link sm:text-sm">{formatDuration(film.minutes)}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{kicker}</p>
+      <p className="mt-2 line-clamp-2 font-serif text-xl leading-snug text-ink-bright">{title}</p>
+      {meta && <p className={`mt-2 text-xs font-semibold ${toneClass}`}>{meta}</p>}
     </Link>
   );
 }
 
 export default function ProfileStatsPage() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-  const [fromCache, setFromCache] = useState(false);
-
-  const loadStats = useCallback((force = false) => {
-    const controller = new AbortController();
-    const url = force ? '/api/stats/dashboard?refresh=1' : '/api/stats/dashboard';
-    let hasLocalData = false;
-
-    if (!force) {
-      const session = readSessionStats();
-      if (session?.stats) {
-        hasLocalData = true;
-        setStats(session.stats);
-        setFromCache(true);
-        setLoading(false);
-      } else {
-        setLoading(true);
-      }
-    } else {
-      setRefreshing(true);
-    }
-
-    api
-      .get(url, { signal: controller.signal, timeout: 90000 })
-      .then((r) => {
-        if (r.data.success) {
-          setStats(r.data.stats);
-          writeSessionStats(r.data.stats, r.data.builtAt);
-          setFromCache(Boolean(r.data.cached));
-          setError('');
-        } else if (!hasLocalData) {
-          setError('Could not load stats.');
-        }
-      })
-      .catch((err) => {
-        if (err.code === 'ERR_CANCELED') return;
-        if (!hasLocalData) {
-          setError(
-            err.code === 'ECONNABORTED'
-              ? 'Stats took too long — tap refresh to try again.'
-              : 'Could not load stats.'
-          );
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-        setRefreshing(false);
-      });
-
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    const cleanup = loadStats(false);
-    return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { stats, loading, refreshing, error, fromCache, refresh } = useDashboardStats();
 
   const o = stats?.overview;
+  const year = stats?.year;
   const lib = stats?.library;
   const act = stats?.activity;
   const films = stats?.films;
   const taste = stats?.taste;
+  const quality = stats?.quality;
+  const facts = stats?.funFacts;
 
-  const tvActivityCells = [
-    {
-      label: 'This week',
-      value: formatCount(act?.episodesThisWeek),
-      sub: formatDuration(act?.tvMinsThisWeek),
-      icon: TrendingUp,
-    },
-    {
-      label: 'Month',
-      value: formatCount(act?.episodesThisMonth),
-      sub: formatDuration(act?.tvMinsThisMonth),
-    },
-    {
-      label: 'Year',
-      value: formatCount(act?.episodesThisYear),
-      sub: 'episodes',
-    },
-    {
-      label: 'TV time',
-      value: formatDuration(o?.tvMins),
-      sub: 'all time',
-      icon: Clock,
-    },
-    {
-      label: 'Last',
-      value: act?.lastWatchedAt ? formatShortDate(act.lastWatchedAt).split(',')[0] : '—',
-      sub: 'watched',
-    },
-    ...(act?.busiestDay
-      ? [
-          {
-            label: 'Top day',
-            value: act.busiestDay.day.slice(0, 3),
-            sub: `${formatCount(act.busiestDay.count)} eps`,
-          },
-        ]
-      : []),
-  ];
+  const previousYearTotal = stats?.previousYear?.totalMins;
+  const delta = formatDelta(year?.totalMins, previousYearTotal);
+  const lastYearLabel = stats?.yearStart ? Number(stats.yearStart.slice(0, 4)) - 1 : null;
+  const quirks = buildQuirkTickets(stats);
+  const daysLine = screenDaysLine(o?.totalMins);
 
-  const libraryCells = [
-    { label: 'Watching', value: formatCount(lib?.watching), icon: PlayCircle },
-    { label: 'Paused', value: formatCount(lib?.stopped), icon: PauseCircle },
-    { label: 'Finished', value: formatCount(lib?.finished), icon: Award },
-    { label: 'Backlog', value: formatCount(lib?.backlog), icon: Layers },
-    { label: 'Caught up', value: formatCount(lib?.caughtUp), icon: Timer },
-  ];
+  const hasTaste =
+    taste?.available &&
+    (taste.tv?.genreByEpisodes?.length > 0 ||
+      taste.films?.genreByCount?.length > 0 ||
+      taste.films?.decades?.length > 0);
+
+  const isEmpty = !o?.episodeCount && !o?.filmCount && !(lib?.totalTracked > 0);
 
   return (
     <>
       <PageTitle title="Your stats" />
 
-      <div className="mx-auto max-w-content px-3 py-5 sm:px-6 sm:py-8 md:py-10">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
+        <div className="mb-5 flex items-center justify-between gap-3">
           <BackNav to="/profile" label="Back to profile" />
           {stats && (
             <button
               type="button"
               disabled={refreshing}
-              onClick={() => loadStats(true)}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-link hover:text-ink-bright disabled:opacity-50 cursor-pointer"
+              onClick={refresh}
+              className="focus-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-link hover:text-ink-bright disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
@@ -253,241 +90,219 @@ export default function ProfileStatsPage() {
           )}
         </div>
 
-        <header className="mb-6 sm:mb-8">
-          <p className="section-title text-accent">Your diary</p>
-          <h1 className="page-title mt-1.5 text-2xl sm:mt-2 sm:text-3xl">Stats</h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-            {stats?.memberSince && <span>Member since {formatMemberSince(stats.memberSince)}</span>}
-            {fromCache && stats && !refreshing && (
-              <span className="text-muted-dim">· Saved snapshot</span>
-            )}
-          </div>
-        </header>
-
         {loading && !stats ? (
           <div className="space-y-4">
             <div className="glass-card p-6 text-center">
               <p className="text-sm font-medium text-ink-bright">Crunching your stats…</p>
               <p className="mt-1.5 text-sm text-muted">First load can take a moment.</p>
             </div>
-            <div className="h-36 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="h-48 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="h-28 animate-pulse rounded-2xl bg-surface-raised" />
           </div>
         ) : error && !stats ? (
           <div className="glass-card p-8 text-center">
             <p className="text-sm text-muted">{error}</p>
-            <button type="button" onClick={() => loadStats(true)} className="btn-primary mt-4">
+            <button type="button" onClick={refresh} className="btn-primary mt-4">
               Try again
             </button>
           </div>
+        ) : isEmpty ? (
+          <div className="glass-card p-8 text-center">
+            <Clapperboard className="mx-auto h-8 w-8 text-accent/70" />
+            <p className="mt-3 font-serif text-lg text-ink-bright">Your stats start with one log</p>
+            <p className="mt-1.5 text-sm text-muted">
+              Mark an episode or a film watched and this page fills in.
+            </p>
+            <Link to="/tv" className="btn-primary mt-5 inline-flex">
+              Browse TV
+            </Link>
+          </div>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
-            <section className="glass-card overflow-hidden bg-gradient-to-br from-accent/10 via-surface to-surface p-4 sm:p-6">
-              <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-end">
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-accent sm:text-[10px]">
-                    Total screen time
+          <div className="stats-diary space-y-8 sm:space-y-10">
+            {/* Hero — one composition: story + time */}
+            <section className="animate-soft-rise relative overflow-hidden rounded-3xl border border-border/60 bg-surface/85 shadow-glass opacity-0">
+              <div
+                className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full opacity-40 blur-3xl"
+                style={{ background: 'var(--bg-glow-1)' }}
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-24 -left-10 h-48 w-48 rounded-full opacity-30 blur-3xl"
+                style={{ background: 'var(--bg-glow-2)' }}
+                aria-hidden
+              />
+
+              <div className="relative border-b border-border/50 px-5 py-5 sm:px-7 sm:py-6">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <p className="section-title text-accent">Your diary</p>
+                    <h1 className="page-title mt-1.5">Stats</h1>
+                  </div>
+                  <p className="text-xs text-muted">
+                    {stats?.memberSince && <>Member since {formatMemberSince(stats.memberSince)}</>}
+                    {fromCache && stats && !refreshing && (
+                      <span className="text-muted-dim"> · Saved snapshot</span>
+                    )}
                   </p>
-                  <p className="mt-2 font-serif text-3xl text-ink-bright sm:text-4xl lg:text-5xl">
+                </div>
+                <blockquote className="mt-5 max-w-3xl font-serif text-xl leading-snug text-ink-bright sm:text-2xl md:text-[1.7rem] md:leading-snug">
+                  {storyInsight(stats)}
+                </blockquote>
+              </div>
+
+              <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-10">
+                <div className="min-w-0">
+                  <p className="section-title">Estimated watch time</p>
+                  <p className="tnum mt-2 font-serif text-[3rem] leading-[0.95] tracking-tight text-ink-bright sm:text-6xl">
                     {formatDuration(o?.totalMins)}
                   </p>
-                  <div className="mt-4 grid grid-cols-4 gap-1.5 sm:gap-2">
-                    <StatCell label="Eps" value={formatCount(o?.episodeCount)} />
-                    <StatCell label="Shows" value={formatCount(o?.tvShowCount)} />
-                    <StatCell label="Films" value={formatCount(o?.filmCount)} />
-                    <StatCell
-                      label="Streak"
-                      value={act?.streak ? `${act.streak}d` : '—'}
-                      sub={act?.streak ? 'days' : undefined}
+                  {daysLine && <p className="mt-2 text-sm text-muted">{daysLine}</p>}
+                  <p className="mt-3 text-sm text-ink">
+                    {[
+                      o?.filmCount ? `${formatCount(o.filmCount)} films` : null,
+                      o?.episodeCount ? `${formatCount(o.episodeCount)} episodes` : null,
+                      o?.tvShowCount ? `${formatCount(o.tvShowCount)} shows` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                  <div className="mt-5 max-w-md">
+                    <TimeSplitBar
+                      filmShare={o?.filmShare}
+                      tvShare={o?.tvShare}
+                      filmMins={o?.filmMins}
+                      tvMins={o?.tvMins}
                     />
                   </div>
                 </div>
-                <TimeSplitBar
-                  filmShare={o?.filmShare}
-                  tvShare={o?.tvShare}
-                  filmMins={o?.filmMins}
-                  tvMins={o?.tvMins}
-                />
+
+                <div className="flex min-w-0 flex-col justify-between gap-5 rounded-2xl border border-border/50 bg-canvas/40 p-4 sm:p-5">
+                  <div>
+                    <p className="section-title">This year so far</p>
+                    <p className="tnum mt-2 font-serif text-4xl leading-none text-ink-bright">
+                      {formatDuration(year?.totalMins)}
+                    </p>
+                    <p className="mt-2 text-sm text-muted">
+                      {formatCount(year?.filmCount)} films · {formatCount(year?.episodeCount)}{' '}
+                      episodes
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {delta && lastYearLabel && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          delta.direction === 'down'
+                            ? 'bg-surface-raised/80 text-muted'
+                            : 'bg-accent/12 text-accent'
+                        }`}
+                      >
+                        {delta.text} vs {lastYearLabel}
+                      </span>
+                    )}
+                    {act?.activeDaysThisYear > 0 && (
+                      <span className="inline-flex items-center rounded-full bg-link/10 px-2.5 py-1 text-[11px] font-semibold text-link">
+                        {formatCount(act.activeDaysThisYear)} days logged
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {quality?.filmRuntimeMissing > 0 && (
+                <div className="relative px-5 pb-5 sm:px-7">
+                  <RuntimeCoverageNote quality={quality} films={films} />
+                </div>
+              )}
             </section>
 
-            <Section
-              title="TV"
-              description="Activity & library"
-              action={
-                <Link
-                  to={tvLibraryPath('watching')}
-                  className="shrink-0 text-xs font-semibold text-link hover:text-ink-bright cursor-pointer"
-                >
-                  Library
-                </Link>
-              }
-            >
-              <StatStrip items={tvActivityCells} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" />
-              <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
-                <WeeklyTrendChart data={act?.weeklyTrend} weeksToShow={8} />
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Library</p>
-                  <StatStrip items={libraryCells} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
+            {/* Quirks — the memorable, weird bits */}
+            {quirks.length > 0 && (
+              <section className="animate-soft-rise space-y-3 opacity-0 [animation-delay:60ms]">
+                <div className="flex items-end justify-between gap-3">
+                  <h2 className="rule-label section-title">From the margins</h2>
+                  <p className="hidden text-xs text-muted sm:block">The odd details worth keeping</p>
                 </div>
-              </div>
-            </Section>
-
-            <Section title="Films">
-              {films?.count > 0 && films?.withRuntime < films?.count && (
-                <p className="-mt-1 rounded-lg border border-border/40 bg-surface-raised/30 px-3 py-2 text-[11px] text-muted">
-                  Runtime for {films.withRuntime}/{films.count} films
-                  {films.runtimeBackfilled > 0 ? ` · ${films.runtimeBackfilled} updated` : ''}
-                </p>
-              )}
-              <StatStrip
-                className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-                items={[
-                  { label: 'Total', value: formatCount(films?.count), icon: Film },
-                  {
-                    label: 'Time',
-                    value: formatDuration(films?.filmMins),
-                    sub: `${films?.shareOfScreenTime || 0}% split`,
-                    icon: Clock,
-                  },
-                  {
-                    label: 'Year',
-                    value: formatCount(films?.thisYear),
-                    sub: formatDuration(films?.filmMinsThisYear),
-                  },
-                  {
-                    label: 'Month',
-                    value: formatCount(films?.thisMonth),
-                    sub: formatDuration(films?.filmMinsThisMonth),
-                  },
-                  {
-                    label: 'Week',
-                    value: formatCount(films?.thisWeek),
-                    sub: formatDuration(films?.filmMinsThisWeek),
-                  },
-                  {
-                    label: 'Avg',
-                    value: films?.avgRuntime ? formatDuration(films.avgRuntime) : '—',
-                    sub: 'per film',
-                  },
-                ]}
-              />
-              <div className="grid gap-3 lg:grid-cols-2">
-                <WeeklyTrendChart
-                  data={films?.weeklyTrend}
-                  countLabel="Films"
-                  weeksToShow={8}
-                  emptyMessage="No films in the last 8 weeks."
-                />
-                {(films?.longest || films?.shortest) && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <FilmHighlight film={films.longest} label="Longest" />
-                    <FilmHighlight film={films.shortest} label="Shortest" />
-                  </div>
-                )}
-              </div>
-            </Section>
-
-            {taste?.available &&
-              (taste.tv?.genreByEpisodes?.length > 0 ||
-                taste.films?.genreByCount?.length > 0 ||
-                taste.films?.decades?.length > 0) && (
-                <Section title="Your taste" description="Genres & eras">
-                  {stats?.metaPending && (
-                    <p className="-mt-1 rounded-lg border border-border/40 bg-surface-raised/30 px-3 py-2 text-[11px] text-muted">
-                      More taste data fills in when you refresh after logging activity.
-                    </p>
-                  )}
-                  {(taste.tv?.avgRating > 0 || taste.films?.avgRating > 0) && (
-                    <div className="grid grid-cols-2 gap-1.5 lg:max-w-md">
-                      {taste.tv?.avgRating > 0 && (
-                        <StatCell
-                          label="TV score"
-                          value={`${taste.tv.avgRating}`}
-                          sub="/ 10 TMDB"
-                          icon={Star}
-                        />
-                      )}
-                      {taste.films?.avgRating > 0 && (
-                        <StatCell
-                          label="Film score"
-                          value={`${taste.films.avgRating}`}
-                          sub="/ 10 TMDB"
-                          icon={Star}
-                        />
-                      )}
-                    </div>
-                  )}
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    <GenreBreakdown
-                      compact
-                      title="TV genres"
-                      subtitle="By episodes"
-                      items={taste.tv?.genreByEpisodes}
-                    />
-                    <GenreBreakdown
-                      compact
-                      title="Film genres"
-                      subtitle="By count"
-                      items={taste.films?.genreByCount}
-                    />
-                    <GenreBreakdown
-                      compact
-                      title="Film genres"
-                      subtitle="By watch time"
-                      items={taste.films?.genreByTime}
-                    />
-                    <DecadeChart decades={taste.films?.decades} />
-                  </div>
-                </Section>
-              )}
-
-            {(stats?.funFacts?.biggestBinge || stats?.milestones?.length > 0) && (
-              <Section title="Highlights">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {stats.funFacts?.biggestBinge?.count > 1 && (
-                    <p className="flex items-start gap-2 rounded-lg border border-border/40 bg-surface-raised/25 px-3 py-2 text-[11px] text-muted sm:text-xs">
-                      <Flame className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-                      <span>
-                        Biggest binge:{' '}
-                        <span className="font-medium text-ink">
-                          {stats.funFacts.biggestBinge.count} eps ·{' '}
-                          {formatShortDate(stats.funFacts.biggestBinge.date)}
-                        </span>
-                      </span>
-                    </p>
-                  )}
-                  {stats.funFacts?.avgEpisodeMins > 0 && (
-                    <p className="flex items-start gap-2 rounded-lg border border-border/40 bg-surface-raised/25 px-3 py-2 text-[11px] text-muted sm:text-xs">
-                      <Tv className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-                      Avg episode:{' '}
-                      <span className="font-medium text-ink">{stats.funFacts.avgEpisodeMins} min</span>
-                    </p>
-                  )}
+                <div className="stats-quirk-rail -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+                  {quirks.map((ticket) => (
+                    <QuirkTicket key={ticket.key} ticket={ticket} />
+                  ))}
                 </div>
-                {stats.milestones?.length > 0 && (
-                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
-                    {stats.milestones.map((m) => (
-                      <span
-                        key={m.key}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-2.5 py-1.5 text-[10px] font-medium leading-snug text-accent sm:text-[11px]"
-                      >
-                        <Award className="h-3 w-3 shrink-0" />
-                        {m.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Section>
+              </section>
             )}
 
-            {!o?.episodeCount && !o?.filmCount && (
-              <div className="glass-card p-8 text-center">
-                <Clapperboard className="mx-auto h-8 w-8 text-accent/70" />
-                <p className="mt-3 font-serif text-lg text-ink-bright">Stats appear as you log</p>
-                <Link to="/tv" className="btn-primary mt-4 inline-flex">
-                  Browse TV
-                </Link>
-              </div>
+            {/* Rhythm — interactive, fits any width */}
+            <section className="animate-soft-rise opacity-0 [animation-delay:120ms]">
+              <RhythmExplorer
+                months={act?.monthlyTrend}
+                days={act?.dailyActivity}
+                streak={act?.streak}
+              />
+            </section>
+
+            {/* Spotlight — titles that define the diary */}
+            {(facts?.mostWatchedShow?.tvTitle || films?.longest || films?.shortest) && (
+              <section className="animate-soft-rise space-y-3 opacity-0 [animation-delay:160ms]">
+                <h2 className="rule-label section-title">On the marquee</h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {facts?.mostWatchedShow?.tvTitle && (
+                    <div className="sm:col-span-2 lg:col-span-1">
+                      <SpotlightLink
+                        to={`/tv/${facts.mostWatchedShow.tvId}`}
+                        kicker="Most watched show"
+                        title={facts.mostWatchedShow.tvTitle}
+                        meta={`${formatCount(facts.mostWatchedShow.episodeCount)} episodes${
+                          facts.mostWatchedShow.minutes
+                            ? ` · ${formatDuration(facts.mostWatchedShow.minutes)}`
+                            : ''
+                        }`}
+                      />
+                    </div>
+                  )}
+                  <SpotlightLink
+                    to={`/movies/${films?.longest?.movieId}`}
+                    kicker="Longest film"
+                    title={films?.longest?.movieTitle}
+                    meta={formatDuration(films?.longest?.minutes)}
+                    tone="link"
+                  />
+                  <SpotlightLink
+                    to={`/movies/${films?.shortest?.movieId}`}
+                    kicker="Shortest film"
+                    title={films?.shortest?.movieTitle}
+                    meta={formatDuration(films?.shortest?.minutes)}
+                    tone="link"
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* Taste — compact, not a wall of charts */}
+            {hasTaste && (
+              <section className="animate-soft-rise space-y-3 opacity-0 [animation-delay:200ms]">
+                <h2 className="rule-label section-title">Taste</h2>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <GenreBreakdown
+                    compact
+                    title="TV genres"
+                    subtitle="By episodes logged"
+                    items={(taste.tv?.genreByEpisodes || []).slice(0, 5)}
+                  />
+                  <GenreBreakdown
+                    compact
+                    title="Film genres"
+                    subtitle="By title count"
+                    items={(taste.films?.genreByCount || []).slice(0, 5)}
+                  />
+                </div>
+                {taste.films?.decades?.length > 0 && (
+                  <DecadeChart decades={taste.films.decades} />
+                )}
+                {stats?.metaPending && (
+                  <p className="text-[11px] text-muted-dim">
+                    More taste data fills in each time you refresh after logging.
+                  </p>
+                )}
+              </section>
             )}
           </div>
         )}

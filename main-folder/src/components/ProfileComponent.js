@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Pencil, Phone, Settings, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import api from '../api/axios';
 import { IMAGE_URL } from '../config/keys';
 import { profileListPath } from '../config/profileLists';
 import { useAuth } from '../context/AuthContext';
 import PageTitle from '../utils/PageTitle';
-import Dialog from './ui/Dialog';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 import ProfileEmptyState from './profile/ProfileEmptyState';
 import ProfileStats from './profile/ProfileStats';
 import TvLibrarySummary from './profile/TvLibrarySummary';
-import ProfileJumpNav from './profile/ProfileJumpNav';
 import BackNav from './ui/BackNav';
 import useConfirmDialog from '../hooks/useConfirmDialog';
+import useDashboardStats from '../hooks/useDashboardStats';
+import { formatMemberSince } from '../utils/statsFormat';
 import {
   favoriteRemoveConfirm,
   watchedFilmRemoveConfirm,
@@ -40,22 +40,21 @@ const emptyTv = (browse) => (
 );
 
 export default function Profile() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { confirm, confirmDialog } = useConfirmDialog();
   const [favoritedMovies, setFavoritedMovies] = useState([]);
   const [favoritedShows, setFavoritedShows] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [watchedShows, setWatchedShows] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
-  const [phoneDialog, setPhoneDialog] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [showLogout, setShowLogout] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [tvStats, setTvStats] = useState({ episodes: 0, tvMins: 0, tvShowCount: 0 });
-  const [tvStatsLoading, setTvStatsLoading] = useState(false);
+
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+  } = useDashboardStats({ enabled: Boolean(user?.id) });
 
   const fetchFavoriteMovies = () =>
     api
@@ -79,14 +78,7 @@ export default function Profile() {
       .then((r) => {
         if (r.data.success) setWatchedMovies(r.data.watch || []);
       })
-      .catch(() =>
-        api
-          .post('/api/favorite/getFavoriteMovie', {})
-          .then((r) => {
-            if (r.data.success) setWatchedMovies(r.data.favorites || []);
-          })
-          .catch(() => setWatchedMovies([]))
-      );
+      .catch(() => setWatchedMovies([]));
 
   const fetchWatchedShows = () =>
     api
@@ -94,14 +86,7 @@ export default function Profile() {
       .then((r) => {
         if (r.data.success) setWatchedShows(r.data.watch || []);
       })
-      .catch(() =>
-        api
-          .post('/api/tv/favorite/getFavoriteMovie', {})
-          .then((r) => {
-            if (r.data.success) setWatchedShows(r.data.favorites || []);
-          })
-          .catch(() => setWatchedShows([]))
-      );
+      .catch(() => setWatchedShows([]));
 
   useEffect(() => {
     if (!user?.id) return;
@@ -132,69 +117,20 @@ export default function Profile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const submitPhone = (e) => {
-    e.preventDefault();
-    if (!/^\d{10}$/.test(inputValue)) {
-      setPhoneError('Enter a valid 10-digit number.');
-      return;
-    }
-    api.post('/users/updateOrAddPhone', { inputValue, userId: user.id }).then((r) => {
-      if (r.data.success) {
-        setInputValue('');
-        setPhoneDialog(false);
-        setPhoneError('');
-        api.get(`/users/getUser/${user.id}`).then((res) => {
-          if (res.data.success) setUserInfo(res.data.found);
-        });
-      }
-    });
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    setShowLogout(false);
-    navigate('/');
-  };
-
-  const joinDate = userInfo?.createdAt
-    ? new Date(userInfo.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : '';
-
   const profileDisplay = useMemo(() => {
     if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };
     const firstName = userInfo.firstName?.trim() || '';
     const email = userInfo.email || '';
     const title = firstName || (email ? email.split('@')[0] : userInfo.username) || 'You';
+    const since = userInfo.createdAt ? formatMemberSince(userInfo.createdAt) : '';
 
     return {
       title,
-      subtitle: email ? `${email} · Member since ${joinDate}` : `Member since ${joinDate}`,
+      subtitle: since ? `Member since ${since}` : email,
+      email,
       avatarLetter: (firstName || title).charAt(0).toUpperCase() || '?',
     };
-  }, [userInfo, joinDate]);
-
-  const watchedMins = useMemo(
-    () => watchedMovies.reduce((sum, m) => sum + (parseInt(m.movieRuntime, 10) || 0), 0),
-    [watchedMovies]
-  );
-
-  useEffect(() => {
-    if (!user?.id) return;
-    setTvStatsLoading(true);
-    api
-      .get('/api/tv/episodes/stats')
-      .then((r) => {
-        if (r.data.success) {
-          setTvStats({
-            episodes: r.data.episodeCount || 0,
-            tvMins: r.data.tvMins || 0,
-            tvShowCount: r.data.tvShowCount || 0,
-          });
-        }
-      })
-      .catch(() => setTvStats({ episodes: 0, tvMins: 0, tvShowCount: 0 }))
-      .finally(() => setTvStatsLoading(false));
-  }, [user?.id]);
+  }, [userInfo]);
 
   const isProfileEmpty = useMemo(
     () =>
@@ -266,7 +202,7 @@ export default function Profile() {
 
         {loading && !userInfo ? (
           <div className="space-y-6">
-            <div className="h-24 animate-pulse rounded-2xl bg-surface-raised" />
+            <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />
             <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />
           </div>
         ) : (
@@ -277,115 +213,76 @@ export default function Profile() {
                   {loadError}
                 </p>
               )}
-              <header className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-xl font-bold text-on-accent sm:h-16 sm:w-16 sm:text-2xl">
+
+              <header className="animate-soft-rise flex items-center gap-4 opacity-0">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent font-serif text-2xl font-semibold text-on-accent sm:h-16 sm:w-16 sm:text-3xl">
                   {profileDisplay.avatarLetter}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <h1 className="page-title">{profileDisplay.title}</h1>
-                    <Link
-                      to="/settings"
-                      className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer sm:flex"
-                      aria-label="Settings"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  <p className="mt-1 text-sm text-muted">{profileDisplay.subtitle}</p>
-                  <div className="mt-2 flex items-center gap-2 text-sm text-muted">
-                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                    <span>{userInfo.phonenumber || 'No phone'}</span>
-                    <button
-                      type="button"
-                      onClick={() => setPhoneDialog(true)}
-                      className="pressable text-link hover:text-ink-bright cursor-pointer"
-                      aria-label="Edit phone"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  <p className="section-title text-accent">Your diary</p>
+                  <h1 className="page-title mt-1 truncate">{profileDisplay.title}</h1>
+                  <p className="mt-1 truncate text-sm text-muted">{profileDisplay.subtitle}</p>
                 </div>
-              </header>
-
-              <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
                 <Link
                   to="/settings"
-                  className="pressable flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                  className="focus-ring pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent cursor-pointer"
+                  aria-label="Settings"
                 >
-                  <Settings className="h-4 w-4 shrink-0" />
-                  Settings
+                  <Settings className="h-4 w-4" />
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setShowLogout(true)}
-                  className="focus-ring pressable flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-3 text-sm font-medium text-ink transition-colors hover:border-danger/40 hover:text-danger cursor-pointer"
-                >
-                  <LogOut className="h-4 w-4 shrink-0" />
-                  Sign out
-                </button>
-              </div>
+              </header>
 
-              <ProfileJumpNav showLists={!isProfileEmpty} />
+              <ProfileStats stats={stats} loading={statsLoading} error={statsError} />
 
-              <div id="profile-stats" className="scroll-mt-24">
-                <ProfileStats
-                  filmCount={watchedMovies.length}
-                  tvCount={tvStats.tvShowCount || watchedShows.length}
-                  episodeCount={tvStats.episodes}
-                  filmMins={watchedMins}
-                  tvMins={tvStats.tvMins}
-                  tvStatsLoading={tvStatsLoading}
-                />
-              </div>
-
-              <div id="profile-library" className="scroll-mt-24">
-                <TvLibrarySummary />
-              </div>
+              <TvLibrarySummary />
 
               {isProfileEmpty ? (
                 <ProfileEmptyState name={profileDisplay.title} />
               ) : (
                 <div className="space-y-10 md:space-y-12">
-                  <div id="profile-films" className="scroll-mt-24 space-y-10 md:space-y-12">
-                    <PosterRail
-                      title="Favorite films"
-                      actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
-                      actionLabel="View all"
-                      empty={emptyFilm('Browse films')}
-                    >
-                      {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m)))}
-                    </PosterRail>
+                  {(favoritedMovies.length > 0 || watchedMovies.length > 0) && (
+                    <div className="space-y-10 md:space-y-12">
+                      <PosterRail
+                        title="Favorite films"
+                        actionTo={favoritedMovies.length ? profileListPath('favorite-films') : undefined}
+                        actionLabel="View all"
+                        empty={emptyFilm('Browse films')}
+                      >
+                        {favoritedMovies.map((m) => filmTile(m, () => removeFavoriteFilm(m)))}
+                      </PosterRail>
 
-                    <PosterRail
-                      title="Watched films"
-                      actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
-                      actionLabel="View all"
-                      empty={emptyFilm('Find a film')}
-                    >
-                      {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m)))}
-                    </PosterRail>
-                  </div>
+                      <PosterRail
+                        title="Watched films"
+                        actionTo={watchedMovies.length ? profileListPath('watched-films') : undefined}
+                        actionLabel="View all"
+                        empty={emptyFilm('Find a film')}
+                      >
+                        {watchedMovies.map((m) => filmTile(m, () => removeWatchedFilm(m)))}
+                      </PosterRail>
+                    </div>
+                  )}
 
-                  <div id="profile-tv" className="scroll-mt-24 space-y-10 md:space-y-12">
-                    <PosterRail
-                      title="Favorite TV"
-                      actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
-                      actionLabel="View all"
-                      empty={emptyTv('Browse TV')}
-                    >
-                      {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s)))}
-                    </PosterRail>
+                  {(favoritedShows.length > 0 || watchedShows.length > 0) && (
+                    <div className="space-y-10 md:space-y-12">
+                      <PosterRail
+                        title="Favorite TV"
+                        actionTo={favoritedShows.length ? profileListPath('favorite-tv') : undefined}
+                        actionLabel="View all"
+                        empty={emptyTv('Browse TV')}
+                      >
+                        {favoritedShows.map((s) => tvTile(s, () => removeFavoriteShow(s)))}
+                      </PosterRail>
 
-                    <PosterRail
-                      title="Watched TV"
-                      actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
-                      actionLabel="View all"
-                      empty={emptyTv('Browse TV')}
-                    >
-                      {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s)))}
-                    </PosterRail>
-                  </div>
+                      <PosterRail
+                        title="Watched TV"
+                        actionTo={watchedShows.length ? profileListPath('watched-tv') : undefined}
+                        actionLabel="View all"
+                        empty={emptyTv('Browse TV')}
+                      >
+                        {watchedShows.map((s) => tvTile(s, () => removeWatchedShow(s)))}
+                      </PosterRail>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -393,57 +290,6 @@ export default function Profile() {
         )}
       </div>
 
-      <Dialog
-        open={phoneDialog}
-        onClose={() => {
-          setPhoneDialog(false);
-          setPhoneError('');
-        }}
-        title="Phone number"
-        footer={
-          <>
-            <button type="button" onClick={() => setPhoneDialog(false)} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" form="phone-form" className="btn-primary">
-              Save
-            </button>
-          </>
-        }
-      >
-        <form id="phone-form" onSubmit={submitPhone}>
-          <input
-            className="input-field"
-            type="tel"
-            placeholder="10-digit number"
-            maxLength={10}
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              setPhoneError('');
-            }}
-          />
-          {phoneError && <p className="state-enter mt-2 text-sm text-danger">{phoneError}</p>}
-        </form>
-      </Dialog>
-
-      <Dialog
-        open={showLogout}
-        onClose={() => setShowLogout(false)}
-        title="Sign out?"
-        footer={
-          <>
-            <button type="button" onClick={() => setShowLogout(false)} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="button" onClick={handleLogout} className="btn-primary">
-              Sign out
-            </button>
-          </>
-        }
-      >
-        <p className="text-sm text-muted">Your lists and history will be here when you return.</p>
-      </Dialog>
       {confirmDialog}
     </>
   );

@@ -77,7 +77,7 @@ export default function HomeDashboard() {
         api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
         api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
         fetchTvWatchlist().catch(() => []),
-        api.get('/api/stats/week-recap').catch(() => ({ data: { success: false } })),
+        api.get(`/api/stats/week-recap?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')}`).catch(() => ({ data: { success: false } })),
         api.post('/api/watch/getWatchMovie', {}).catch(() => ({ data: { success: false } })),
         api.post('/api/tv/watch/getWatchTv', {}).catch(() => ({ data: { success: false } })),
         api.post('/api/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),

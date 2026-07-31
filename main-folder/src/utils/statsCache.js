@@ -1,4 +1,5 @@
-const STATS_SESSION_KEY = 'marquee_stats_v1';
+const STATS_SESSION_KEY = 'marquee_stats_v3';
+const LEGACY_KEYS = ['marquee_stats_v1', 'marquee_stats_v2'];
 
 export function readSessionStats() {
   try {
@@ -26,6 +27,7 @@ export function writeSessionStats(stats, builtAt) {
 export function clearSessionStats() {
   try {
     sessionStorage.removeItem(STATS_SESSION_KEY);
+    LEGACY_KEYS.forEach((key) => sessionStorage.removeItem(key));
   } catch {
     /* ignore */
   }
