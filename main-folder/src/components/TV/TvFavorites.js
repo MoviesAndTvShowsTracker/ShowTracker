@@ -7,6 +7,7 @@ import { favoriteRemoveConfirm, watchlistRemoveConfirm } from '../../utils/remov
 import { clearSessionStats } from '../../utils/statsCache';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 import { RatingField, ratingToStars, starsToPayload } from '../ui/StarRating';
+import { haptic } from '../../utils/haptics';
 
 function listStateFromTrack(track) {
   if (!track || track.status === 'dropped') return null;
@@ -54,6 +55,7 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
           favorited: true,
           favoriteNumber: favoriteNumber + 1,
         });
+        haptic('light');
       }
     });
   };
@@ -166,14 +168,13 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
         />
         {statusButton}
       </ActionStrip>
-      {canRateShow && (
-        <RatingField
-          value={showRating}
-          onChange={handleRateShow}
-          disabled={ratingSaving}
-          title={showTitle}
-        />
-      )}
+      <RatingField
+        visible={canRateShow}
+        value={showRating}
+        onChange={handleRateShow}
+        disabled={ratingSaving}
+        title={showTitle}
+      />
       {confirmDialog}
     </>
   );

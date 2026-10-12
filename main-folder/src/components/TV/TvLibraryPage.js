@@ -13,6 +13,7 @@ import {
   watchedSetFromEpisodes,
 } from '../../utils/tvProgress';
 import PageTitle from '../../utils/PageTitle';
+import { haptic } from '../../utils/haptics';
 import BackNav from '../ui/BackNav';
 import EmptyState from '../ui/EmptyState';
 import TvLibraryTile from './TvLibraryTile';
@@ -76,7 +77,10 @@ export default function TvLibraryPage() {
         true
       );
 
-      await api.post('/api/tv/episodes/mark', payload);
+      const r = await api.post('/api/tv/episodes/mark', payload);
+      if (r.data?.success) {
+        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+      }
       load();
     } finally {
       setMarkingId(null);

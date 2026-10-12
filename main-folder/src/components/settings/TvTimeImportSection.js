@@ -128,9 +128,9 @@ export default function TvTimeImportSection() {
       ) : (
         <>
           {isDone && report && (
-            <div className="state-enter mb-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
+            <div className="celebrate-soft mb-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+                <CheckCircle2 className="check-pop mt-0.5 h-5 w-5 shrink-0 text-accent" />
                 <div className="min-w-0">
                   <p className="font-semibold text-ink-bright">Last import complete</p>
                   <ul className="mt-2 space-y-1 text-sm text-muted">

@@ -96,7 +96,8 @@
     .notice-presence {
       animation: state-fade 0.12s ease-out both !important;
     }
-    .notice-presence.is-exiting {
+    .notice-presence.is-exiting,
+    .action-slot-exit {
       animation: state-fade-out 0.12s ease-in both !important;
     }
     .btn-primary,
@@ -115,7 +116,9 @@
     .state-enter {
       animation: state-fade 0.12s ease-out both !important;
     }
-    .check-pop {
+    .check-pop,
+    .star-settle,
+    .celebrate-soft {
       animation: state-fade 0.12s ease-out both !important;
     }
     .app-dialog[open],
@@ -196,6 +199,14 @@
 
   .check-pop {
     animation: check-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .star-settle {
+    animation: star-settle 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .celebrate-soft {
+    animation: celebrate-soft 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .input-field {
@@ -428,6 +439,15 @@
     transform-origin: top left;
   }
 
+  .menu-pop--bottom-right {
+    transform-origin: bottom right;
+  }
+
+  .action-slot-exit {
+    animation: action-slot-exit 0.16s ease-out both;
+    pointer-events: none;
+  }
+
   .menu-pop.is-exiting {
     animation: menu-pop-out 0.12s ease-in forwards;
     pointer-events: none;
@@ -544,6 +564,17 @@
   }
 }
 
+@keyframes action-slot-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
 @keyframes scroll-fab-in {
   from {
     opacity: 0;
@@ -614,6 +645,29 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes star-settle {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes celebrate-soft {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 

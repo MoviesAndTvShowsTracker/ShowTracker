@@ -14,13 +14,15 @@ function getBottomReserve() {
 /**
  * Positions a fixed popover near an anchor, flipping above when the bottom nav
  * or viewport edge would obscure it (same idea as Floating UI / Radix flip).
+ *
+ * Returns `{ style, placeAbove }` so callers can set transform-origin toward the trigger.
  */
 export function useAnchoredPopover(open, anchorRef, popoverRef) {
-  const [style, setStyle] = useState(null);
+  const [placement, setPlacement] = useState({ style: null, placeAbove: false });
 
   useLayoutEffect(() => {
     if (!open) {
-      setStyle(null);
+      setPlacement({ style: null, placeAbove: false });
       return undefined;
     }
 
@@ -48,11 +50,14 @@ export function useAnchoredPopover(open, anchorRef, popoverRef) {
         Math.min(left, window.innerWidth - popoverWidth - VIEWPORT_PADDING),
       );
 
-      setStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        zIndex: 60,
+      setPlacement({
+        placeAbove,
+        style: {
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          zIndex: 60,
+        },
       });
     };
 
@@ -67,5 +72,5 @@ export function useAnchoredPopover(open, anchorRef, popoverRef) {
     };
   }, [open, anchorRef, popoverRef]);
 
-  return style;
+  return placement;
 }

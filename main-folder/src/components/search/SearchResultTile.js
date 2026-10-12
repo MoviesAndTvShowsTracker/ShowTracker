@@ -63,7 +63,11 @@ export default function SearchResultTile({
   const menuPresence = useAnimatedPresence(menuOpen);
   const buttonRef = useRef(null);
   const popoverRef = useRef(null);
-  const menuStyle = useAnchoredPopover(menuPresence.rendered, buttonRef, popoverRef);
+  const { style: menuStyle, placeAbove } = useAnchoredPopover(
+    menuPresence.rendered,
+    buttonRef,
+    popoverRef
+  );
 
   const tvAction = actionForTv(track);
   const inLibrary = Boolean(track);
@@ -173,7 +177,7 @@ export default function SearchResultTile({
         <button
           type="button"
           onClick={goPrimary}
-          className="flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent transition-colors cursor-pointer"
+          className="pressable flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent transition-colors cursor-pointer"
         >
           <TvActionIcon className="h-3.5 w-3.5" />
           {tvAction.label}
@@ -193,7 +197,7 @@ export default function SearchResultTile({
           onClick={toggleWatchlist}
           disabled={busy}
           aria-label={watchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
-          className={`flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
+          className={`pressable flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
             watchlisted
               ? 'bg-accent text-on-accent'
               : 'bg-surface/90 text-ink hover:bg-surface-raised'
@@ -246,7 +250,7 @@ export default function SearchResultTile({
                 }}
                 aria-label={`Actions for ${title}`}
                 aria-expanded={menuOpen}
-                className="focus-ring absolute right-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-canvas/95 text-ink-bright shadow-sm backdrop-blur-sm md:hidden cursor-pointer"
+                className="focus-ring pressable absolute right-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-canvas/95 text-ink-bright shadow-sm backdrop-blur-sm md:hidden cursor-pointer"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -274,8 +278,8 @@ export default function SearchResultTile({
                 role="menu"
                 aria-label={`Actions for ${title}`}
                 className={`menu-pop w-max min-w-[10.5rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-glass md:hidden ${
-                  menuPresence.exiting ? 'is-exiting' : ''
-                }`}
+                  placeAbove ? 'menu-pop--bottom-right' : ''
+                } ${menuPresence.exiting ? 'is-exiting' : ''}`}
               >
                 {isTv && tvAction && TvActionIcon ? (
                   <button

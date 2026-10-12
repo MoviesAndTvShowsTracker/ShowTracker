@@ -16,6 +16,7 @@ import {
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import PageTitle from '../utils/PageTitle';
 import { displayName } from '../utils/displayUser';
+import { haptic } from '../utils/haptics';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import TvTimeWelcomeBanner, {
   dismissTvTimePrompt,
@@ -149,7 +150,10 @@ export default function HomeDashboard() {
         true
       );
 
-      await api.post('/api/tv/episodes/mark', payload);
+      const r = await api.post('/api/tv/episodes/mark', payload);
+      if (r.data?.success) {
+        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+      }
       await refreshAll();
     } finally {
       setMarkingId(null);

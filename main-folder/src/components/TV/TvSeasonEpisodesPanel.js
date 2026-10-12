@@ -5,6 +5,7 @@ import { tmdbFetch } from '../../utils/tmdb';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { EpisodeRatingControl, starsToPayload } from '../ui/StarRating';
 import { clearSessionStats } from '../../utils/statsCache';
+import { haptic } from '../../utils/haptics';
 import {
   episodeUnmarkConfirm,
   markSeasonConfirm,
@@ -215,6 +216,9 @@ export default function TvSeasonEpisodesPanel({
         !isUnmark
       );
       const r = await api.post(isUnmark ? '/api/tv/episodes/unmark' : '/api/tv/episodes/mark', payload);
+      if (r.data?.success && !isUnmark) {
+        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+      }
       applyResponse(r);
     } finally {
       setToggling(null);
@@ -240,6 +244,9 @@ export default function TvSeasonEpisodesPanel({
     try {
       const payload = buildBatchPayload(showMeta, unwatchedAiredSeason, episodeIndex, watchedKeys, true);
       const r = await api.post('/api/tv/episodes/mark-batch', payload);
+      if (r.data?.success) {
+        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+      }
       applyResponse(r);
     } finally {
       setBatching(false);
@@ -307,6 +314,9 @@ export default function TvSeasonEpisodesPanel({
     try {
       const payload = buildBatchPayload(showMeta, unwatchedAiredAll, episodeIndex, watchedKeys, true);
       const r = await api.post('/api/tv/episodes/mark-batch', payload);
+      if (r.data?.success) {
+        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'medium');
+      }
       applyResponse(r);
     } finally {
       setBatching(false);

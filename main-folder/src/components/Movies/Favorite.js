@@ -9,8 +9,10 @@ import {
   watchedFilmRemoveConfirm,
 } from '../../utils/removeConfirm';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
+import useAnimatedPresence from '../../hooks/useAnimatedPresence';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 import { RatingField, ratingToStars, starsToPayload } from '../ui/StarRating';
+import { haptic } from '../../utils/haptics';
 
 export default function Favorite({ movieId, movieInfo }) {
   const { confirm, confirmDialog } = useConfirmDialog();
@@ -32,6 +34,7 @@ export default function Favorite({ movieId, movieInfo }) {
 
   const movieTitle = movieInfo.title || 'this film';
   const watchedDateLabel = watchedAt ? formatShortDate(watchedAt) : null;
+  const watchlistPresence = useAnimatedPresence(!watched, 160);
 
   useEffect(() => {
     api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {
@@ -70,6 +73,7 @@ export default function Favorite({ movieId, movieInfo }) {
       if (r.data.success) {
         setFavoriteNumber(favoriteNumber + 1);
         setFavorited(true);
+        haptic('light');
       }
     });
   };
@@ -96,6 +100,7 @@ export default function Favorite({ movieId, movieInfo }) {
         setWatchedAt(r.data.watchedAt || new Date().toISOString());
         setRating(ratingToStars(r.data.rating));
         clearSessionStats();
+        haptic('success');
       }
     });
   };
@@ -141,7 +146,7 @@ export default function Favorite({ movieId, movieInfo }) {
 
   return (
     <div>
-      <ActionStrip columns={watched ? 2 : 3}>
+      <ActionStrip columns={watchlistPresence.rendered ? 3 : 2}>
         <ActionButton
           active={favorited}
           onClick={toggleFavorite}
@@ -158,24 +163,24 @@ export default function Favorite({ movieId, movieInfo }) {
           compactLabel="Watched"
           subLabel={watched ? watchedDateLabel : null}
         />
-        {!watched && (
+        {watchlistPresence.rendered && (
           <ActionButton
             active={watchlisted}
             onClick={toggleWatchlist}
             icon={Bookmark}
             label={watchlisted ? 'On watchlist' : 'Watchlist'}
             compactLabel="List"
+            className={watchlistPresence.exiting ? 'action-slot-exit' : ''}
           />
         )}
       </ActionStrip>
-      {watched && (
-        <RatingField
-          value={rating}
-          onChange={handleRate}
-          disabled={ratingSaving}
-          title={movieTitle}
-        />
-      )}
+      <RatingField
+        visible={watched}
+        value={rating}
+        onChange={handleRate}
+        disabled={ratingSaving}
+        title={movieTitle}
+      />
       {confirmDialog}
     </div>
   );

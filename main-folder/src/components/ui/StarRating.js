@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star, X } from 'lucide-react';
+import { haptic } from '../../utils/haptics';
+import useAnimatedPresence from '../../hooks/useAnimatedPresence';
 
 /**
  * Half-star rating control.
@@ -27,6 +29,7 @@ export default function StarRating({
   const current = Number(value) || 0;
   const [hover, setHover] = useState(0);
   const [finePointer, setFinePointer] = useState(false);
+  const starsRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return undefined;
@@ -79,6 +82,15 @@ export default function StarRating({
   const commit = (next) => {
     if (disabled) return;
     const clamped = Math.max(0, Math.min(5, Math.round(next * 2) / 2));
+    if (clamped !== current) {
+      haptic(clamped === 0 ? 'light' : 'selection');
+      const el = starsRef.current;
+      if (el) {
+        el.classList.remove('star-settle');
+        void el.offsetWidth;
+        el.classList.add('star-settle');
+      }
+    }
     onChange?.(clamped || null);
   };
 
@@ -109,6 +121,7 @@ export default function StarRating({
   return (
     <div className={`inline-flex items-center gap-1 ${className}`} role="group" aria-label={label}>
       <div
+        ref={starsRef}
         className={`relative inline-flex items-center ${disabled ? 'opacity-50' : ''}`}
         onMouseLeave={() => finePointer && setHover(0)}
         onKeyDown={handleKey}
@@ -233,6 +246,7 @@ export function EpisodeRatingControl({
   const stars = ratingToStars(value);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const panelPresence = useAnimatedPresence(open, 140);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -243,7 +257,7 @@ export function EpisodeRatingControl({
     return () => document.removeEventListener('pointerdown', onPointer);
   }, [open]);
 
-  if (!open) {
+  if (!panelPresence.rendered) {
     if (stars > 0) {
       return (
         <button
@@ -275,7 +289,9 @@ export function EpisodeRatingControl({
   return (
     <div
       ref={wrapRef}
-      className="state-enter basis-full flex flex-wrap items-center gap-1.5 pt-0.5"
+      className={`notice-presence basis-full flex flex-wrap items-center gap-1.5 pt-0.5 ${
+        panelPresence.exiting ? 'is-exiting' : ''
+      }`}
     >
       <StarRating
         value={stars}
@@ -300,9 +316,17 @@ export function RatingField({
   disabled = false,
   label = 'Your rating',
   title,
+  visible = true,
 }) {
+  const presence = useAnimatedPresence(visible, 140);
+  if (!presence.rendered) return null;
+
   return (
-    <div className="mt-3 flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border/60 bg-surface/50 px-3 py-2.5 shadow-glass backdrop-blur-md">
+    <div
+      className={`notice-presence mt-3 flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border/60 bg-surface/50 px-3 py-2.5 shadow-glass backdrop-blur-md ${
+        presence.exiting ? 'is-exiting' : ''
+      }`}
+    >
       <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
         {label}
       </span>

@@ -15,6 +15,7 @@ export function ActionButton({
   subLabel,
   variant = 'default',
   static: isStatic = false,
+  className: extraClassName = '',
 }) {
   const activeClass = VARIANT_ACTIVE[variant] || VARIANT_ACTIVE.default;
   const className = `focus-ring flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-all duration-200 min-h-[72px] md:min-h-[44px] md:flex-row md:gap-2 md:px-4 md:py-2 ${
@@ -25,7 +26,7 @@ export function ActionButton({
             ? activeClass
             : 'border-border bg-surface/80 text-ink shadow-glass backdrop-blur-md hover:border-accent/30 hover:bg-surface md:hover:scale-[1.02]'
         }`
-  }`;
+  } ${extraClassName}`;
 
   const content = (
     <>

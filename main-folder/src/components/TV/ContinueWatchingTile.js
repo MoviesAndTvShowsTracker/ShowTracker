@@ -47,12 +47,18 @@ export default function ContinueWatchingTile({ track, onMark, marking }) {
             </div>
 
             {isComplete && (
-              <span className="absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
+              <span
+                key="done"
+                className="state-enter absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent"
+              >
                 Done
               </span>
             )}
             {caughtUp && !isComplete && (
-              <span className="absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
+              <span
+                key="caught-up"
+                className="state-enter absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent"
+              >
                 Caught up
               </span>
             )}

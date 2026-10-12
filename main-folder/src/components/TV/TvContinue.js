@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronRight, List, X } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import useIsMobile from '../../hooks/useIsMobile';
+import useAnimatedPresence from '../../hooks/useAnimatedPresence';
 import {
   buildMarkPayload,
   deriveShowProgress,
@@ -19,6 +20,7 @@ import TvTrackingStatusAction from './TvTrackingStatusAction';
 import StarRating, { starsToPayload } from '../ui/StarRating';
 import { clearSessionStats } from '../../utils/statsCache';
 import { formatShortDate } from '../../utils/statsFormat';
+import { haptic } from '../../utils/haptics';
 
 const menuRowClass =
   'flex min-h-[48px] w-full items-center gap-3 px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-surface-raised/50 active:bg-surface-raised/70';
@@ -68,6 +70,12 @@ export default function TvContinue() {
   const [episodesEverOpened, setEpisodesEverOpened] = useState(false);
   const [episodesRefresh, setEpisodesRefresh] = useState(null);
   const [rateChip, setRateChip] = useState(null); // { seasonNumber, episodeNumber, episodeName, saving }
+  const [rateChipView, setRateChipView] = useState(null);
+  const rateChipPresence = useAnimatedPresence(Boolean(rateChip), 140);
+
+  useEffect(() => {
+    if (rateChip) setRateChipView(rateChip);
+  }, [rateChip]);
 
   const load = () => {
     setLoading(true);
@@ -131,6 +139,8 @@ export default function TvContinue() {
       );
       const r = await api.post('/api/tv/episodes/mark', payload);
       if (r.data.success) {
+        const finished = r.data.tracking?.status === 'completed';
+        haptic(finished ? 'success' : 'light');
         handleProgressChange(r.data);
         setEpisodesRefresh((n) => (n ?? 0) + 1);
         setRateChip({
@@ -270,7 +280,7 @@ export default function TvContinue() {
             {isComplete ? (
               <div
                 key="finished"
-                className="state-enter mt-6 rounded-xl border border-link/30 bg-link/10 px-4 py-5 text-center"
+                className="celebrate-soft mt-6 rounded-xl border border-link/30 bg-link/10 px-4 py-5 text-center"
               >
                 <p className="font-serif text-lg text-ink-bright">You&apos;ve finished this show</p>
               </div>
@@ -327,10 +337,12 @@ export default function TvContinue() {
               </div>
             )}
 
-            {rateChip && (
+            {rateChipPresence.rendered && rateChipView && (
               <div
-                key={`rate-${rateChip.seasonNumber}-${rateChip.episodeNumber}`}
-                className="state-enter mt-4 rounded-xl border border-border/60 bg-surface/60 px-3 py-3 shadow-glass backdrop-blur-md sm:px-4"
+                key={`rate-${rateChipView.seasonNumber}-${rateChipView.episodeNumber}`}
+                className={`notice-presence mt-4 rounded-xl border border-border/60 bg-surface/60 px-3 py-3 shadow-glass backdrop-blur-md sm:px-4 ${
+                  rateChipPresence.exiting ? 'is-exiting' : ''
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -338,8 +350,8 @@ export default function TvContinue() {
                       Rate this episode?
                     </p>
                     <p className="mt-0.5 truncate text-sm text-ink">
-                      S{rateChip.seasonNumber} · E{rateChip.episodeNumber}
-                      {rateChip.episodeName ? ` — ${rateChip.episodeName}` : ''}
+                      S{rateChipView.seasonNumber} · E{rateChipView.episodeNumber}
+                      {rateChipView.episodeName ? ` — ${rateChipView.episodeName}` : ''}
                     </p>
                   </div>
                   <button
@@ -357,8 +369,10 @@ export default function TvContinue() {
                     onChange={rateJustWatched}
                     size="md"
                     allowClear={false}
-                    disabled={rateChip.saving}
-                    label={`Rate S${rateChip.seasonNumber}E${rateChip.episodeNumber}`}
+                    disabled={
+                      Boolean(rateChip?.saving) || rateChipPresence.exiting || !rateChip
+                    }
+                    label={`Rate S${rateChipView.seasonNumber}E${rateChipView.episodeNumber}`}
                   />
                 </div>
               </div>
