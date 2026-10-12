@@ -34,7 +34,7 @@ export default function Favorite({ movieId, movieInfo }) {
 
   const movieTitle = movieInfo.title || 'this film';
   const watchedDateLabel = watchedAt ? formatShortDate(watchedAt) : null;
-  const watchlistPresence = useAnimatedPresence(!watched, 160);
+  const watchlistPresence = useAnimatedPresence(!watched, 140);
 
   useEffect(() => {
     api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {

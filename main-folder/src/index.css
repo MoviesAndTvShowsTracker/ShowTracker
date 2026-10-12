@@ -173,6 +173,8 @@
 
   .pressable:active:not(:disabled) {
     transform: scale(0.96);
+    transition-duration: 0.06s;
+    transition-timing-function: ease-in;
   }
 
   .state-enter {
@@ -444,7 +446,7 @@
   }
 
   .action-slot-exit {
-    animation: action-slot-exit 0.16s ease-out both;
+    animation: action-slot-exit 0.14s ease-in both;
     pointer-events: none;
   }
 

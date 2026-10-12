@@ -29,7 +29,9 @@ export default function StarRating({
   const current = Number(value) || 0;
   const [hover, setHover] = useState(0);
   const [finePointer, setFinePointer] = useState(false);
-  const starsRef = useRef(null);
+  const [pulsePos, setPulsePos] = useState(0);
+  const pulseTimer = useRef(null);
+  const clearPresence = useAnimatedPresence(allowClear && current > 0 && !disabled, 120);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return undefined;
@@ -39,6 +41,13 @@ export default function StarRating({
     mq.addEventListener?.('change', sync);
     return () => mq.removeEventListener?.('change', sync);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+    },
+    []
+  );
 
   // cell = full touch target for one star (two equal halves). star = glyph size inside.
   const dims =
@@ -84,11 +93,12 @@ export default function StarRating({
     const clamped = Math.max(0, Math.min(5, Math.round(next * 2) / 2));
     if (clamped !== current) {
       haptic(clamped === 0 ? 'light' : 'selection');
-      const el = starsRef.current;
-      if (el) {
-        el.classList.remove('star-settle');
-        void el.offsetWidth;
-        el.classList.add('star-settle');
+      if (clamped > 0) {
+        setPulsePos(Math.ceil(clamped));
+        if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+        pulseTimer.current = window.setTimeout(() => setPulsePos(0), 220);
+      } else {
+        setPulsePos(0);
       }
     }
     onChange?.(clamped || null);
@@ -121,7 +131,6 @@ export default function StarRating({
   return (
     <div className={`inline-flex items-center gap-1 ${className}`} role="group" aria-label={label}>
       <div
-        ref={starsRef}
         className={`relative inline-flex items-center ${disabled ? 'opacity-50' : ''}`}
         onMouseLeave={() => finePointer && setHover(0)}
         onKeyDown={handleKey}
@@ -136,14 +145,17 @@ export default function StarRating({
             onCommit={commit}
             disabled={disabled}
             dims={dims}
+            settling={pulsePos === pos}
           />
         ))}
       </div>
-      {allowClear && current > 0 && !disabled && (
+      {clearPresence.rendered && (
         <button
           type="button"
           onClick={() => commit(0)}
-          className="focus-ring pressable inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-raised/70 hover:text-ink-bright cursor-pointer"
+          className={`focus-ring pressable inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-raised/70 hover:text-ink-bright cursor-pointer ${
+            clearPresence.exiting ? 'action-slot-exit' : 'state-enter'
+          }`}
           aria-label="Clear rating"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -153,14 +165,17 @@ export default function StarRating({
   );
 }
 
-function StarCell({ pos, effective, onHover, onCommit, disabled, dims }) {
+function StarCell({ pos, effective, onHover, onCommit, disabled, dims, settling }) {
   const halfValue = pos - 0.5;
   const fullValue = pos;
   const fillLevel = effective >= fullValue ? 'full' : effective >= halfValue ? 'half' : 'empty';
 
   return (
     <span className={`relative inline-flex shrink-0 items-center justify-center ${dims.cell}`}>
-      <span className={`relative inline-flex ${dims.star}`} aria-hidden="true">
+      <span
+        className={`relative inline-flex ${dims.star} ${settling ? 'star-settle' : ''}`}
+        aria-hidden="true"
+      >
         <Star
           className={`absolute inset-0 ${dims.star} transition-colors duration-150 ${
             fillLevel === 'empty' ? 'text-muted/35' : 'text-accent'
@@ -168,7 +183,7 @@ function StarCell({ pos, effective, onHover, onCommit, disabled, dims }) {
         />
         {fillLevel !== 'empty' && (
           <span
-            className="absolute inset-y-0 left-0 overflow-hidden transition-[width] duration-150"
+            className="absolute inset-y-0 left-0 overflow-hidden transition-[width] duration-150 ease-out"
             style={{ width: fillLevel === 'half' ? '50%' : '100%' }}
           >
             <Star className={`${dims.star} fill-accent text-accent`} />
@@ -179,7 +194,7 @@ function StarCell({ pos, effective, onHover, onCommit, disabled, dims }) {
         <>
           <button
             type="button"
-            className="absolute inset-y-0 left-0 w-1/2 cursor-pointer"
+            className="absolute inset-y-0 left-0 w-1/2 cursor-pointer active:opacity-80"
             onMouseEnter={() => onHover?.(halfValue)}
             onClick={() => onCommit(halfValue)}
             aria-label={`${halfValue} stars`}
@@ -187,7 +202,7 @@ function StarCell({ pos, effective, onHover, onCommit, disabled, dims }) {
           />
           <button
             type="button"
-            className="absolute inset-y-0 right-0 w-1/2 cursor-pointer"
+            className="absolute inset-y-0 right-0 w-1/2 cursor-pointer active:opacity-80"
             onMouseEnter={() => onHover?.(fullValue)}
             onClick={() => onCommit(fullValue)}
             aria-label={`${fullValue} stars`}

@@ -69,10 +69,10 @@ export default function TvLibraryTile({
 
             {isComplete && (
               <span
-                key="done"
+                key="finished"
                 className="state-enter absolute left-1.5 top-1.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent"
               >
-                Done
+                Finished
               </span>
             )}
             {caughtUp && !isComplete && (
