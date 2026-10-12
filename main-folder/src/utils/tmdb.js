@@ -1,18 +1,34 @@
-import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
+import api from '../api/axios';
+import { IMAGE_URL } from '../config/keys';
 
 export { IMAGE_URL };
 
-export function tmdbFetch(path, params = {}) {
-  const url = new URL(`${API_URL}${path.replace(/^\//, '')}`);
-  url.searchParams.set('api_key', API_KEY);
-  url.searchParams.set('language', 'en-US');
+/**
+ * Call TMDB through the backend proxy. The API key never ships to the browser.
+ *
+ * @param {string} path  TMDB path without leading slash (e.g. `tv/1399`).
+ * @param {object} [params]  Query params. Omit empty values; `language` defaults to en-US server-side.
+ * @param {{ signal?: AbortSignal }} [options]  Optional AbortSignal for cancellation.
+ */
+export function tmdbFetch(path, params = {}, options = {}) {
+  const cleanPath = String(path).replace(/^\/+/, '');
+  const filtered = {};
   Object.entries(params).forEach(([key, value]) => {
-    if (value != null && value !== '') url.searchParams.set(key, String(value));
+    if (value != null && value !== '') filtered[key] = value;
   });
-  return fetch(url).then((res) => {
-    if (!res.ok) throw new Error(`TMDB ${path} failed`);
-    return res.json();
-  });
+  return api
+    .get(`/api/tmdb/${cleanPath}`, { params: filtered, signal: options.signal })
+    .then((res) => res.data);
+}
+
+/** True when an error from `tmdbFetch` / axios is due to an aborted signal. */
+export function isAbortError(err) {
+  if (!err) return false;
+  return (
+    err.name === 'AbortError' ||
+    err.name === 'CanceledError' ||
+    err.code === 'ERR_CANCELED'
+  );
 }
 
 export function heroSlides(items, basePath, titleKey = 'title') {

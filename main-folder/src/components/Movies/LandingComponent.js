@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
 import GridCard from './GridCard';
 import PageTitle from '../../utils/PageTitle';
 import HeroCarousel from '../ui/HeroCarousel';
@@ -71,12 +71,12 @@ export default function LandingPage() {
   }, [selectedGenre]);
 
   const loadMorePopular = useCallback(() => {
-    fetch(`${API_URL}movie/popular?api_key=${API_KEY}&language=en-US&page=${popularPage + 1}`)
-      .then((r) => r.json())
+    tmdbFetch('movie/popular', { page: popularPage + 1 })
       .then((data) => {
         setPopular((prev) => [...prev, ...withPoster(data.results)]);
         setPopularPage(data.page);
-      });
+      })
+      .catch(() => {});
   }, [popularPage]);
 
   const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name;

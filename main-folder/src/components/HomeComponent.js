@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Bookmark, CheckCircle2, Heart, List, Search, Sparkles } from 'lucide-react';
-import { API_KEY, API_URL, IMAGE_URL } from '../config/keys';
+import { IMAGE_URL } from '../config/keys';
+import { tmdbFetch } from '../utils/tmdb';
 import PageTitle from '../utils/PageTitle';
 import { useAuth } from '../context/AuthContext';
 import { BRAND_NAME } from '../config/brand';
@@ -18,16 +19,7 @@ export default function Home() {
 
   useEffect(() => {
     setTrendingError(false);
-    Promise.all([
-      fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`).then((r) => {
-        if (!r.ok) throw new Error('movies');
-        return r.json();
-      }),
-      fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`).then((r) => {
-        if (!r.ok) throw new Error('tv');
-        return r.json();
-      }),
-    ])
+    Promise.all([tmdbFetch('trending/movie/week'), tmdbFetch('trending/tv/week')])
       .then(([movies, tv]) => {
         setTrendingMovies((movies.results || []).slice(0, 16));
         setTrendingTv((tv.results || []).slice(0, 16));

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
+import { tmdbFetch } from '../../utils/tmdb';
 import PosterTile from '../ui/PosterTile';
 
 export default function SimilarMoviesData({ movieId }) {
   const [similarMovies, setSimilarMovies] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}movie/${movieId}/similar?api_key=${API_KEY}&language=en-US&page=1`)
-      .then((r) => r.json())
-      .then((data) => setSimilarMovies(data.results || []));
+    tmdbFetch(`movie/${movieId}/similar`, { page: 1 })
+      .then((data) => setSimilarMovies(data.results || []))
+      .catch(() => setSimilarMovies([]));
   }, [movieId]);
 
   if (!similarMovies.length) return null;

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
-import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
+import { isAbortError, tmdbFetch } from '../../utils/tmdb';
 import { fetchTvShowDiary } from '../../api/tvShowDiary';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
@@ -70,45 +71,46 @@ export default function TvDetail() {
 
     try {
       const diaryPromise = fetchTvShowDiary(tvShowId);
-      const showRes = await fetch(`${API_URL}tv/${tvShowId}?api_key=${API_KEY}&language=en-US`, {
-        signal,
-      });
-      const showData = await showRes.json();
+      const showData = await tmdbFetch(`tv/${tvShowId}`, {}, { signal });
 
-      if (!showRes.ok || showData.success === false || !showData.id) {
-        throw new Error('not_found');
-      }
+      if (!showData || !showData.id) throw new Error('not_found');
 
       setTvShow(showData);
       setCreatedBy(showData.created_by || []);
       setGenres(showData.genres || []);
       setSeasons(showData.seasons || []);
 
-      const [creditsRes, providersRes, ratingsRes, diaryData] = await Promise.all([
-        fetch(`${API_URL}tv/${tvShowId}/credits?api_key=${API_KEY}`, { signal }),
-        fetch(`${API_URL}tv/${tvShowId}/watch/providers?api_key=${API_KEY}`, { signal }),
-        fetch(`${API_URL}tv/${tvShowId}/content_ratings?api_key=${API_KEY}`, { signal }),
+      const [creditsData, providersData, ratingsData, diaryData] = await Promise.all([
+        tmdbFetch(`tv/${tvShowId}/credits`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return { cast: [], crew: [] };
+        }),
+        tmdbFetch(`tv/${tvShowId}/watch/providers`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return null;
+        }),
+        tmdbFetch(`tv/${tvShowId}/content_ratings`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return null;
+        }),
         diaryPromise,
       ]);
 
-      if (!signal.aborted) setDiary(diaryData);
-
-      const creditsData = await creditsRes.json();
+      if (signal.aborted) return;
+      setDiary(diaryData);
       setCrews(creditsData.cast || []);
 
-      if (providersRes.ok) {
-        const providersData = await providersRes.json();
+      if (providersData) {
         const { providers, region } = pickWatchProviders(providersData.results);
         setWatchProviders(providers);
         setWatchRegion(region);
       }
 
-      if (ratingsRes.ok) {
-        const ratingsData = await ratingsRes.json();
+      if (ratingsData) {
         setCertification(tvCertification(ratingsData));
       }
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (isAbortError(err) || signal.aborted) return;
       setError("Couldn't load this show. Check your connection and try again.");
     } finally {
       if (!signal.aborted) setLoading(false);

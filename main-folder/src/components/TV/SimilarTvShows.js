@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
+import { tmdbFetch } from '../../utils/tmdb';
 import PosterTile from '../ui/PosterTile';
 
 export default function SimilarTvShows({ showId }) {
   const [similarShows, setSimilarShows] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}tv/${showId}/recommendations?api_key=${API_KEY}&language=en-US&page=1`)
-      .then((r) => r.json())
-      .then((data) => setSimilarShows(data.results || []));
+    tmdbFetch(`tv/${showId}/recommendations`, { page: 1 })
+      .then((data) => setSimilarShows(data.results || []))
+      .catch(() => setSimilarShows([]));
   }, [showId]);
 
   if (!similarShows.length) return null;

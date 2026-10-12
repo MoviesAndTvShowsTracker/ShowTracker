@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Film, Heart, Sparkles } from 'lucide-react';
-import { API_KEY, API_URL, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
+import { tmdbFetch } from '../../utils/tmdb';
 import PosterRail from '../ui/PosterRail';
 import PosterTile from '../ui/PosterTile';
 
@@ -35,14 +36,12 @@ export default function ProfileEmptyState({ name }) {
   const [trendingLoading, setTrendingLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_URL}trending/movie/week?api_key=${API_KEY}&language=en-US`).then((r) => r.json()),
-      fetch(`${API_URL}trending/tv/week?api_key=${API_KEY}&language=en-US`).then((r) => r.json()),
-    ])
+    Promise.all([tmdbFetch('trending/movie/week'), tmdbFetch('trending/tv/week')])
       .then(([films, tv]) => {
         setTrendingFilms((films.results || []).slice(0, 10));
         setTrendingTv((tv.results || []).slice(0, 10));
       })
+      .catch(() => {})
       .finally(() => setTrendingLoading(false));
   }, []);
 

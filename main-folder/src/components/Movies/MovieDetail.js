@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
-import { API_URL, API_KEY, IMAGE_URL } from '../../config/keys';
+import { IMAGE_URL } from '../../config/keys';
+import { isAbortError, tmdbFetch } from '../../utils/tmdb';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarMoviesData from './ShowSimilarMovies';
@@ -40,42 +41,43 @@ export default function MovieDetail() {
     setCertification(null);
 
     try {
-      const movieRes = await fetch(
-        `${API_URL}movie/${movieId}?api_key=${API_KEY}&language=en-US`,
-        { signal }
-      );
-      const movieData = await movieRes.json();
-
-      if (!movieRes.ok || movieData.success === false || !movieData.id) {
-        throw new Error('not_found');
-      }
+      const movieData = await tmdbFetch(`movie/${movieId}`, {}, { signal });
+      if (!movieData || !movieData.id) throw new Error('not_found');
 
       setMovie(movieData);
       setGenres(movieData.genres || []);
 
-      const [creditsRes, providersRes, releaseDatesRes] = await Promise.all([
-        fetch(`${API_URL}movie/${movieId}/credits?api_key=${API_KEY}`, { signal }),
-        fetch(`${API_URL}movie/${movieId}/watch/providers?api_key=${API_KEY}`, { signal }),
-        fetch(`${API_URL}movie/${movieId}/release_dates?api_key=${API_KEY}`, { signal }),
+      const [creditsData, providersData, releaseDatesData] = await Promise.all([
+        tmdbFetch(`movie/${movieId}/credits`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return { cast: [], crew: [] };
+        }),
+        tmdbFetch(`movie/${movieId}/watch/providers`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return null;
+        }),
+        tmdbFetch(`movie/${movieId}/release_dates`, {}, { signal }).catch((err) => {
+          if (isAbortError(err)) throw err;
+          return null;
+        }),
       ]);
 
-      const creditsData = await creditsRes.json();
+      if (signal.aborted) return;
+
       setActors(creditsData.cast || []);
       setCrews(creditsData.crew || []);
 
-      if (providersRes.ok) {
-        const providersData = await providersRes.json();
+      if (providersData) {
         const { providers, region } = pickWatchProviders(providersData.results);
         setWatchProviders(providers);
         setWatchRegion(region);
       }
 
-      if (releaseDatesRes.ok) {
-        const releaseDatesData = await releaseDatesRes.json();
+      if (releaseDatesData) {
         setCertification(movieCertification(releaseDatesData));
       }
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (isAbortError(err) || signal.aborted) return;
       setError("Couldn't load this film. Check your connection and try again.");
     } finally {
       if (!signal.aborted) setLoading(false);

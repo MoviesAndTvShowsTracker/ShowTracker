@@ -20,6 +20,7 @@ const tvtracking = require('./routes/tvtracking');
 const tvepisodes = require('./routes/tvepisodes');
 const importRouter = require('./routes/import');
 const statsRouter = require('./routes/stats');
+const tmdbRouter = require('./routes/tmdb');
 
 const url = config.mongoURL;
 mongoose
@@ -74,6 +75,7 @@ app.use('/api/watch', watch);
 app.use('/api/watchlist', moviewatchlist);
 app.use('/api/import', importRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/tmdb', tmdbRouter);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
