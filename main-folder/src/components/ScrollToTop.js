@@ -7,9 +7,20 @@ export default function ScrollToTop() {
   const presence = useAnimatedPresence(isVisible);
 
   useEffect(() => {
-    const toggle = () => setIsVisible(window.pageYOffset > 300);
-    window.addEventListener('scroll', toggle);
-    return () => window.removeEventListener('scroll', toggle);
+    let timer = 0;
+    const toggle = () => {
+      window.clearTimeout(timer);
+      // Debounce so back-navigation restore doesn't flash the FAB.
+      timer = window.setTimeout(() => {
+        setIsVisible(window.pageYOffset > 300);
+      }, 80);
+    };
+    toggle();
+    window.addEventListener('scroll', toggle, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('scroll', toggle);
+    };
   }, []);
 
   if (!presence.rendered) return null;

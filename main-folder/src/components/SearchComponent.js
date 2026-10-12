@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Clock, Film, Loader2, Search, Tv, X } from 'lucide-react';
 import { IMAGE_URL } from '../config/keys';
@@ -9,13 +9,12 @@ import {
   getMatchingSearchCache,
   loadRecentSearches,
   pushRecentSearch,
-  restoreSearchScroll,
   saveSearchCache,
-  saveSearchScroll,
 } from '../utils/searchStorage';
 import PageTitle from '../utils/PageTitle';
 import useSearchDiaryContext from '../hooks/useSearchDiaryContext';
 import { FOCUS_SEARCH_EVENT } from '../hooks/useSearchShortcut';
+import { confirmScrollRestore } from './ScrollRestoration';
 import BackNav from './ui/BackNav';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
@@ -34,27 +33,56 @@ function normalizeMultiResults(results) {
   return (results || []).filter((item) => item.media_type === 'movie' || item.media_type === 'tv');
 }
 
+/** Sync hydrate from session cache so Back can restore scroll into a tall list. */
+function initialFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q') || '';
+  const type = params.get('type') || 'multi';
+  const cache = getMatchingSearchCache(q, type);
+  if (!cache) {
+    return {
+      query: q,
+      type,
+      results: [],
+      page: 1,
+      totalPages: 0,
+      totalResults: 0,
+      hasSearched: Boolean(q),
+    };
+  }
+  return {
+    query: cache.query,
+    type: cache.type,
+    results: cache.results,
+    page: cache.page || 1,
+    totalPages: cache.totalPages || 0,
+    totalResults: cache.totalResults || 0,
+    hasSearched: true,
+  };
+}
+
 export default function SearchBox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef(null);
   const { context: diary, ready: diaryReady, patchWatchlist } = useSearchDiaryContext();
+  const boot = useRef(initialFromUrl()).current;
 
   const urlQuery = searchParams.get('q') || '';
   const urlType = searchParams.get('type') || 'multi';
 
-  const [query, setQuery] = useState(urlQuery);
-  const [type, setType] = useState(urlType);
-  const [results, setResults] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalResults, setTotalResults] = useState(0);
+  const [query, setQuery] = useState(boot.query);
+  const [type, setType] = useState(boot.type);
+  const [results, setResults] = useState(boot.results);
+  const [page, setPage] = useState(boot.page);
+  const [totalPages, setTotalPages] = useState(boot.totalPages);
+  const [totalResults, setTotalResults] = useState(boot.totalResults);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [recent, setRecent] = useState(loadRecentSearches);
   const [trendingFilms, setTrendingFilms] = useState([]);
   const [trendingTv, setTrendingTv] = useState([]);
-  const [hasSearched, setHasSearched] = useState(Boolean(urlQuery));
+  const [hasSearched, setHasSearched] = useState(boot.hasSearched);
 
   const applyCache = useCallback((cache) => {
     setResults(cache.results);
@@ -63,8 +91,14 @@ export default function SearchBox() {
     setTotalResults(cache.totalResults || 0);
     setHasSearched(true);
     setError('');
-    setSearchParams({ q: cache.query, type: cache.type }, { replace: true });
-  }, [setSearchParams]);
+    // Avoid replace navigations when the URL already matches — those used to
+    // wipe restored scroll (treated as a fresh navigation).
+    const q = searchParams.get('q') || '';
+    const t = searchParams.get('type') || 'multi';
+    if (q !== cache.query || t !== cache.type) {
+      setSearchParams({ q: cache.query, type: cache.type }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const runSearch = useCallback(async (searchQuery, searchType, pageNum, append = false) => {
     const trimmed = searchQuery.trim();
@@ -121,25 +155,16 @@ export default function SearchBox() {
     }
   }, [setSearchParams]);
 
-  // Restore cache + scroll when returning to search
   useEffect(() => {
     const focusInput = () => inputRef.current?.focus();
     window.addEventListener(FOCUS_SEARCH_EVENT, focusInput);
     return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusInput);
   }, []);
 
-  useEffect(() => {
-    const cache = getMatchingSearchCache(urlQuery, urlType);
-    if (urlQuery && cache) {
-      applyCache(cache);
-      restoreSearchScroll();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    return () => saveSearchScroll();
-  }, []);
+  // After cached results paint, re-apply POP scroll (page was short on first try).
+  useLayoutEffect(() => {
+    if (results.length > 0) confirmScrollRestore();
+  }, [results.length, page]);
 
   // Trending discovery when idle
   useEffect(() => {

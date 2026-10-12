@@ -36,10 +36,7 @@ export default function MobileBottomNav() {
   };
 
   useLayoutEffect(() => {
-    if (!activeId) {
-      setIndicator({ x: 0, width: 0, ready: false });
-      return undefined;
-    }
+    if (!activeId) return undefined;
 
     const measure = () => {
       const nav = navRef.current;
@@ -48,6 +45,7 @@ export default function MobileBottomNav() {
 
       const navRect = nav.getBoundingClientRect();
       const itemRect = item.getBoundingClientRect();
+      // Keep ready true once measured so tab changes slide instead of fading out.
       setIndicator({
         x: itemRect.left - navRect.left,
         width: itemRect.width,

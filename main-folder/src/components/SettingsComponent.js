@@ -48,7 +48,6 @@ export default function Settings() {
         }
       })
       .catch(() => setProfileError('Could not load your profile.'));
-    window.scrollTo(0, 0);
   }, [user?.id]);
 
   const saveProfile = async (e) => {

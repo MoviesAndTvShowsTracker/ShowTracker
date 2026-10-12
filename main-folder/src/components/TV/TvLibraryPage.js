@@ -48,7 +48,6 @@ export default function TvLibraryPage() {
   useEffect(() => {
     if (tabParam && !TV_LIBRARY_TABS[tabParam]) return;
     load();
-    window.scrollTo(0, 0);
   }, [tabParam, tab, load]);
 
   if (tabParam && !TV_LIBRARY_TABS[tabParam]) {

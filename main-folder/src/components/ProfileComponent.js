@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import api from '../api/axios';
@@ -11,6 +11,7 @@ import PosterTile from './ui/PosterTile';
 import ProfileEmptyState from './profile/ProfileEmptyState';
 import ProfileStats from './profile/ProfileStats';
 import TvLibrarySummary from './profile/TvLibrarySummary';
+import { confirmScrollRestore } from './ScrollRestoration';
 import BackNav from './ui/BackNav';
 import useConfirmDialog from '../hooks/useConfirmDialog';
 import useDashboardStats from '../hooks/useDashboardStats';
@@ -111,11 +112,14 @@ export default function Profile() {
           fetchWatchedShows(),
         ]).finally(() => {
           setLoading(false);
-          window.scrollTo(0, 0);
         });
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useLayoutEffect(() => {
+    if (!loading) confirmScrollRestore();
+  }, [loading, favoritedMovies.length, watchedMovies.length, favoritedShows.length, watchedShows.length]);
 
   const profileDisplay = useMemo(() => {
     if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };

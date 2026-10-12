@@ -87,7 +87,6 @@ export default function MovieDetail() {
   useEffect(() => {
     const controller = new AbortController();
     loadMovie(controller.signal);
-    window.scrollTo(0, 0);
     return () => controller.abort();
   }, [loadMovie, reloadKey]);
 

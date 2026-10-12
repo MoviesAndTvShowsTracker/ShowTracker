@@ -47,6 +47,10 @@ export default function Header() {
   const showMobileNav = !hideMobileBottomNav(location.pathname);
 
   useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!menuOpen || !menuPresence.rendered) return undefined;
     firstMenuItemRef.current?.focus();
     const onKeyDown = (event) => {

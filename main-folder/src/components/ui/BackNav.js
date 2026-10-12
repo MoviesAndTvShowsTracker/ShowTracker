@@ -1,19 +1,20 @@
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * True “back”: pop history when possible so ScrollRestoration can return the
+ * user to their previous scroll (search deep in results, profile rails, etc.).
+ * `to` / `fallback` are only used when there is no in-app history (cold open).
+ */
 export default function BackNav({ fallback = '/', label = 'Back', className = '', to }) {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (to) {
-      navigate(to);
-      return;
-    }
     if (window.history.state?.idx > 0) {
       navigate(-1);
-    } else {
-      navigate(fallback);
+      return;
     }
+    navigate(to || fallback);
   };
 
   return (

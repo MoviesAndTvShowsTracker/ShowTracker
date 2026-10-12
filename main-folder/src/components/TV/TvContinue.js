@@ -97,7 +97,6 @@ export default function TvContinue() {
     load();
     setEpisodesOpen(false);
     setEpisodesEverOpened(false);
-    window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvShowId]);
 

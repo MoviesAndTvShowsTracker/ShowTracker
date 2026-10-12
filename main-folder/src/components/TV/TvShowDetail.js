@@ -120,7 +120,6 @@ export default function TvDetail() {
   useEffect(() => {
     const controller = new AbortController();
     loadShow(controller.signal);
-    window.scrollTo(0, 0);
     return () => controller.abort();
   }, [loadShow, reloadKey]);
 

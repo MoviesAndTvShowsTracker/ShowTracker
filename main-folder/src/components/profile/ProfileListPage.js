@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import { fetchTvWatchlist } from '../../api/tvWatchlist';
 import { IMAGE_URL } from '../../config/keys';
 import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
+import { confirmScrollRestore } from '../ScrollRestoration';
 import BackNav from '../ui/BackNav';
 import EmptyState from '../ui/EmptyState';
 import PosterTile from '../ui/PosterTile';
@@ -87,9 +88,12 @@ export default function ProfileListPage() {
 
   useEffect(() => {
     load();
-    window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listKey]);
+
+  useLayoutEffect(() => {
+    if (!loading && items.length > 0) confirmScrollRestore();
+  }, [loading, items.length]);
 
   if (!config) return <Navigate to="/profile" replace />;
 

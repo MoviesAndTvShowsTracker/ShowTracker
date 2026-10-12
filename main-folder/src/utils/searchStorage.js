@@ -1,6 +1,5 @@
 const CACHE_KEY = 'marquee-search-cache';
 const RECENT_KEY = 'marquee-recent-searches';
-const SCROLL_KEY = 'marquee-search-scroll';
 const MAX_RECENT = 8;
 
 export function loadSearchCache() {
@@ -33,17 +32,6 @@ export function getMatchingSearchCache(query, type) {
     return cache;
   }
   return null;
-}
-
-export function saveSearchScroll() {
-  sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
-}
-
-export function restoreSearchScroll() {
-  const y = parseInt(sessionStorage.getItem(SCROLL_KEY) || '0', 10);
-  if (y > 0) {
-    requestAnimationFrame(() => window.scrollTo(0, y));
-  }
 }
 
 export function loadRecentSearches() {
