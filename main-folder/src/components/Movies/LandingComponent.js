@@ -109,8 +109,7 @@ export default function LandingPage() {
           </div>
         )}
         <header>
-          <p className="section-title">Films</p>
-          <h1 className="page-title mt-1">Films</h1>
+          <h1 className="page-title">Films</h1>
           <p className="mt-2 max-w-lg text-sm text-muted">
             Trending this week, in theaters now, coming soon, and the classics — pick a genre or scroll the rails.
           </p>

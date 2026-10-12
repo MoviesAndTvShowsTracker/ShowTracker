@@ -104,7 +104,7 @@ export default function Home() {
               to={isAuthenticated ? '/profile' : '/signup'}
               icon={List}
               title="Watchlists"
-              description="Queue what to watch next. Separate lists for movies and TV — plan your next binge."
+              description="Queue what to watch next. Separate lists for films and TV — plan your next binge."
               delay={160}
             />
             <BentoCard
@@ -120,15 +120,15 @@ export default function Home() {
         {/* Secondary bento row */}
         <section className="mb-14 grid grid-cols-2 gap-2 sm:gap-3 md:mb-16 md:grid-cols-3">
           <BentoCard
-            to="/movies"
+            to={isAuthenticated ? '/movies' : '/signup'}
             icon={Bookmark}
-            title="Browse movies"
+            title="Browse films"
             description="Explore popular and trending films. Tap any poster to log, favorite, or watchlist."
             delay={100}
             className="md:col-span-1"
           />
           <BentoCard
-            to="/tv"
+            to={isAuthenticated ? '/tv' : '/signup'}
             icon={Sparkles}
             title="Browse TV"
             description="Follow shows season by season. Track episodes and build your series library."
@@ -160,7 +160,11 @@ export default function Home() {
               </button>
             </div>
           )}
-          <PosterRail title="Trending this week — films" actionTo="/movies" actionLabel="All films">
+          <PosterRail
+            title="Trending this week — films"
+            actionTo={isAuthenticated ? '/movies' : '/signup'}
+            actionLabel="All films"
+          >
             {trendingMovies.map(
               (m) =>
                 m.poster_path && (
@@ -176,7 +180,11 @@ export default function Home() {
             )}
           </PosterRail>
 
-          <PosterRail title="Trending this week — TV" actionTo="/tv" actionLabel="All TV">
+          <PosterRail
+            title="Trending this week — TV"
+            actionTo={isAuthenticated ? '/tv' : '/signup'}
+            actionLabel="All TV"
+          >
             {trendingTv.map(
               (s) =>
                 s.poster_path && (

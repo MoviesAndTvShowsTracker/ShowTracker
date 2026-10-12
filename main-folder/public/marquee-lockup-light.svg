@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248 64">
+  <g transform="translate(2,2)">
+    <path d="M20 26v22 M44 26v22 M20 26l12 12 12-12" fill="none" stroke="#f6f3ec" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#e9a13b">
+      <circle cx="20" cy="17.5" r="2.6"/>
+      <circle cx="44" cy="17.5" r="2.6"/>
+    </g>
+  </g>
+  <text x="72" y="42" font-family="'Space Grotesk','Sora',Inter,system-ui,-apple-system,sans-serif" font-size="30" font-weight="600" letter-spacing="1.5" fill="#f6f3ec">Marquee</text>
+</svg>
