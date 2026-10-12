@@ -24,7 +24,7 @@ export default function PosterTile({
   const stars = ratingToStars(rating);
 
   const posterImage = (
-    <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:shadow-poster-hover hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 ${widthClass}`}>
+    <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-shadow duration-200 ease-out hover:shadow-poster-hover ${widthClass}`}>
       <img
         src={src}
         alt={title || 'Poster'}

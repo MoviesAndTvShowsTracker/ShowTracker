@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var FavoriteTv = require('../models/favoritefortv');
+var TvShowTracking = require('../models/tvShowTracking');
 const tvwatchlist = require('../models/tvwatchlist');
 var authenticate = require('../authenticate');
 
@@ -63,12 +64,34 @@ router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, nex
 
 router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const favorites = await FavoriteTv.find({ userFrom: req.user._id }).sort({
-      favoritedAt: -1,
-      updatedAt: -1,
-      createdAt: -1,
+    const favorites = await FavoriteTv.find({ userFrom: req.user._id })
+      .sort({
+        favoritedAt: -1,
+        updatedAt: -1,
+        createdAt: -1,
+      })
+      .lean();
+
+    const tvIds = favorites.map((f) => f.tvId).filter(Boolean);
+    const tracks = tvIds.length
+      ? await TvShowTracking.find({
+          userFrom: req.user._id,
+          tvId: { $in: tvIds },
+        })
+          .select('tvId rating')
+          .lean()
+      : [];
+    const ratingById = new Map(
+      tracks.map((t) => [String(t.tvId), t.rating ?? null])
+    );
+
+    res.status(200).json({
+      success: true,
+      favorites: favorites.map((f) => ({
+        ...f,
+        rating: ratingById.get(String(f.tvId)) ?? null,
+      })),
     });
-    res.status(200).json({ success: true, favorites });
   } catch (err) {
     next(err);
   }

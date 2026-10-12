@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
 var Favorite = require('../models/favorite');
+var Watch = require('../models/watch');
 const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
 
@@ -63,12 +64,34 @@ router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, nex
 
 router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const favorites = await Favorite.find({ userFrom: req.user._id }).sort({
-      favoritedAt: -1,
-      updatedAt: -1,
-      createdAt: -1,
+    const favorites = await Favorite.find({ userFrom: req.user._id })
+      .sort({
+        favoritedAt: -1,
+        updatedAt: -1,
+        createdAt: -1,
+      })
+      .lean();
+
+    const movieIds = favorites.map((f) => f.movieId).filter(Boolean);
+    const watches = movieIds.length
+      ? await Watch.find({
+          userFrom: req.user._id,
+          movieId: { $in: movieIds },
+        })
+          .select('movieId rating')
+          .lean()
+      : [];
+    const ratingById = new Map(
+      watches.map((w) => [String(w.movieId), w.rating ?? null])
+    );
+
+    res.status(200).json({
+      success: true,
+      favorites: favorites.map((f) => ({
+        ...f,
+        rating: ratingById.get(String(f.movieId)) ?? null,
+      })),
     });
-    res.status(200).json({ success: true, favorites });
   } catch (err) {
     next(err);
   }
