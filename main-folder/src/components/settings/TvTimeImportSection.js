@@ -25,7 +25,7 @@ export default function TvTimeImportSection() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [allowNewImport, setAllowNewImport] = useState(false);
+  const [selectedName, setSelectedName] = useState('');
   const fileRef = useRef(null);
 
   const fetchStatus = useCallback(() => {
@@ -45,6 +45,12 @@ export default function TvTimeImportSection() {
     return () => clearInterval(id);
   }, [job, fetchStatus]);
 
+  const onFileChange = () => {
+    const file = fileRef.current?.files?.[0];
+    setSelectedName(file?.name || '');
+    setUploadError('');
+  };
+
   const onUpload = async (e) => {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
@@ -63,12 +69,14 @@ export default function TvTimeImportSection() {
       const form = new FormData();
       form.append('file', file);
       const r = await api.post('/api/import/tvtime', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
       });
       if (r.data.success) {
         setJob(r.data.job);
-        setAllowNewImport(false);
+        setSelectedName('');
         if (fileRef.current) fileRef.current.value = '';
+      } else {
+        setUploadError(r.data.message || 'Upload failed. Try again.');
       }
     } catch (err) {
       setUploadError(
@@ -81,9 +89,8 @@ export default function TvTimeImportSection() {
   };
 
   const isActive = job && ['queued', 'processing'].includes(job.status);
-  const isDone = job?.status === 'completed' && !allowNewImport;
-  const isFailed = job?.status === 'failed' && !allowNewImport;
-  const showUploadForm = !loading && !isActive && (!job || allowNewImport || isFailed);
+  const isDone = job?.status === 'completed';
+  const isFailed = job?.status === 'failed';
   const report = job?.report;
 
   return (
@@ -118,84 +125,85 @@ export default function TvTimeImportSection() {
             </div>
           </div>
         </div>
-      ) : showUploadForm ? (
-        <form onSubmit={onUpload} className="state-enter space-y-3">
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface/50 px-4 py-8 transition-all duration-200 hover:border-accent/40 hover:bg-accent/5 active:scale-[0.99]">
-            <Upload className="mb-2 h-8 w-8 text-muted" />
-            <span className="text-sm font-medium text-ink">Choose TV Time export .zip</span>
-            <span className="mt-1 text-xs text-muted">Max 50 MB · replaces your current diary</span>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".zip,application/zip"
-              className="sr-only"
-              disabled={uploading}
-            />
-          </label>
-          {uploadError && (
-            <p className="state-enter flex items-start gap-2 text-sm text-danger">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              {uploadError}
-            </p>
+      ) : (
+        <>
+          {isDone && report && (
+            <div className="state-enter mb-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink-bright">Last import complete</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted">
+                    <li>{report.tv?.episodesImported ?? 0} TV episodes</li>
+                    <li>{report.tv?.shows ?? 0} shows tracked</li>
+                    <li>{report.movies?.watchedMapped ?? 0} films watched</li>
+                    <li>{report.movies?.favoritesMapped ?? 0} favorite films</li>
+                    <li>{report.tv?.favorites ?? 0} favorite TV shows</li>
+                    <li>
+                      {report.tv?.watchlist ?? 0} TV watchlist ·{' '}
+                      {report.movies?.towatchMapped ?? 0} film watchlist
+                    </li>
+                  </ul>
+                  {(report.tv?.unmapped?.length > 0 ||
+                    report.movies?.watchedUnmapped?.length > 0) && (
+                    <p className="mt-3 text-xs text-muted">
+                      Some titles couldn&apos;t be matched to TMDB (
+                      {(report.tv?.unmapped?.length || 0) +
+                        (report.movies?.watchedUnmapped?.length || 0)}{' '}
+                      skipped).
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          <button type="submit" disabled={uploading} className="btn-primary w-full sm:w-auto">
-            {uploading ? 'Uploading…' : 'Start import'}
-          </button>
-        </form>
-      ) : null}
 
-      {isDone && report && (
-        <div className="state-enter mt-5 rounded-xl border border-border bg-surface/50 px-4 py-4">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-            <div className="min-w-0">
-              <p className="font-semibold text-ink-bright">Import complete</p>
-              <ul className="mt-2 space-y-1 text-sm text-muted">
-                <li>{report.tv?.episodesImported ?? 0} TV episodes</li>
-                <li>{report.tv?.shows ?? 0} shows tracked</li>
-                <li>{report.movies?.watchedMapped ?? 0} films watched</li>
-                <li>{report.movies?.favoritesMapped ?? 0} favorite films</li>
-                <li>{report.tv?.favorites ?? 0} favorite TV shows</li>
-                <li>{report.tv?.watchlist ?? 0} TV watchlist · {report.movies?.towatchMapped ?? 0} film watchlist</li>
-              </ul>
-              {(report.tv?.unmapped?.length > 0 || report.movies?.watchedUnmapped?.length > 0) && (
-                <p className="mt-3 text-xs text-muted">
-                  Some titles couldn&apos;t be matched to TMDB (
-                  {(report.tv?.unmapped?.length || 0) + (report.movies?.watchedUnmapped?.length || 0)}{' '}
-                  skipped). Your CLI report has details if you need them.
-                </p>
-              )}
-              {!isActive && (
-                <button
-                  type="button"
-                  className="btn-secondary mt-4 !text-xs"
-                  onClick={() => setAllowNewImport(true)}
-                >
-                  Import another export
-                </button>
-              )}
+          {isFailed && (
+            <div className="state-enter mb-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+                <div>
+                  <p className="font-semibold text-ink-bright">Last import failed</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {job.errorMessage || 'Something went wrong.'}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {isFailed && (
-        <div className="state-enter mt-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
-            <div>
-              <p className="font-semibold text-ink-bright">Import failed</p>
-              <p className="mt-1 text-sm text-muted">{job.errorMessage || 'Something went wrong.'}</p>
-              <button
-                type="button"
-                className="btn-secondary mt-3 !text-xs"
-                onClick={() => setAllowNewImport(true)}
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        </div>
+          <form onSubmit={onUpload} className="state-enter space-y-3">
+            {isDone && (
+              <p className="text-sm text-ink">
+                Upload again to overwrite your diary with a fresh TV Time export.
+              </p>
+            )}
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface/50 px-4 py-8 transition-all duration-200 hover:border-accent/40 hover:bg-accent/5 active:scale-[0.99]">
+              <Upload className="mb-2 h-8 w-8 text-muted" />
+              <span className="text-sm font-medium text-ink">
+                {selectedName || 'Choose TV Time export .zip'}
+              </span>
+              <span className="mt-1 text-xs text-muted">Max 50 MB · replaces your current diary</span>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".zip,application/zip"
+                className="sr-only"
+                disabled={uploading}
+                onChange={onFileChange}
+              />
+            </label>
+            {uploadError && (
+              <p className="state-enter flex items-start gap-2 text-sm text-danger">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                {uploadError}
+              </p>
+            )}
+            <button type="submit" disabled={uploading} className="btn-primary w-full sm:w-auto">
+              {uploading ? 'Uploading…' : isDone ? 'Overwrite with new import' : 'Start import'}
+            </button>
+          </form>
+        </>
       )}
     </section>
   );

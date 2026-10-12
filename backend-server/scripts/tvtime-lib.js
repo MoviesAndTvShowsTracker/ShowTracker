@@ -87,15 +87,45 @@ function episodeKey(season, episode) {
   return `${season}-${episode}`;
 }
 
-function parseListUuids(dataDir, listKey) {
+/**
+ * Parse objects from lists-prod-lists.csv for a given s_key (e.g. favorite-series).
+ * Array order matches TV Time's ranked list order.
+ * Series entries use TVDB id:; movie entries use uuid:.
+ */
+function parseListEntries(dataDir, listKey) {
   const filePath = path.join(dataDir, 'lists-prod-lists.csv');
   if (!fs.existsSync(filePath)) return [];
-  const lines = fs.readFileSync(filePath, 'utf8').split('\n');
-  const line =
-    lines.find((row) => row.includes(`s_key:${listKey}`) && row.includes('uuid:')) ||
-    lines.find((row) => row.includes(listKey) && row.includes('uuid:'));
-  if (!line) return [];
-  return [...line.matchAll(/uuid:([0-9a-f-]{36})/gi)].map((m) => m[1]);
+  const row = readCsv(filePath).find((r) => r.s_key === listKey);
+  if (!row?.objects) return [];
+
+  const entries = [];
+  for (const match of row.objects.matchAll(/map\[([^\]]+)\]/g)) {
+    const body = match[1];
+    const idMatch = body.match(/\bid:(\d+)/);
+    const uuidMatch = body.match(/\buuid:([0-9a-f-]{36})/i);
+    const typeMatch = body.match(/\btype:(\w+)/);
+    const createdMatch = body.match(/created_at:([0-9.eE+-]+)/);
+    const createdSec = createdMatch ? parseFloat(createdMatch[1]) : NaN;
+
+    entries.push({
+      tvdbId: idMatch ? idMatch[1] : null,
+      uuid: uuidMatch ? uuidMatch[1] : null,
+      type: typeMatch ? typeMatch[1] : null,
+      createdAt: Number.isFinite(createdSec) ? new Date(createdSec * 1000) : null,
+    });
+  }
+  return entries;
+}
+
+function parseListUuids(dataDir, listKey) {
+  return parseListEntries(dataDir, listKey)
+    .map((e) => e.uuid)
+    .filter(Boolean);
+}
+
+/** favoritedAt descending so API sort matches TV Time rank (first = top). */
+function rankFavoritedAt(index) {
+  return new Date(Date.now() - index * 1000);
 }
 
 function loadGdprData(dataDir) {
@@ -185,6 +215,20 @@ function loadGdprData(dataDir) {
     tvFavorites.push({ tvdbId, name, favoritedAt: favoritedAt || null });
   };
 
+  const resolveTvName = (tvdbId) => {
+    if (!tvdbId) return '';
+    const fromMeta = tvShowMeta.get(tvdbId)?.name;
+    if (fromMeta) return fromMeta;
+    const fromV2 = trackingV2.find(
+      (r) => String(r.s_id || '').trim() === tvdbId && (r.series_name || '').trim()
+    );
+    if (fromV2?.series_name) return fromV2.series_name.trim();
+    const fromV1 = trackingV1.find(
+      (r) => String(r.series_id || '').trim() === tvdbId && (r.series_name || '').trim()
+    );
+    return (fromV1?.series_name || '').trim();
+  };
+
   for (const row of userTvShow) {
     const tvdbId = String(row.tv_show_id || '').trim();
     const name = (row.tv_show_name || '').trim();
@@ -198,9 +242,6 @@ function loadGdprData(dataDir) {
       isFavorited: row.is_favorited === '1',
     });
 
-    if (row.is_favorited === '1') {
-      addTvFavorite(tvdbId, name, null);
-    }
     if (row.is_followed === '1' && (parseInt(row.nb_episodes_seen || '0', 10) || 0) === 0) {
       tvWatchlist.push({ tvdbId, name });
     }
@@ -218,10 +259,25 @@ function loadGdprData(dataDir) {
     }
   }
 
-  for (const uuid of parseListUuids(dataDir, 'favorite-series')) {
-    const tvdbId = seriesUuidToTvdb.get(uuid);
-    const row = trackingV1.find((r) => r.uuid === uuid && r.series_name);
-    addTvFavorite(tvdbId, row?.series_name || '', null);
+  // Source of truth: ranked Favorite Shows list (TVDB ids). is_favorited is a divergent flag.
+  const favoriteSeriesList = parseListEntries(dataDir, 'favorite-series').filter(
+    (e) => e.type === 'series' || e.tvdbId || e.uuid
+  );
+
+  if (favoriteSeriesList.length) {
+    favoriteSeriesList.forEach((entry, index) => {
+      let tvdbId = entry.tvdbId;
+      if (!tvdbId && entry.uuid) tvdbId = seriesUuidToTvdb.get(entry.uuid) || null;
+      const name = resolveTvName(tvdbId);
+      addTvFavorite(tvdbId, name, rankFavoritedAt(index));
+    });
+  } else {
+    for (const row of userTvShow) {
+      if (row.is_favorited !== '1') continue;
+      const tvdbId = String(row.tv_show_id || '').trim();
+      const name = (row.tv_show_name || '').trim();
+      addTvFavorite(tvdbId, name, null);
+    }
   }
 
   const movieFavoriteUuids = parseListUuids(dataDir, 'favorite-movies');

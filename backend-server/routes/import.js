@@ -12,6 +12,8 @@ const router = express.Router();
 const UPLOAD_ROOT = path.join(__dirname, '../tmp/imports');
 const CACHE_PATH = path.join(__dirname, '../scripts/.tvtime-import-cache.json');
 const MAX_ZIP_BYTES = 50 * 1024 * 1024;
+/** Jobs stuck in queued/processing longer than this are marked failed so overwrite can proceed. */
+const STALE_JOB_MS = 2 * 60 * 60 * 1000;
 
 if (!fs.existsSync(UPLOAD_ROOT)) {
   fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
@@ -139,13 +141,23 @@ router.post(
       const active = await ImportJob.findOne({
         userFrom: req.user._id,
         status: { $in: ['queued', 'processing'] },
-      });
+      }).sort({ createdAt: -1 });
       if (active) {
-        rmDirSafe(req.file.path);
-        return res.status(409).json({
-          success: false,
-          message: 'An import is already running. Check back here for progress.',
-          job: active,
+        const anchor = active.startedAt || active.createdAt;
+        const ageMs = Date.now() - new Date(anchor).getTime();
+        if (ageMs < STALE_JOB_MS) {
+          rmDirSafe(req.file.path);
+          return res.status(409).json({
+            success: false,
+            message: 'An import is already running. Check back here for progress.',
+            job: active,
+          });
+        }
+        await ImportJob.findByIdAndUpdate(active._id, {
+          status: 'failed',
+          phase: 'failed',
+          errorMessage: 'Import timed out or the server restarted. Please try again.',
+          finishedAt: new Date(),
         });
       }
 
