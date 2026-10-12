@@ -149,6 +149,22 @@ function filmExtremes(films) {
   };
 }
 
+/** Average + top-rated across any item list with a `rating` field (1..10). */
+function ratingSummary(items, keyFn) {
+  const rated = items.filter((it) => Number.isFinite(it.rating) && it.rating > 0);
+  if (!rated.length) {
+    return { count: 0, average: 0, top: null };
+  }
+  const sum = rated.reduce((acc, it) => acc + it.rating, 0);
+  const average = Math.round((sum / rated.length) * 10) / 10 / 2; // stored 1..10 -> 0.5..5 average
+  const top = [...rated].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+  return {
+    count: rated.length,
+    average,
+    top: top ? { ...keyFn(top), rating: top.rating / 2 } : null,
+  };
+}
+
 function mostWatchedShow(episodes, tracks) {
   if (!episodes.length) return null;
   const counts = new Map();
@@ -263,7 +279,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 2;
+const STATS_SCHEMA_VERSION = 3;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
@@ -296,6 +312,18 @@ async function buildUserStatsDashboard(userId, options = {}) {
   const epsMissingRuntime = episodes.length - epsWithRuntime;
 
   const { longest: longestFilm, shortest: shortestFilm } = filmExtremes(films);
+
+  const filmRatingStats = ratingSummary(films, (f) => ({
+    movieId: f.movieId,
+    movieTitle: f.movieTitle,
+  }));
+  const showRatingStats = ratingSummary(tracks, (t) => ({
+    tvId: t.tvId,
+    tvTitle: t.tvTitle,
+  }));
+  const episodeRatingCount = episodes.filter(
+    (e) => Number.isFinite(e.rating) && e.rating > 0
+  ).length;
 
   const library = {
     watching: tracks.filter((t) => t.status === 'watching').length,
@@ -501,6 +529,11 @@ async function buildUserStatsDashboard(userId, options = {}) {
     },
     previousYear,
     funFacts,
+    ratings: {
+      films: filmRatingStats,
+      shows: showRatingStats,
+      episodeCount: episodeRatingCount,
+    },
     milestones: computeMilestones({
       episodeCount: episodes.length,
       filmCount: films.length,

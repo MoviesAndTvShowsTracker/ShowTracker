@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clapperboard, RefreshCw } from 'lucide-react';
+import { Clapperboard, RefreshCw, Star } from 'lucide-react';
 import {
   formatCount,
   formatDelta,
@@ -24,6 +24,33 @@ function QuirkTicket({ ticket }) {
       </p>
       <p className="mt-2 text-sm leading-snug text-ink">{ticket.line}</p>
       {ticket.meta && <p className="mt-2 text-[11px] text-muted">{ticket.meta}</p>}
+    </article>
+  );
+}
+
+function RatingSummaryCard({ label, count, average }) {
+  const hasData = (count || 0) > 0 && average > 0;
+  return (
+    <article className="rounded-2xl border border-border/50 bg-surface/70 p-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
+      {hasData ? (
+        <>
+          <p className="tnum mt-2 inline-flex items-center gap-1.5 font-serif text-2xl leading-none text-ink-bright">
+            <Star className="h-4 w-4 fill-accent text-accent" aria-hidden="true" />
+            {average.toFixed(1)}
+          </p>
+          <p className="mt-1.5 text-xs text-muted">
+            avg · {formatCount(count)} rated
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="tnum mt-2 font-serif text-2xl leading-none text-ink-bright">
+            {formatCount(count || 0)}
+          </p>
+          <p className="mt-1.5 text-xs text-muted">rated</p>
+        </>
+      )}
     </article>
   );
 }
@@ -55,6 +82,11 @@ export default function ProfileStatsPage() {
   const taste = stats?.taste;
   const quality = stats?.quality;
   const facts = stats?.funFacts;
+  const ratings = stats?.ratings;
+  const hasRatings =
+    (ratings?.films?.count || 0) > 0 ||
+    (ratings?.shows?.count || 0) > 0 ||
+    (ratings?.episodeCount || 0) > 0;
 
   const previousYearTotal = stats?.previousYear?.totalMins;
   const delta = formatDelta(year?.totalMins, previousYearTotal);
@@ -272,6 +304,56 @@ export default function ProfileStatsPage() {
                     meta={formatDuration(films?.shortest?.minutes)}
                     tone="link"
                   />
+                </div>
+              </section>
+            )}
+
+            {/* Ratings — only when the user has started rating */}
+            {hasRatings && (
+              <section className="animate-soft-rise space-y-3 opacity-0 [animation-delay:180ms]">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <h2 className="rule-label section-title">Your ratings</h2>
+                  {(ratings?.episodeCount || 0) > 0 && (
+                    <p className="text-xs text-muted">
+                      {formatCount(ratings.episodeCount)} episode
+                      {ratings.episodeCount === 1 ? '' : 's'} rated
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(ratings?.films?.count || 0) > 0 && (
+                    <RatingSummaryCard
+                      label="Films"
+                      count={ratings.films.count}
+                      average={ratings.films.average}
+                    />
+                  )}
+                  {(ratings?.shows?.count || 0) > 0 && (
+                    <RatingSummaryCard
+                      label="Shows"
+                      count={ratings.shows.count}
+                      average={ratings.shows.average}
+                    />
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {ratings?.films?.top?.movieId && (
+                    <SpotlightLink
+                      to={`/movies/${ratings.films.top.movieId}`}
+                      kicker="Top-rated film"
+                      title={ratings.films.top.movieTitle}
+                      meta={`${ratings.films.top.rating.toFixed(1)} stars`}
+                    />
+                  )}
+                  {ratings?.shows?.top?.tvId && (
+                    <SpotlightLink
+                      to={`/tv/${ratings.shows.top.tvId}`}
+                      kicker="Top-rated show"
+                      title={ratings.shows.top.tvTitle}
+                      meta={`${ratings.shows.top.rating.toFixed(1)} stars`}
+                      tone="link"
+                    />
+                  )}
                 </div>
               </section>
             )}

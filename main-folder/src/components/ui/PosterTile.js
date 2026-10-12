@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { Star, X } from 'lucide-react';
+import { ratingToStars } from './StarRating';
 
 const sizes = {
   sm: 'w-[88px] sm:w-[100px] md:w-[112px] lg:w-[128px]',
@@ -16,9 +17,11 @@ export default function PosterTile({
   size = 'sm',
   showTitle = true,
   onRemove,
+  rating = null,
 }) {
   const src = imageUrlPrefix ? `${imageUrlPrefix}${poster}` : poster;
   const widthClass = sizes[size] || sizes.sm;
+  const stars = ratingToStars(rating);
 
   const posterImage = (
     <div className={`group relative shrink-0 overflow-hidden rounded-xl bg-surface-raised shadow-poster transition-all duration-200 ease-out hover:shadow-poster-hover hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 ${widthClass}`}>
@@ -28,6 +31,15 @@ export default function PosterTile({
         className="aspect-[2/3] w-full object-cover"
         loading="lazy"
       />
+      {stars > 0 && (
+        <span
+          className="pointer-events-none absolute left-1 top-1 inline-flex items-center gap-0.5 rounded-md bg-canvas/90 px-1.5 py-0.5 text-[10px] font-semibold text-ink-bright shadow-sm backdrop-blur-sm"
+          aria-label={`Rated ${stars} out of 5`}
+        >
+          <Star className="h-2.5 w-2.5 fill-accent text-accent" />
+          {stars % 1 === 0 ? stars.toFixed(0) : stars.toFixed(1)}
+        </span>
+      )}
       {onRemove && (
         <button
           type="button"

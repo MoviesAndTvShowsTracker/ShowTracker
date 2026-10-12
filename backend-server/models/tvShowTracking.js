@@ -22,6 +22,7 @@ const TvShowTracking = new Schema(
     lastSeason: Number,
     lastEpisode: Number,
     lastWatchedAt: Date,
+    rating: { type: Number, min: 1, max: 10, default: null },
   },
   { timestamps: true }
 );

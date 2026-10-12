@@ -10,6 +10,7 @@ const {
   deleteWatchedEpisodes,
 } = require('../services/tvTrackingService');
 const { invalidateUserStats } = require('../services/statsCache');
+const { normalizeRating } = require('../services/ratings');
 
 router.use(bodyParser.json());
 
@@ -63,18 +64,28 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       nextEpisodeName,
     } = req.body;
 
+    let rating;
+    try {
+      rating = normalizeRating(req.body.rating);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    const epSet = {
+      userFrom: userId,
+      tvId,
+      seasonNumber,
+      episodeNumber,
+      tmdbEpisodeId,
+      episodeName,
+      runtimeMinutes: runtimeMinutes || 0,
+      watchedAt: new Date(),
+    };
+    if (req.body.rating !== undefined) epSet.rating = rating;
+
     await TvEpisodeWatch.findOneAndUpdate(
       { userFrom: userId, tvId, seasonNumber, episodeNumber },
-      {
-        userFrom: userId,
-        tvId,
-        seasonNumber,
-        episodeNumber,
-        tmdbEpisodeId,
-        episodeName,
-        runtimeMinutes: runtimeMinutes || 0,
-        watchedAt: new Date(),
-      },
+      epSet,
       { upsert: true, new: true }
     );
 
@@ -229,6 +240,38 @@ router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => 
 
     await invalidateUserStats(userId);
     res.status(200).json({ success: true, tracking, episodes: allEpisodes });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/rate-episode', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const tvId = String(req.body.tvId);
+    const { seasonNumber, episodeNumber } = req.body;
+
+    let rating;
+    try {
+      rating = normalizeRating(req.body.rating);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    const episode = await TvEpisodeWatch.findOneAndUpdate(
+      { userFrom: userId, tvId, seasonNumber, episodeNumber },
+      { $set: { rating } },
+      { new: true }
+    );
+
+    if (!episode) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Mark this episode watched before rating it.' });
+    }
+
+    await invalidateUserStats(userId);
+    res.status(200).json({ success: true, rating: episode.rating ?? null, episode });
   } catch (err) {
     next(err);
   }

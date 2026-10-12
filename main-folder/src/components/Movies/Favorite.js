@@ -10,6 +10,7 @@ import {
 } from '../../utils/removeConfirm';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
+import { RatingField, ratingToStars, starsToPayload } from '../ui/StarRating';
 
 export default function Favorite({ movieId, movieInfo }) {
   const { confirm, confirmDialog } = useConfirmDialog();
@@ -18,6 +19,8 @@ export default function Favorite({ movieId, movieInfo }) {
   const [watched, setWatched] = useState(false);
   const [watchedAt, setWatchedAt] = useState(null);
   const [watchlisted, setWatchlisted] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingSaving, setRatingSaving] = useState(false);
 
   const payload = {
     movieId,
@@ -41,6 +44,7 @@ export default function Favorite({ movieId, movieInfo }) {
       if (watch.data.success) {
         setWatched(watch.data.watched);
         setWatchedAt(watch.data.watchedAt || null);
+        setRating(ratingToStars(watch.data.rating));
       }
     });
     api.post('/api/watchlist/watchlisted', { movieId }).then((r) => {
@@ -79,6 +83,7 @@ export default function Favorite({ movieId, movieInfo }) {
             if (r.data.success) {
               setWatched(false);
               setWatchedAt(null);
+              setRating(0);
               clearSessionStats();
             }
           }),
@@ -89,9 +94,33 @@ export default function Favorite({ movieId, movieInfo }) {
       if (r.data.success) {
         setWatched(true);
         setWatchedAt(r.data.watchedAt || new Date().toISOString());
+        setRating(ratingToStars(r.data.rating));
         clearSessionStats();
       }
     });
+  };
+
+  const handleRate = async (stars) => {
+    if (!watched || ratingSaving) return;
+    const prev = rating;
+    setRating(stars || 0);
+    setRatingSaving(true);
+    try {
+      const r = await api.post('/api/watch/rate', {
+        movieId,
+        rating: starsToPayload(stars),
+      });
+      if (r.data.success) {
+        setRating(ratingToStars(r.data.rating));
+        clearSessionStats();
+      } else {
+        setRating(prev);
+      }
+    } catch {
+      setRating(prev);
+    } finally {
+      setRatingSaving(false);
+    }
   };
 
   const toggleWatchlist = () => {
@@ -139,6 +168,14 @@ export default function Favorite({ movieId, movieInfo }) {
           />
         )}
       </ActionStrip>
+      {watched && (
+        <RatingField
+          value={rating}
+          onChange={handleRate}
+          disabled={ratingSaving}
+          title={movieTitle}
+        />
+      )}
       {confirmDialog}
     </div>
   );

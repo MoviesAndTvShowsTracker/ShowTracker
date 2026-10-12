@@ -23,6 +23,12 @@ var Watch = new Schema({
     },
     watchedAt: {
         type: Date
+    },
+    rating: {
+        type: Number,
+        min: 1,
+        max: 10,
+        default: null,
     }
 }, {
     timestamps: true

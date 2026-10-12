@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, CheckCircle2, Heart, PauseCircle, PlayCircle } from 'lucide-react';
 import api from '../../api/axios';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { favoriteRemoveConfirm, watchlistRemoveConfirm } from '../../utils/removeConfirm';
+import { clearSessionStats } from '../../utils/statsCache';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
+import { RatingField, ratingToStars, starsToPayload } from '../ui/StarRating';
 
 function listStateFromTrack(track) {
   if (!track || track.status === 'dropped') return null;
@@ -16,7 +19,10 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
   const navigate = useNavigate();
   const { confirm, confirmDialog } = useConfirmDialog();
   const { tracking, favoriteNumber, favorited, watchlisted } = diary;
+  const [ratingSaving, setRatingSaving] = useState(false);
   const showTitle = tvInfo.name || 'this show';
+  const canRateShow = Boolean(tracking && (tracking.watchedEpisodeCount || 0) >= 1);
+  const showRating = ratingToStars(tracking?.rating);
 
   const payload = {
     tvId,
@@ -71,6 +77,34 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
   const listState = listStateFromTrack(tracking);
   const goToProgress = () => navigate(`/tv/${tvId}/continue`);
 
+  const handleRateShow = async (stars) => {
+    if (!canRateShow || ratingSaving) return;
+    const prevRating = tracking?.rating ?? null;
+    const next = starsToPayload(stars);
+    // Optimistic: patch tracking.rating locally.
+    onDiaryPatch({
+      tracking: tracking ? { ...tracking, rating: next ? next : null } : tracking,
+    });
+    setRatingSaving(true);
+    try {
+      const r = await api.post('/api/tv/tracking/rate', { tvId, rating: next });
+      if (r.data?.success) {
+        onDiaryPatch({ tracking: r.data.tracking || tracking });
+        clearSessionStats();
+      } else {
+        onDiaryPatch({
+          tracking: tracking ? { ...tracking, rating: prevRating } : tracking,
+        });
+      }
+    } catch {
+      onDiaryPatch({
+        tracking: tracking ? { ...tracking, rating: prevRating } : tracking,
+      });
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
   const statusButton = (() => {
     if (listState === 'completed') {
       return (
@@ -122,17 +156,25 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
   return (
     <>
       <ActionStrip columns={2}>
-      <ActionButton
-        active={favorited}
-        onClick={toggleFavorite}
-        icon={Heart}
-        label={favorited ? 'Favorited' : 'Favorite'}
-        compactLabel="Favorite"
-        badge={favoriteNumber}
-      />
-      {statusButton}
-    </ActionStrip>
-    {confirmDialog}
+        <ActionButton
+          active={favorited}
+          onClick={toggleFavorite}
+          icon={Heart}
+          label={favorited ? 'Favorited' : 'Favorite'}
+          compactLabel="Favorite"
+          badge={favoriteNumber}
+        />
+        {statusButton}
+      </ActionStrip>
+      {canRateShow && (
+        <RatingField
+          value={showRating}
+          onChange={handleRateShow}
+          disabled={ratingSaving}
+          title={showTitle}
+        />
+      )}
+      {confirmDialog}
     </>
   );
 }

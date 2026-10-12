@@ -3,6 +3,8 @@ import { Check, ChevronDown, Star } from 'lucide-react';
 import api from '../../api/axios';
 import { tmdbFetch } from '../../utils/tmdb';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
+import { EpisodeRatingControl, starsToPayload } from '../ui/StarRating';
+import { clearSessionStats } from '../../utils/statsCache';
 import {
   episodeUnmarkConfirm,
   markSeasonConfirm,
@@ -54,6 +56,7 @@ export default function TvSeasonEpisodesPanel({
   const [toggling, setToggling] = useState(null);
   const [batching, setBatching] = useState(false);
   const [seasonDataReady, setSeasonDataReady] = useState(false);
+  const [ratingSavingKey, setRatingSavingKey] = useState(null);
   const { confirm, confirmDialog } = useConfirmDialog();
 
   const showMeta = useMemo(
@@ -258,6 +261,46 @@ export default function TvSeasonEpisodesPanel({
     }
   };
 
+  const rateEpisode = async (ep, stars) => {
+    const key = episodeKey(ep.seasonNumber, ep.episodeNumber);
+    const prev = [...watched];
+    const payload = starsToPayload(stars);
+
+    // Optimistic update
+    setWatched((rows) =>
+      rows.map((row) =>
+        row.seasonNumber === ep.seasonNumber && row.episodeNumber === ep.episodeNumber
+          ? { ...row, rating: payload || null }
+          : row
+      )
+    );
+    setRatingSavingKey(key);
+    try {
+      const r = await api.post('/api/tv/episodes/rate-episode', {
+        tvId: tvShowId,
+        seasonNumber: ep.seasonNumber,
+        episodeNumber: ep.episodeNumber,
+        rating: payload,
+      });
+      if (r.data?.success) {
+        setWatched((rows) =>
+          rows.map((row) =>
+            row.seasonNumber === ep.seasonNumber && row.episodeNumber === ep.episodeNumber
+              ? { ...row, rating: r.data.rating ?? null }
+              : row
+          )
+        );
+        clearSessionStats();
+      } else {
+        setWatched(prev);
+      }
+    } catch {
+      setWatched(prev);
+    } finally {
+      setRatingSavingKey(null);
+    }
+  };
+
   const markAllShow = async () => {
     if (!unwatchedAiredAll.length) return;
     setBatching(true);
@@ -457,7 +500,7 @@ export default function TvSeasonEpisodesPanel({
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
                       {episode.air_date && <span>Aired {airdate(episode.air_date)}</span>}
                       {isWatched && watchedAt && (
                         <span className="state-enter font-medium text-accent">
@@ -467,11 +510,19 @@ export default function TvSeasonEpisodesPanel({
                       {episode.runtime > 0 && <span>{episode.runtime} min</span>}
                       {episode.vote_average > 0 && (
                         <span className="inline-flex items-center gap-0.5">
-                          <Star className="h-3 w-3 fill-accent text-accent" />
+                          <Star className="h-3 w-3 fill-accent text-accent" aria-hidden="true" />
                           {Number(episode.vote_average).toFixed(1)}
                         </span>
                       )}
-                    </p>
+                      {isWatched && (
+                        <EpisodeRatingControl
+                          value={watchedByKey.get(key)?.rating}
+                          onChange={(stars) => rateEpisode(epMeta, stars)}
+                          disabled={ratingSavingKey === key}
+                          label={`Rate episode ${episode.episode_number}`}
+                        />
+                      )}
+                    </div>
                   </div>
                 </article>
               );

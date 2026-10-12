@@ -35,6 +35,7 @@ router.post('/getWatchTv', authenticate.verifyUser, async (req, res, next) => {
       lastWatchedAt: t.lastWatchedAt,
       watchedEpisodeCount: t.watchedEpisodeCount,
       totalEpisodes: t.totalEpisodes,
+      rating: t.rating ?? null,
     }));
 
     res.status(200).json({ success: true, watch });

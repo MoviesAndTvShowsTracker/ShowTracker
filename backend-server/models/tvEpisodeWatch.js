@@ -11,6 +11,7 @@ const TvEpisodeWatch = new Schema(
     episodeName: String,
     runtimeMinutes: { type: Number, default: 0 },
     watchedAt: { type: Date, default: Date.now },
+    rating: { type: Number, min: 1, max: 10, default: null },
   },
   { timestamps: true }
 );

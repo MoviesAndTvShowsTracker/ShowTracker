@@ -16,6 +16,8 @@ const {
   mapTabToStatus,
   STALE_DAYS,
 } = require('../services/tvTrackingMaintenance');
+const { normalizeRating } = require('../services/ratings');
+const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
 
@@ -209,6 +211,31 @@ router.post('/stop', authenticate.verifyUser, async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Not tracking this show' });
     }
     res.status(200).json({ success: true, tracking });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/rate', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    let rating;
+    try {
+      rating = normalizeRating(req.body.rating);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    const tracking = await findTracking(req.user._id, req.body.tvId);
+    if (!tracking || (tracking.watchedEpisodeCount || 0) < 1) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Mark at least one episode before rating this show.' });
+    }
+
+    tracking.rating = rating;
+    await tracking.save();
+    await invalidateUserStats(req.user._id);
+    res.status(200).json({ success: true, rating: tracking.rating ?? null, tracking });
   } catch (err) {
     next(err);
   }

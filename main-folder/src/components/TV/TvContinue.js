@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, ChevronDown, ChevronRight, List } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, List, X } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -16,6 +16,8 @@ import BackNav from '../ui/BackNav';
 import Dialog from '../ui/Dialog';
 import TvSeasonEpisodesPanel from './TvSeasonEpisodesPanel';
 import TvTrackingStatusAction from './TvTrackingStatusAction';
+import StarRating, { starsToPayload } from '../ui/StarRating';
+import { clearSessionStats } from '../../utils/statsCache';
 import { formatShortDate } from '../../utils/statsFormat';
 
 const menuRowClass =
@@ -65,6 +67,7 @@ export default function TvContinue() {
   const [episodesOpen, setEpisodesOpen] = useState(false);
   const [episodesEverOpened, setEpisodesEverOpened] = useState(false);
   const [episodesRefresh, setEpisodesRefresh] = useState(null);
+  const [rateChip, setRateChip] = useState(null); // { seasonNumber, episodeNumber, episodeName, saving }
 
   const load = () => {
     setLoading(true);
@@ -130,9 +133,42 @@ export default function TvContinue() {
       if (r.data.success) {
         handleProgressChange(r.data);
         setEpisodesRefresh((n) => (n ?? 0) + 1);
+        setRateChip({
+          seasonNumber: nextEp.seasonNumber,
+          episodeNumber: nextEp.episodeNumber,
+          episodeName: nextEp.episodeName,
+          saving: false,
+        });
       }
     } finally {
       setMarking(false);
+    }
+  };
+
+  const rateJustWatched = async (stars) => {
+    if (!rateChip) return;
+    setRateChip((prev) => (prev ? { ...prev, saving: true } : prev));
+    try {
+      const r = await api.post('/api/tv/episodes/rate-episode', {
+        tvId: tvShowId,
+        seasonNumber: rateChip.seasonNumber,
+        episodeNumber: rateChip.episodeNumber,
+        rating: starsToPayload(stars),
+      });
+      if (r.data?.success) {
+        setWatched((rows) =>
+          rows.map((row) =>
+            row.seasonNumber === rateChip.seasonNumber &&
+            row.episodeNumber === rateChip.episodeNumber
+              ? { ...row, rating: r.data.rating ?? null }
+              : row
+          )
+        );
+        clearSessionStats();
+        setEpisodesRefresh((n) => (n ?? 0) + 1);
+      }
+    } finally {
+      setRateChip(null);
     }
   };
 
@@ -288,6 +324,43 @@ export default function TvContinue() {
             ) : (
               <div key="pick-season" className="state-enter mt-6">
                 <p className="text-sm text-muted">Choose a season to start tracking.</p>
+              </div>
+            )}
+
+            {rateChip && (
+              <div
+                key={`rate-${rateChip.seasonNumber}-${rateChip.episodeNumber}`}
+                className="state-enter mt-4 rounded-xl border border-border/60 bg-surface/60 px-3 py-3 shadow-glass backdrop-blur-md sm:px-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+                      Rate this episode?
+                    </p>
+                    <p className="mt-0.5 truncate text-sm text-ink">
+                      S{rateChip.seasonNumber} · E{rateChip.episodeNumber}
+                      {rateChip.episodeName ? ` — ${rateChip.episodeName}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRateChip(null)}
+                    className="focus-ring pressable inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-raised hover:text-ink-bright cursor-pointer"
+                    aria-label="Dismiss rating prompt"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="mt-2.5">
+                  <StarRating
+                    value={0}
+                    onChange={rateJustWatched}
+                    size="md"
+                    allowClear={false}
+                    disabled={rateChip.saving}
+                    label={`Rate S${rateChip.seasonNumber}E${rateChip.episodeNumber}`}
+                  />
+                </div>
               </div>
             )}
 

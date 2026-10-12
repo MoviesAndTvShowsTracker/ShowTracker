@@ -178,6 +178,7 @@ export default function Profile() {
       imageUrlPrefix={`${IMAGE_URL}w342`}
       size="sm"
       onRemove={onRemove}
+      rating={m.rating}
     />
   );
 
@@ -190,6 +191,7 @@ export default function Profile() {
       imageUrlPrefix={`${IMAGE_URL}w342`}
       size="sm"
       onRemove={onRemove}
+      rating={s.rating}
     />
   );
 

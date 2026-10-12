@@ -151,6 +151,7 @@ export default function ProfileListPage() {
                   imageUrlPrefix={`${IMAGE_URL}w342`}
                   size="fill"
                   onRemove={canRemove ? () => handleRemove(item.movieId, item.movieTitle) : undefined}
+                  rating={listKey === 'watched-films' ? item.rating : undefined}
                 />
               ) : (
                 <PosterTile
@@ -161,6 +162,7 @@ export default function ProfileListPage() {
                   imageUrlPrefix={`${IMAGE_URL}w342`}
                   size="fill"
                   onRemove={canRemove ? () => handleRemove(item.tvId, item.tvTitle) : undefined}
+                  rating={item.rating}
                 />
               )
             )}
