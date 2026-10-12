@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { IMAGE_URL } from '../../config/keys';
-import { isAbortError, tmdbFetch } from '../../utils/tmdb';
+import { tmdbFetch } from '../../utils/tmdb';
 import { fetchTvShowDiary } from '../../api/tvShowDiary';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarTvShows from './SimilarTvShows';
@@ -17,8 +17,46 @@ import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
 import PosterTile from '../ui/PosterTile';
+import useCachedResource, { CACHE_KEYS, writeCache } from '../../utils/routeCache';
 import { formatLanguage, formatShortDate, premiereFieldLabel } from '../../utils/statsFormat';
 import { pickWatchProviders, tvCertification } from '../../utils/watchRegion';
+
+const EMPTY_DETAIL = {
+  tvShow: {},
+  createdBy: [],
+  genres: [],
+  seasons: [],
+  crews: [],
+  watchProviders: [],
+  watchRegion: null,
+  certification: null,
+};
+
+async function fetchTvDetailBundle(tvShowId, signal) {
+  const showData = await tmdbFetch(`tv/${tvShowId}`, {}, { signal });
+  if (!showData || !showData.id) throw new Error('not_found');
+
+  const [creditsData, providersData, ratingsData] = await Promise.all([
+    tmdbFetch(`tv/${tvShowId}/credits`, {}, { signal }).catch(() => ({ cast: [], crew: [] })),
+    tmdbFetch(`tv/${tvShowId}/watch/providers`, {}, { signal }).catch(() => null),
+    tmdbFetch(`tv/${tvShowId}/content_ratings`, {}, { signal }).catch(() => null),
+  ]);
+
+  const { providers = [], region = null } = providersData
+    ? pickWatchProviders(providersData.results)
+    : {};
+
+  return {
+    tvShow: showData,
+    createdBy: showData.created_by || [],
+    genres: showData.genres || [],
+    seasons: showData.seasons || [],
+    crews: creditsData.cast || [],
+    watchProviders: providers,
+    watchRegion: region,
+    certification: ratingsData ? tvCertification(ratingsData) : null,
+  };
+}
 
 export default function TvDetail() {
   const { Id: tvShowId } = useParams();
@@ -26,102 +64,60 @@ export default function TvDetail() {
   const initialSeason = searchParams.get('season')
     ? Number(searchParams.get('season'))
     : undefined;
-  const [tvShow, setTvShow] = useState({});
-  const [createdBy, setCreatedBy] = useState([]);
-  const [genres, setGenres] = useState([]);
-  const [seasons, setSeasons] = useState([]);
-  const [crews, setCrews] = useState([]);
-  const [watchProviders, setWatchProviders] = useState([]);
-  const [watchRegion, setWatchRegion] = useState(null);
-  const [certification, setCertification] = useState(null);
-  const [actorToggle, setActorToggle] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [reloadKey, setReloadKey] = useState(0);
-  const [diary, setDiary] = useState(null);
 
-  const patchDiary = useCallback((patch) => {
-    setDiary((current) => (current ? { ...current, ...patch } : current));
-  }, []);
+  const {
+    data,
+    loading,
+    error,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    tvShowId ? CACHE_KEYS.tvDetail(tvShowId) : null,
+    (signal) => fetchTvDetailBundle(tvShowId, signal),
+    { ttl: 24 * 60 * 60_000, enabled: Boolean(tvShowId) }
+  );
 
-  const handleProgressChange = useCallback((data) => {
-    if (!data || !('tracking' in data)) return;
-    setDiary((current) => {
-      if (!current) return current;
-      return {
+  const { tvShow, createdBy, genres, seasons, crews, watchProviders, watchRegion, certification } =
+    data || EMPTY_DETAIL;
+
+  // Diary (favorite / watchlist / tracking) IS user-specific, so cache
+  // separately with a short TTL and expose write access so mutations can
+  // keep the cache honest without a round-trip.
+  const diaryKey = tvShowId ? `tv:diary:${tvShowId}` : null;
+  const { data: diary, refresh: refreshDiary } = useCachedResource(
+    diaryKey,
+    () => fetchTvShowDiary(tvShowId),
+    { ttl: 15_000, enabled: Boolean(tvShowId) }
+  );
+
+  const patchDiary = useCallback(
+    (patch) => {
+      if (!diaryKey) return;
+      const current = diary || null;
+      if (!current) return;
+      writeCache(diaryKey, { ...current, ...patch });
+    },
+    [diary, diaryKey]
+  );
+
+  const handleProgressChange = useCallback(
+    (payload) => {
+      if (!payload || !('tracking' in payload) || !diaryKey) return;
+      const current = diary;
+      if (!current) {
+        refreshDiary().catch(() => {});
+        return;
+      }
+      writeCache(diaryKey, {
         ...current,
-        tracking: data.tracking ?? null,
-        watchlisted: data.tracking ? false : current.watchlisted,
-      };
-    });
-  }, []);
+        tracking: payload.tracking ?? null,
+        watchlisted: payload.tracking ? false : current.watchlisted,
+      });
+    },
+    [diary, diaryKey, refreshDiary]
+  );
 
-  const loadShow = useCallback(async (signal) => {
-    setLoading(true);
-    setError('');
-    setDiary(null);
-    setTvShow({});
-    setCreatedBy([]);
-    setGenres([]);
-    setSeasons([]);
-    setCrews([]);
-    setWatchProviders([]);
-    setWatchRegion(null);
-    setCertification(null);
-
-    try {
-      const diaryPromise = fetchTvShowDiary(tvShowId);
-      const showData = await tmdbFetch(`tv/${tvShowId}`, {}, { signal });
-
-      if (!showData || !showData.id) throw new Error('not_found');
-
-      setTvShow(showData);
-      setCreatedBy(showData.created_by || []);
-      setGenres(showData.genres || []);
-      setSeasons(showData.seasons || []);
-
-      const [creditsData, providersData, ratingsData, diaryData] = await Promise.all([
-        tmdbFetch(`tv/${tvShowId}/credits`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return { cast: [], crew: [] };
-        }),
-        tmdbFetch(`tv/${tvShowId}/watch/providers`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return null;
-        }),
-        tmdbFetch(`tv/${tvShowId}/content_ratings`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return null;
-        }),
-        diaryPromise,
-      ]);
-
-      if (signal.aborted) return;
-      setDiary(diaryData);
-      setCrews(creditsData.cast || []);
-
-      if (providersData) {
-        const { providers, region } = pickWatchProviders(providersData.results);
-        setWatchProviders(providers);
-        setWatchRegion(region);
-      }
-
-      if (ratingsData) {
-        setCertification(tvCertification(ratingsData));
-      }
-    } catch (err) {
-      if (isAbortError(err) || signal.aborted) return;
-      setError("Couldn't load this show. Check your connection and try again.");
-    } finally {
-      if (!signal.aborted) setLoading(false);
-    }
-  }, [tvShowId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    loadShow(controller.signal);
-    return () => controller.abort();
-  }, [loadShow, reloadKey]);
+  const [actorToggle, setActorToggle] = useState(false);
 
   useEffect(() => {
     if (initialSeason && tvShow.name) {
@@ -130,7 +126,10 @@ export default function TvDetail() {
   }, [initialSeason, tvShow.name]);
 
   const infoItems = [
-    [premiereFieldLabel(tvShow.first_air_date), tvShow.first_air_date && formatShortDate(tvShow.first_air_date)],
+    [
+      premiereFieldLabel(tvShow.first_air_date),
+      tvShow.first_air_date && formatShortDate(tvShow.first_air_date),
+    ],
     ['Created by', createdBy.map((c) => c.name).join(', ')],
     ['Genre', genres.map((g) => g.name).join(', ')],
     [
@@ -145,7 +144,7 @@ export default function TvDetail() {
     ['Certification', certification],
   ];
 
-  if (loading) {
+  if (loading && !fromCache && !data) {
     return (
       <>
         <PageTitle title="Loading…" />
@@ -154,15 +153,15 @@ export default function TvDetail() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <>
         <PageTitle title="TV Show" />
         <DetailPageError
           fallback="/tv"
           backLabel="Back to TV"
-          message={error}
-          onRetry={() => setReloadKey((k) => k + 1)}
+          message="Couldn't load this show. Check your connection and try again."
+          onRetry={() => refresh().catch(() => {})}
         />
       </>
     );
@@ -191,7 +190,9 @@ export default function TvDetail() {
               className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover shadow-poster"
             />
             <div className="flex min-w-0 flex-col justify-center">
-              <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">{tvShow.name}</p>
+              <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">
+                {tvShow.name}
+              </p>
               <div className="mt-2 flex items-center gap-1.5 text-sm">
                 <Star className="h-4 w-4 fill-accent text-accent" />
                 <span className="font-bold text-accent">{tvShow.vote_average?.toFixed(1)}</span>
@@ -205,9 +206,13 @@ export default function TvDetail() {
         )}
 
         <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs text-muted md:mb-6 md:block">
-          <Link to="/" className="hover:text-ink-bright cursor-pointer">Home</Link>
+          <Link to="/" className="hover:text-ink-bright cursor-pointer">
+            Home
+          </Link>
           <span className="mx-1.5">/</span>
-          <Link to="/tv" className="hover:text-ink-bright cursor-pointer">TV</Link>
+          <Link to="/tv" className="hover:text-ink-bright cursor-pointer">
+            TV
+          </Link>
           <span className="mx-1.5">/</span>
           <span className="text-ink">{tvShow.original_name}</span>
         </nav>

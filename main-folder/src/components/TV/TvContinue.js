@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, ChevronDown, ChevronRight, List, X } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import useIsMobile from '../../hooks/useIsMobile';
 import useAnimatedPresence from '../../hooks/useAnimatedPresence';
+import useCachedResource, {
+  CACHE_KEYS,
+  invalidateUserTvLists,
+} from '../../utils/routeCache';
 import {
   buildMarkPayload,
   deriveShowProgress,
@@ -21,9 +25,32 @@ import StarRating, { starsToPayload } from '../ui/StarRating';
 import { clearSessionStats } from '../../utils/statsCache';
 import { formatShortDate } from '../../utils/statsFormat';
 import { haptic } from '../../utils/haptics';
+import { confirmScrollRestore } from '../ScrollRestoration';
 
 const menuRowClass =
   'flex min-h-[48px] w-full items-center gap-3 px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-surface-raised/50 active:bg-surface-raised/70';
+
+const EMPTY_SNAPSHOT = {
+  track: null,
+  watched: [],
+  showMeta: null,
+  episodeIndex: [],
+};
+
+async function fetchContinueSnapshot(tvShowId) {
+  const [trackRes, epRes, index] = await Promise.all([
+    api.get(`/api/tv/tracking/show/${tvShowId}`),
+    api.get(`/api/tv/episodes/${tvShowId}`),
+    fetchShowEpisodeIndex(tvShowId),
+  ]);
+
+  return {
+    track: trackRes.data.success ? trackRes.data.tracking : null,
+    watched: epRes.data.success ? epRes.data.episodes || [] : [],
+    showMeta: index.show,
+    episodeIndex: index.episodes,
+  };
+}
 
 function ShowQuickLinks({ tvShowId, episodesOpen, onEpisodesClick, isMobile }) {
   return (
@@ -60,16 +87,35 @@ export default function TvContinue() {
   const { Id: tvShowId } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [track, setTrack] = useState(null);
-  const [showMeta, setShowMeta] = useState(null);
-  const [episodeIndex, setEpisodeIndex] = useState([]);
-  const [watched, setWatched] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    data,
+    loading,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    tvShowId ? CACHE_KEYS.tvContinue(tvShowId) : null,
+    () => fetchContinueSnapshot(tvShowId),
+    { ttl: 15_000, enabled: Boolean(tvShowId) }
+  );
+
+  const snapshot = data || EMPTY_SNAPSHOT;
+
+  // Progress mutations (mark / rate) happen locally — we mirror the cached
+  // snapshot in state so optimistic updates stay smooth, and sync back to
+  // the cache on each change.
+  const [local, setLocal] = useState(snapshot);
+  useEffect(() => {
+    setLocal(snapshot);
+  }, [snapshot]);
+
+  const { track, watched, showMeta, episodeIndex } = local;
+
   const [marking, setMarking] = useState(false);
   const [episodesOpen, setEpisodesOpen] = useState(false);
   const [episodesEverOpened, setEpisodesEverOpened] = useState(false);
   const [episodesRefresh, setEpisodesRefresh] = useState(null);
-  const [rateChip, setRateChip] = useState(null); // { seasonNumber, episodeNumber, episodeName, saving }
+  const [rateChip, setRateChip] = useState(null);
   const [rateChipView, setRateChipView] = useState(null);
   const rateChipPresence = useAnimatedPresence(Boolean(rateChip), 140);
 
@@ -77,40 +123,35 @@ export default function TvContinue() {
     if (rateChip) setRateChipView(rateChip);
   }, [rateChip]);
 
-  const load = () => {
-    setLoading(true);
-    Promise.all([
-      api.get(`/api/tv/tracking/show/${tvShowId}`),
-      api.get(`/api/tv/episodes/${tvShowId}`),
-      fetchShowEpisodeIndex(tvShowId),
-    ])
-      .then(([trackRes, epRes, index]) => {
-        if (trackRes.data.success) setTrack(trackRes.data.tracking);
-        if (epRes.data.success) setWatched(epRes.data.episodes || []);
-        setShowMeta(index.show);
-        setEpisodeIndex(index.episodes);
-      })
-      .finally(() => setLoading(false));
-  };
-
+  // Reset collapsible UI when we land on a different show.
   useEffect(() => {
-    load();
     setEpisodesOpen(false);
     setEpisodesEverOpened(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvShowId]);
 
-  const handleProgressChange = (data) => {
-    setWatched(data.episodes || []);
-    const nextTrack = data.tracking ?? null;
-    setTrack(nextTrack);
-    if (!nextTrack && !(data.episodes || []).length) {
+  useLayoutEffect(() => {
+    if (!loading && showMeta) confirmScrollRestore();
+    // Only re-check when load state or show changes — rating/mark updates
+    // don't shift the restoration target.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, showMeta?.id]);
+
+  const handleProgressChange = (payload) => {
+    setLocal((prev) => ({
+      ...prev,
+      watched: payload.episodes || prev.watched,
+      track: payload.tracking ?? null,
+    }));
+    const nextTrack = payload.tracking ?? null;
+    if (!nextTrack && !(payload.episodes || []).length) {
       navigate(`/tv/${tvShowId}`, { replace: true });
     }
   };
 
-  const handleTrackingStatusChange = (data) => {
-    if (data && 'tracking' in data) setTrack(data.tracking ?? null);
+  const handleTrackingStatusChange = (payload) => {
+    if (payload && 'tracking' in payload) {
+      setLocal((prev) => ({ ...prev, track: payload.tracking ?? null }));
+    }
   };
 
   const watchedKeys = watchedSetFromEpisodes(watched);
@@ -142,6 +183,9 @@ export default function TvContinue() {
         haptic(finished ? 'success' : 'light');
         handleProgressChange(r.data);
         setEpisodesRefresh((n) => (n ?? 0) + 1);
+        invalidateUserTvLists();
+        // Re-sync the cache in the background so other screens stay fresh.
+        refresh().catch(() => {});
         setRateChip({
           seasonNumber: nextEp.seasonNumber,
           episodeNumber: nextEp.episodeNumber,
@@ -165,14 +209,15 @@ export default function TvContinue() {
         rating: starsToPayload(stars),
       });
       if (r.data?.success) {
-        setWatched((rows) =>
-          rows.map((row) =>
+        setLocal((prev) => ({
+          ...prev,
+          watched: prev.watched.map((row) =>
             row.seasonNumber === rateChip.seasonNumber &&
             row.episodeNumber === rateChip.episodeNumber
               ? { ...row, rating: r.data.rating ?? null }
               : row
-          )
-        );
+          ),
+        }));
         clearSessionStats();
         setEpisodesRefresh((n) => (n ?? 0) + 1);
       }
@@ -202,7 +247,9 @@ export default function TvContinue() {
     />
   ) : null;
 
-  if (loading) {
+  const showSkeleton = loading && !fromCache && !showMeta;
+
+  if (showSkeleton) {
     return (
       <div className="mx-auto max-w-content px-4 py-10" aria-busy="true" aria-label="Loading show progress">
         <div className="glass-card animate-pulse overflow-hidden">
@@ -368,9 +415,7 @@ export default function TvContinue() {
                     onChange={rateJustWatched}
                     size="md"
                     allowClear={false}
-                    disabled={
-                      Boolean(rateChip?.saving) || rateChipPresence.exiting || !rateChip
-                    }
+                    disabled={Boolean(rateChip?.saving) || rateChipPresence.exiting || !rateChip}
                     label={`Rate S${rateChipView.seasonNumber}E${rateChipView.episodeNumber}`}
                   />
                 </div>

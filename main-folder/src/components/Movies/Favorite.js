@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bookmark, Check, Heart } from 'lucide-react';
 import api from '../../api/axios';
 import { clearSessionStats } from '../../utils/statsCache';
+import { invalidateUserMovieLists } from '../../utils/routeCache';
 import { formatShortDate } from '../../utils/statsFormat';
 import {
   favoriteRemoveConfirm,
@@ -64,6 +65,7 @@ export default function Favorite({ movieId, movieInfo }) {
             if (r.data.success) {
               setFavoriteNumber(favoriteNumber - 1);
               setFavorited(false);
+              invalidateUserMovieLists();
             }
           }),
       });
@@ -73,6 +75,7 @@ export default function Favorite({ movieId, movieInfo }) {
       if (r.data.success) {
         setFavoriteNumber(favoriteNumber + 1);
         setFavorited(true);
+        invalidateUserMovieLists();
         haptic('light');
       }
     });
@@ -89,6 +92,7 @@ export default function Favorite({ movieId, movieInfo }) {
               setWatchedAt(null);
               setRating(0);
               clearSessionStats();
+              invalidateUserMovieLists();
             }
           }),
       });
@@ -100,6 +104,7 @@ export default function Favorite({ movieId, movieInfo }) {
         setWatchedAt(r.data.watchedAt || new Date().toISOString());
         setRating(ratingToStars(r.data.rating));
         clearSessionStats();
+        invalidateUserMovieLists();
         haptic('success');
       }
     });
@@ -134,13 +139,19 @@ export default function Favorite({ movieId, movieInfo }) {
         ...watchlistRemoveConfirm(movieTitle),
         onConfirm: () =>
           api.post('/api/watchlist/removeFromWatchlist', payload).then((r) => {
-            if (r.data.success) setWatchlisted(false);
+            if (r.data.success) {
+              setWatchlisted(false);
+              invalidateUserMovieLists();
+            }
           }),
       });
       return;
     }
     api.post('/api/watchlist/addToWatchlist', payload).then((r) => {
-      if (r.data.success) setWatchlisted(true);
+      if (r.data.success) {
+        setWatchlisted(true);
+        invalidateUserMovieLists();
+      }
     });
   };
 

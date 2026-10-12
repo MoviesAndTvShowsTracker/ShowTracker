@@ -4,6 +4,7 @@ import { PauseCircle, PlayCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { tvLibraryPath } from '../../config/tvLibrary';
 import { deriveShowProgress, fetchShowEpisodeIndex } from '../../utils/tvProgress';
+import { invalidateUserTvLists } from '../../utils/routeCache';
 
 export default function TvTrackingStatusAction({
   tvId,
@@ -40,6 +41,8 @@ export default function TvTrackingStatusAction({
 
   const applyStatusChange = (nextTrack) => {
     if (selfLoaded) setFetchedTrack(nextTrack || null);
+    // Pause / resume moves a show between library buckets — refresh those caches.
+    invalidateUserTvLists();
     onStatusChange?.({ tracking: nextTrack ?? null });
   };
 

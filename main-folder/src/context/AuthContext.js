@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import { clearUserRouteCaches } from '../utils/routeCache';
+import { clearSessionStats } from '../utils/statsCache';
 
 const AuthContext = createContext(null);
 
@@ -43,6 +45,9 @@ export const AuthProvider = ({ children }) => {
 
   const clearSession = useCallback(() => {
     clearStoredUser();
+    // Blow away cached data so the next sign-in doesn't flash someone else's lists.
+    clearUserRouteCaches();
+    clearSessionStats();
     setUser(null);
   }, []);
 

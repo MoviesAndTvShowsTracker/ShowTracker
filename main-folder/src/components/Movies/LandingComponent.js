@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { IMAGE_URL } from '../../config/keys';
 import GridCard from './GridCard';
 import PageTitle from '../../utils/PageTitle';
@@ -7,27 +7,23 @@ import PosterRail from '../ui/PosterRail';
 import GenreChips, { filterCuratedGenres } from '../ui/GenreChips';
 import MediaPosterTiles from '../browse/MediaPosterTiles';
 import { heroSlides, tmdbFetch, withPoster } from '../../utils/tmdb';
+import useCachedResource, { CACHE_KEYS } from '../../utils/routeCache';
+import { confirmScrollRestore } from '../ScrollRestoration';
 
-export default function LandingPage() {
-  const [loading, setLoading] = useState(true);
-  const [hero, setHero] = useState([]);
-  const [trendingToday, setTrendingToday] = useState([]);
-  const [nowPlaying, setNowPlaying] = useState([]);
-  const [upcoming, setUpcoming] = useState([]);
-  const [topRated, setTopRated] = useState([]);
-  const [popular, setPopular] = useState([]);
-  const [popularPage, setPopularPage] = useState(1);
-  const [genres, setGenres] = useState([]);
-  const [selectedGenre, setSelectedGenre] = useState(null);
-  const [genreResults, setGenreResults] = useState([]);
-  const [genreLoading, setGenreLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+const EMPTY_LANDING = {
+  hero: [],
+  trendingToday: [],
+  nowPlaying: [],
+  upcoming: [],
+  topRated: [],
+  popular: [],
+  popularPage: 1,
+  genres: [],
+};
 
-  useEffect(() => {
-    setLoading(true);
-    setLoadError(false);
-    Promise.all([
+async function fetchMovieLanding() {
+  const [trendingWeek, trendingDay, inTheaters, comingSoon, rated, pop, genreList] =
+    await Promise.all([
       tmdbFetch('trending/movie/week'),
       tmdbFetch('trending/movie/day'),
       tmdbFetch('movie/now_playing', { region: 'IN', page: 1 }),
@@ -35,57 +31,90 @@ export default function LandingPage() {
       tmdbFetch('movie/top_rated', { page: 1 }),
       tmdbFetch('movie/popular', { page: 1 }),
       tmdbFetch('genre/movie/list'),
-    ])
-      .then(([trendingWeek, trendingDay, inTheaters, comingSoon, rated, pop, genreList]) => {
-        const slides = heroSlides(trendingWeek.results, '/movies', 'title').map((s, i) =>
-          i === 0 ? { ...s, badge: 'Trending this week' } : s
-        );
-        setHero(slides);
-        setTrendingToday(withPoster(trendingDay.results).slice(0, 16));
-        setNowPlaying(withPoster(inTheaters.results).slice(0, 16));
-        setUpcoming(withPoster(comingSoon.results).slice(0, 16));
-        setTopRated(withPoster(rated.results).slice(0, 16));
-        setPopular(withPoster(pop.results));
-        setPopularPage(pop.page || 1);
-        setGenres(filterCuratedGenres(genreList.genres || [], 'movie'));
-      })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  }, [reloadKey]);
+    ]);
 
-  useEffect(() => {
-    if (!selectedGenre) {
-      setGenreResults([]);
-      return;
-    }
-    setGenreLoading(true);
-    tmdbFetch('discover/movie', {
-      with_genres: selectedGenre,
-      sort_by: 'popularity.desc',
-      page: 1,
-      region: 'IN',
-    })
-      .then((data) => setGenreResults(withPoster(data.results).slice(0, 16)))
-      .catch(() => setGenreResults([]))
-      .finally(() => setGenreLoading(false));
-  }, [selectedGenre]);
+  const slides = heroSlides(trendingWeek.results, '/movies', 'title').map((s, i) =>
+    i === 0 ? { ...s, badge: 'Trending this week' } : s
+  );
+
+  return {
+    hero: slides,
+    trendingToday: withPoster(trendingDay.results).slice(0, 16),
+    nowPlaying: withPoster(inTheaters.results).slice(0, 16),
+    upcoming: withPoster(comingSoon.results).slice(0, 16),
+    topRated: withPoster(rated.results).slice(0, 16),
+    popular: withPoster(pop.results),
+    popularPage: pop.page || 1,
+    genres: filterCuratedGenres(genreList.genres || [], 'movie'),
+  };
+}
+
+export default function LandingPage() {
+  const {
+    data,
+    loading,
+    error,
+    fromCache,
+    refresh,
+  } = useCachedResource(CACHE_KEYS.movieLanding, fetchMovieLanding, {
+    ttl: 10 * 60_000,
+  });
+
+  const {
+    hero,
+    trendingToday,
+    nowPlaying,
+    upcoming,
+    topRated,
+    popular: cachedPopular,
+    popularPage: cachedPage,
+    genres,
+  } = data || EMPTY_LANDING;
+
+  // Local extension of the popular grid for "Load more" — does not need
+  // to live in the cache; it's only interesting while this page is mounted.
+  const [extraPopular, setExtraPopular] = useState([]);
+  const [extraPopularPage, setExtraPopularPage] = useState(0);
+
+  const popular = extraPopularPage > 0 ? [...cachedPopular, ...extraPopular] : cachedPopular;
+  const popularPage = Math.max(cachedPage, extraPopularPage);
+
+  const [selectedGenre, setSelectedGenre] = useState(null);
+  const { data: genreData, loading: genreLoading } = useCachedResource(
+    selectedGenre ? CACHE_KEYS.movieGenre(selectedGenre) : null,
+    (signal) =>
+      tmdbFetch(
+        'discover/movie',
+        { with_genres: selectedGenre, sort_by: 'popularity.desc', page: 1, region: 'IN' },
+        { signal }
+      ).then((d) => withPoster(d.results).slice(0, 16)),
+    { ttl: 10 * 60_000, enabled: Boolean(selectedGenre) }
+  );
+  const genreResults = genreData || [];
 
   const loadMorePopular = useCallback(() => {
     tmdbFetch('movie/popular', { page: popularPage + 1 })
-      .then((data) => {
-        setPopular((prev) => [...prev, ...withPoster(data.results)]);
-        setPopularPage(data.page);
+      .then((d) => {
+        setExtraPopular((prev) => [...prev, ...withPoster(d.results)]);
+        setExtraPopularPage(d.page);
       })
       .catch(() => {});
   }, [popularPage]);
 
+  // Snap scroll back to where the user left when cache hydrates us
+  // instantly on a Back navigation.
+  useLayoutEffect(() => {
+    if (!loading) confirmScrollRestore();
+  }, [loading, popular.length, genres.length]);
+
   const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name;
+  const showHeroSkeleton = loading && !fromCache && hero.length === 0;
 
   return (
     <>
       <PageTitle title="Browse films" />
 
-      {loading ? (
+      {showHeroSkeleton ? (
         <div
           className="h-52 animate-pulse bg-surface sm:h-64 md:h-80"
           aria-busy="true"
@@ -96,12 +125,12 @@ export default function LandingPage() {
       )}
 
       <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
-        {loadError && (
+        {error && !fromCache && (
           <div className="state-enter rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             Couldn&apos;t reach the film catalog.{' '}
             <button
               type="button"
-              onClick={() => setReloadKey((key) => key + 1)}
+              onClick={() => refresh().catch(() => {})}
               className="focus-ring font-semibold underline"
             >
               Try again
@@ -129,7 +158,10 @@ export default function LandingPage() {
             {genreLoading ? (
               <div className="poster-rail" aria-busy="true" aria-label="Loading genre">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]" />
+                  <div
+                    key={i}
+                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                  />
                 ))}
               </div>
             ) : genreResults.length > 0 ? (
@@ -182,11 +214,13 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <div className="text-center">
-            <button type="button" className="btn-secondary" onClick={loadMorePopular}>
-              Load more
-            </button>
-          </div>
+          {popular.length > 0 && (
+            <div className="text-center">
+              <button type="button" className="btn-secondary" onClick={loadMorePopular}>
+                Load more
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </>

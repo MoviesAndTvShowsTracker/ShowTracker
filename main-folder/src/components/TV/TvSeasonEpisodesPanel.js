@@ -5,6 +5,7 @@ import { tmdbFetch } from '../../utils/tmdb';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { EpisodeRatingControl, starsToPayload } from '../ui/StarRating';
 import { clearSessionStats } from '../../utils/statsCache';
+import { invalidateUserTvLists } from '../../utils/routeCache';
 import { haptic } from '../../utils/haptics';
 import {
   episodeUnmarkConfirm,
@@ -193,6 +194,10 @@ export default function TvSeasonEpisodesPanel({
     if (r.data.success) {
       setWatched(r.data.episodes || []);
       setTrack(r.data.tracking ?? null);
+      // Keep Home / Library / Profile / Continue caches honest after any
+      // episode mark/unmark/batch — the next visit will be instant *and* fresh.
+      invalidateUserTvLists();
+      clearSessionStats();
       onProgressChange?.(r.data);
     }
   };

@@ -40,13 +40,28 @@ function applyY(y) {
   window.scrollTo({ top: y, left: 0, behavior: 'auto' });
 }
 
+function maxScrollY() {
+  return Math.max(
+    0,
+    (document.documentElement?.scrollHeight || 0) - window.innerHeight
+  );
+}
+
 /**
  * Call after a list/page has painted enough height for a POP restore
- * (e.g. search cache hydrated). Safe to call anytime.
+ * (e.g. search cache hydrated). Safe to call anytime. If we're still waiting
+ * on a restore target, re-apply now that the page has grown.
  */
 export function confirmScrollRestore() {
   if (!pendingRestore) return;
-  applyY(pendingRestore.y);
+  const target = pendingRestore.y;
+  // Only re-apply if we haven't yet landed close enough to the target —
+  // avoids fighting a user who already started scrolling after Back.
+  if (Math.abs(window.scrollY - target) < 4) return;
+  // Also skip if the document still isn't tall enough; the scheduled
+  // retries below will try again once more content paints.
+  if (maxScrollY() + 16 < target) return;
+  applyY(target);
 }
 
 /**
@@ -77,8 +92,11 @@ export default function ScrollRestoration() {
     return () => window.removeEventListener('pagehide', persist);
   }, []);
 
+  const { key: locationKey, pathname: locationPathname } = location;
+
   useLayoutEffect(() => {
-    const { key, pathname } = location;
+    const key = locationKey;
+    const pathname = locationPathname;
     const prevKey = prevKeyRef.current;
     const prevPath = prevPathRef.current;
 
@@ -93,14 +111,21 @@ export default function ScrollRestoration() {
       pendingRestore = { key, y };
       applyY(y);
 
-      const timers = [80, 200, 400].map((ms) =>
+      // Retry across a wider window so slow mobile networks (first visit, no
+      // cache) still get a correct restore once images/data expand the page.
+      // When cached data is available, the first retry usually wins instantly.
+      const timers = [60, 160, 320, 640, 1200, 2000].map((ms) =>
         window.setTimeout(() => {
-          if (pendingRestore?.key === key) applyY(pendingRestore.y);
+          if (pendingRestore?.key !== key) return;
+          // Nothing to do if we already reached the target.
+          if (Math.abs(window.scrollY - pendingRestore.y) < 4) return;
+          // Only re-apply once the page has grown tall enough.
+          if (maxScrollY() + 16 >= pendingRestore.y) applyY(pendingRestore.y);
         }, ms)
       );
       const clear = window.setTimeout(() => {
         if (pendingRestore?.key === key) pendingRestore = null;
-      }, 600);
+      }, 2500);
 
       prevPathRef.current = pathname;
       return () => {
@@ -121,7 +146,7 @@ export default function ScrollRestoration() {
     applyY(0);
     prevPathRef.current = pathname;
     return undefined;
-  }, [location.key, location.pathname, navigationType]);
+  }, [locationKey, locationPathname, navigationType]);
 
   return null;
 }

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { IMAGE_URL } from '../../config/keys';
-import { isAbortError, tmdbFetch } from '../../utils/tmdb';
+import { tmdbFetch } from '../../utils/tmdb';
 import Favorite from './Favorite';
 import MainImageforDetail from './MainImageforDetail';
 import SimilarMoviesData from './ShowSimilarMovies';
@@ -12,83 +12,65 @@ import BackNav from '../ui/BackNav';
 import DetailPageSkeleton from '../ui/DetailPageSkeleton';
 import DetailPageError from '../ui/DetailPageError';
 import PosterTile from '../ui/PosterTile';
+import useCachedResource, { CACHE_KEYS } from '../../utils/routeCache';
 import { formatLanguage, formatShortDate, releaseFieldLabel } from '../../utils/statsFormat';
 import { movieCertification, pickWatchProviders } from '../../utils/watchRegion';
 
+const EMPTY_DETAIL = {
+  movie: {},
+  actors: [],
+  crews: [],
+  genres: [],
+  watchProviders: [],
+  watchRegion: null,
+  certification: null,
+};
+
+/** Single bundle fetch so the detail page is one atomic cache entry. */
+async function fetchMovieDetailBundle(movieId, signal) {
+  const movieData = await tmdbFetch(`movie/${movieId}`, {}, { signal });
+  if (!movieData || !movieData.id) throw new Error('not_found');
+
+  const [creditsData, providersData, releaseDatesData] = await Promise.all([
+    tmdbFetch(`movie/${movieId}/credits`, {}, { signal }).catch(() => ({ cast: [], crew: [] })),
+    tmdbFetch(`movie/${movieId}/watch/providers`, {}, { signal }).catch(() => null),
+    tmdbFetch(`movie/${movieId}/release_dates`, {}, { signal }).catch(() => null),
+  ]);
+
+  const { providers = [], region = null } = providersData
+    ? pickWatchProviders(providersData.results)
+    : {};
+
+  return {
+    movie: movieData,
+    actors: creditsData.cast || [],
+    crews: creditsData.crew || [],
+    genres: movieData.genres || [],
+    watchProviders: providers,
+    watchRegion: region,
+    certification: releaseDatesData ? movieCertification(releaseDatesData) : null,
+  };
+}
+
 export default function MovieDetail() {
   const { Id: movieId } = useParams();
-  const [movie, setMovie] = useState({});
-  const [actors, setActors] = useState([]);
-  const [crews, setCrews] = useState([]);
-  const [watchProviders, setWatchProviders] = useState([]);
-  const [watchRegion, setWatchRegion] = useState(null);
-  const [certification, setCertification] = useState(null);
-  const [genres, setGenres] = useState([]);
+  const {
+    data,
+    loading,
+    error,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    movieId ? CACHE_KEYS.movieDetail(movieId) : null,
+    (signal) => fetchMovieDetailBundle(movieId, signal),
+    // TMDB detail data is effectively immutable per id — stay fresh for 24h.
+    { ttl: 24 * 60 * 60_000, enabled: Boolean(movieId) }
+  );
+
   const [actorToggle, setActorToggle] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [reloadKey, setReloadKey] = useState(0);
 
-  const loadMovie = useCallback(async (signal) => {
-    setLoading(true);
-    setError('');
-    setMovie({});
-    setActors([]);
-    setCrews([]);
-    setGenres([]);
-    setWatchProviders([]);
-    setWatchRegion(null);
-    setCertification(null);
-
-    try {
-      const movieData = await tmdbFetch(`movie/${movieId}`, {}, { signal });
-      if (!movieData || !movieData.id) throw new Error('not_found');
-
-      setMovie(movieData);
-      setGenres(movieData.genres || []);
-
-      const [creditsData, providersData, releaseDatesData] = await Promise.all([
-        tmdbFetch(`movie/${movieId}/credits`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return { cast: [], crew: [] };
-        }),
-        tmdbFetch(`movie/${movieId}/watch/providers`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return null;
-        }),
-        tmdbFetch(`movie/${movieId}/release_dates`, {}, { signal }).catch((err) => {
-          if (isAbortError(err)) throw err;
-          return null;
-        }),
-      ]);
-
-      if (signal.aborted) return;
-
-      setActors(creditsData.cast || []);
-      setCrews(creditsData.crew || []);
-
-      if (providersData) {
-        const { providers, region } = pickWatchProviders(providersData.results);
-        setWatchProviders(providers);
-        setWatchRegion(region);
-      }
-
-      if (releaseDatesData) {
-        setCertification(movieCertification(releaseDatesData));
-      }
-    } catch (err) {
-      if (isAbortError(err) || signal.aborted) return;
-      setError("Couldn't load this film. Check your connection and try again.");
-    } finally {
-      if (!signal.aborted) setLoading(false);
-    }
-  }, [movieId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    loadMovie(controller.signal);
-    return () => controller.abort();
-  }, [loadMovie, reloadKey]);
+  const { movie, actors, crews, genres, watchProviders, watchRegion, certification } =
+    data || EMPTY_DETAIL;
 
   const timeConvert = (num) => {
     const h = Math.floor(num / 60);
@@ -97,7 +79,10 @@ export default function MovieDetail() {
   };
 
   const infoItems = [
-    [releaseFieldLabel(movie.release_date), movie.release_date && formatShortDate(movie.release_date)],
+    [
+      releaseFieldLabel(movie.release_date),
+      movie.release_date && formatShortDate(movie.release_date),
+    ],
     ['Director', crews.filter((v) => v.job === 'Director').map((v) => v.name).join(', ')],
     ['Genre', genres.map((g) => g.name).join(', ')],
     ['Runtime', movie.runtime ? timeConvert(movie.runtime) : null],
@@ -105,7 +90,9 @@ export default function MovieDetail() {
     ['Certification', certification],
   ];
 
-  if (loading) {
+  // Only block with a skeleton on the very first fetch; cache hits show
+  // real content immediately so Back-nav scroll restoration works.
+  if (loading && !fromCache && !data) {
     return (
       <>
         <PageTitle title="Loading…" />
@@ -114,15 +101,15 @@ export default function MovieDetail() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <>
         <PageTitle title="Film" />
         <DetailPageError
           fallback="/movies"
           backLabel="Back to films"
-          message={error}
-          onRetry={() => setReloadKey((k) => k + 1)}
+          message="Couldn't load this film. Check your connection and try again."
+          onRetry={() => refresh().catch(() => {})}
         />
       </>
     );
@@ -151,7 +138,9 @@ export default function MovieDetail() {
               className="h-28 w-[4.5rem] shrink-0 rounded-xl object-cover shadow-poster"
             />
             <div className="flex min-w-0 flex-col justify-center">
-              <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">{movie.title}</p>
+              <p className="line-clamp-2 font-serif text-lg font-semibold text-ink-bright">
+                {movie.title}
+              </p>
               <div className="mt-2 flex items-center gap-1.5 text-sm">
                 <Star className="h-4 w-4 fill-accent text-accent" />
                 <span className="font-bold text-accent">{movie.vote_average?.toFixed(1)}</span>
@@ -165,9 +154,13 @@ export default function MovieDetail() {
         )}
 
         <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs text-muted md:mb-6 md:block">
-          <Link to="/" className="hover:text-ink-bright cursor-pointer">Home</Link>
+          <Link to="/" className="hover:text-ink-bright cursor-pointer">
+            Home
+          </Link>
           <span className="mx-1.5">/</span>
-          <Link to="/movies" className="hover:text-ink-bright cursor-pointer">Films</Link>
+          <Link to="/movies" className="hover:text-ink-bright cursor-pointer">
+            Films
+          </Link>
           <span className="mx-1.5">/</span>
           <span className="text-ink">{movie.title}</span>
         </nav>

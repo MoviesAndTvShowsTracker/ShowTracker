@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react';
 import { IMAGE_URL } from '../../config/keys';
 import { tmdbFetch } from '../../utils/tmdb';
+import useCachedResource, { CACHE_KEYS } from '../../utils/routeCache';
 import PosterTile from '../ui/PosterTile';
 
 export default function SimilarTvShows({ showId }) {
-  const [similarShows, setSimilarShows] = useState([]);
+  const { data } = useCachedResource(
+    showId ? CACHE_KEYS.tvSimilar(showId) : null,
+    (signal) =>
+      tmdbFetch(`tv/${showId}/recommendations`, { page: 1 }, { signal })
+        .then((d) => d.results || [])
+        .catch(() => []),
+    { ttl: 24 * 60 * 60_000, enabled: Boolean(showId) }
+  );
 
-  useEffect(() => {
-    tmdbFetch(`tv/${showId}/recommendations`, { page: 1 })
-      .then((data) => setSimilarShows(data.results || []))
-      .catch(() => setSimilarShows([]));
-  }, [showId]);
-
+  const similarShows = data || [];
   if (!similarShows.length) return null;
 
   return (

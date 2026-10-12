@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react';
 import { IMAGE_URL } from '../../config/keys';
 import { tmdbFetch } from '../../utils/tmdb';
+import useCachedResource, { CACHE_KEYS } from '../../utils/routeCache';
 import PosterTile from '../ui/PosterTile';
 
 export default function SimilarMoviesData({ movieId }) {
-  const [similarMovies, setSimilarMovies] = useState([]);
+  const { data } = useCachedResource(
+    movieId ? CACHE_KEYS.movieSimilar(movieId) : null,
+    (signal) =>
+      tmdbFetch(`movie/${movieId}/similar`, { page: 1 }, { signal })
+        .then((d) => d.results || [])
+        .catch(() => []),
+    { ttl: 24 * 60 * 60_000, enabled: Boolean(movieId) }
+  );
 
-  useEffect(() => {
-    tmdbFetch(`movie/${movieId}/similar`, { page: 1 })
-      .then((data) => setSimilarMovies(data.results || []))
-      .catch(() => setSimilarMovies([]));
-  }, [movieId]);
-
+  const similarMovies = data || [];
   if (!similarMovies.length) return null;
 
   return (

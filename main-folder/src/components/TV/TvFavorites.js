@@ -5,6 +5,7 @@ import api from '../../api/axios';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import { favoriteRemoveConfirm, watchlistRemoveConfirm } from '../../utils/removeConfirm';
 import { clearSessionStats } from '../../utils/statsCache';
+import { invalidateUserTvLists } from '../../utils/routeCache';
 import ActionStrip, { ActionButton } from '../ui/ActionStrip';
 import { RatingField, ratingToStars, starsToPayload } from '../ui/StarRating';
 import { haptic } from '../../utils/haptics';
@@ -44,6 +45,7 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
                 favorited: false,
                 favoriteNumber: favoriteNumber - 1,
               });
+              invalidateUserTvLists();
             }
           }),
       });
@@ -55,6 +57,7 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
           favorited: true,
           favoriteNumber: favoriteNumber + 1,
         });
+        invalidateUserTvLists();
         haptic('light');
       }
     });
@@ -66,13 +69,19 @@ export default function TvFavorites({ tvId, tvInfo, diary, onDiaryPatch }) {
         ...watchlistRemoveConfirm(showTitle),
         onConfirm: () =>
           api.post('/api/tv/watchlist/removeFromWatchlist', payload).then((r) => {
-            if (r.data.success) onDiaryPatch({ watchlisted: false });
+            if (r.data.success) {
+              onDiaryPatch({ watchlisted: false });
+              invalidateUserTvLists();
+            }
           }),
       });
       return;
     }
     api.post('/api/tv/watchlist/addToWatchlist', payload).then((r) => {
-      if (r.data.success) onDiaryPatch({ watchlisted: true });
+      if (r.data.success) {
+        onDiaryPatch({ watchlisted: true });
+        invalidateUserTvLists();
+      }
     });
   };
 

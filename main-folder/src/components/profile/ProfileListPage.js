@@ -1,10 +1,15 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import { fetchTvWatchlist } from '../../api/tvWatchlist';
 import { IMAGE_URL } from '../../config/keys';
 import { PROFILE_LISTS } from '../../config/profileLists';
 import PageTitle from '../../utils/PageTitle';
+import useCachedResource, {
+  CACHE_KEYS,
+  invalidateUserMovieLists,
+  invalidateUserTvLists,
+} from '../../utils/routeCache';
 import { confirmScrollRestore } from '../ScrollRestoration';
 import BackNav from '../ui/BackNav';
 import EmptyState from '../ui/EmptyState';
@@ -42,6 +47,8 @@ async function fetchListItems(listKey) {
   }
 }
 
+const MOVIE_LIST_KEYS = new Set(['favorite-films', 'watched-films', 'film-watchlist']);
+
 function removeFromList(listKey, id) {
   switch (listKey) {
     case 'favorite-films':
@@ -74,22 +81,19 @@ export default function ProfileListPage() {
   const { listKey } = useParams();
   const config = PROFILE_LISTS[listKey];
   const { confirm, confirmDialog } = useConfirmDialog();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    if (!config) return;
-    setLoading(true);
-    fetchListItems(listKey)
-      .then((data) => setItems(data || []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  };
+  const {
+    data,
+    loading,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    config ? CACHE_KEYS.profileList(listKey) : null,
+    () => fetchListItems(listKey),
+    { ttl: 30_000, enabled: Boolean(config) }
+  );
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listKey]);
+  const items = data || [];
 
   useLayoutEffect(() => {
     if (!loading && items.length > 0) confirmScrollRestore();
@@ -103,9 +107,16 @@ export default function ProfileListPage() {
   const handleRemove = (id, title) => {
     confirm({
       ...profileListRemoveConfirm(listKey, title),
-      onConfirm: () => removeFromList(listKey, id).then(load),
+      onConfirm: () =>
+        removeFromList(listKey, id).then(() => {
+          if (MOVIE_LIST_KEYS.has(listKey)) invalidateUserMovieLists();
+          else invalidateUserTvLists();
+          return refresh();
+        }),
     });
   };
+
+  const showSkeleton = loading && !fromCache && items.length === 0;
 
   return (
     <>
@@ -116,25 +127,27 @@ export default function ProfileListPage() {
 
         <header className="mb-6 md:mb-8">
           <h1 className="page-title">{config.title}</h1>
-          {!loading && (
+          {!showSkeleton && (
             <p className="mt-2 text-sm text-muted">
               {items.length} {items.length === 1 ? 'title' : 'titles'}
             </p>
           )}
         </header>
 
-        {loading ? (
-          <div key="list-loading" className="state-enter poster-grid" aria-busy="true" aria-label="Loading list">
+        {showSkeleton ? (
+          <div
+            key="list-loading"
+            className="state-enter poster-grid"
+            aria-busy="true"
+            aria-label="Loading list"
+          >
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface-raised" />
             ))}
           </div>
         ) : items.length === 0 ? (
           <EmptyState description={config.empty}>
-            <Link
-              to={isMovie ? '/movies' : '/tv'}
-              className="btn-primary"
-            >
+            <Link to={isMovie ? '/movies' : '/tv'} className="btn-primary">
               Browse {isMovie ? 'films' : 'TV'}
             </Link>
           </EmptyState>

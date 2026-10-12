@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import api from '../api/axios';
@@ -13,6 +13,11 @@ import ProfileStats from './profile/ProfileStats';
 import TvLibrarySummary from './profile/TvLibrarySummary';
 import { confirmScrollRestore } from './ScrollRestoration';
 import BackNav from './ui/BackNav';
+import useCachedResource, {
+  CACHE_KEYS,
+  invalidateUserMovieLists,
+  invalidateUserTvLists,
+} from '../utils/routeCache';
 import useConfirmDialog from '../hooks/useConfirmDialog';
 import useDashboardStats from '../hooks/useDashboardStats';
 import { formatMemberSince } from '../utils/statsFormat';
@@ -40,16 +45,88 @@ const emptyTv = (browse) => (
   </>
 );
 
+const EMPTY_PROFILE = {
+  userInfo: null,
+  favoritedMovies: [],
+  favoritedShows: [],
+  watchedMovies: [],
+  watchedShows: [],
+  loadError: '',
+};
+
+async function fetchProfileBundle(user) {
+  if (!user?.id) return EMPTY_PROFILE;
+  let userInfo = null;
+  let loadError = '';
+  try {
+    const r = await api.get(`/users/getUser/${user.id}`);
+    if (r.data.success) {
+      userInfo = r.data.found;
+    } else {
+      userInfo = {
+        username: user.username,
+        email: user.email || '',
+        firstName: '',
+        lastName: '',
+      };
+    }
+  } catch {
+    loadError = 'Could not reach the server. Run npm start from backend-server, then log in again.';
+    userInfo = { username: user.username, email: user.email || '', firstName: '', lastName: '' };
+  }
+
+  const [favMovies, favShows, wMovies, wShows] = await Promise.all([
+    api
+      .post('/api/favorite/getFavoriteMovie', {})
+      .then((r) => (r.data.success ? r.data.favorites || [] : []))
+      .catch(() => []),
+    api
+      .post('/api/tv/favorite/getFavoriteMovie', {})
+      .then((r) => (r.data.success ? r.data.favorites || [] : []))
+      .catch(() => []),
+    api
+      .post('/api/watch/getWatchMovie', {})
+      .then((r) => (r.data.success ? r.data.watch || [] : []))
+      .catch(() => []),
+    api
+      .post('/api/tv/watch/getWatchTv', {})
+      .then((r) => (r.data.success ? r.data.watch || [] : []))
+      .catch(() => []),
+  ]);
+
+  return {
+    userInfo,
+    favoritedMovies: favMovies,
+    favoritedShows: favShows,
+    watchedMovies: wMovies,
+    watchedShows: wShows,
+    loadError,
+  };
+}
+
 export default function Profile() {
   const { user } = useAuth();
   const { confirm, confirmDialog } = useConfirmDialog();
-  const [favoritedMovies, setFavoritedMovies] = useState([]);
-  const [favoritedShows, setFavoritedShows] = useState([]);
-  const [watchedMovies, setWatchedMovies] = useState([]);
-  const [watchedShows, setWatchedShows] = useState([]);
-  const [userInfo, setUserInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+
+  const {
+    data,
+    loading: initialLoading,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    user?.id ? CACHE_KEYS.profile : null,
+    () => fetchProfileBundle(user),
+    { ttl: 30_000, enabled: Boolean(user?.id) }
+  );
+
+  const {
+    userInfo,
+    favoritedMovies,
+    favoritedShows,
+    watchedMovies,
+    watchedShows,
+    loadError,
+  } = data || EMPTY_PROFILE;
 
   const {
     stats,
@@ -57,69 +134,15 @@ export default function Profile() {
     error: statsError,
   } = useDashboardStats({ enabled: Boolean(user?.id) });
 
-  const fetchFavoriteMovies = () =>
-    api
-      .post('/api/favorite/getFavoriteMovie', {})
-      .then((r) => {
-        if (r.data.success) setFavoritedMovies(r.data.favorites || []);
-      })
-      .catch(() => setFavoritedMovies([]));
-
-  const fetchFavoriteShows = () =>
-    api
-      .post('/api/tv/favorite/getFavoriteMovie', {})
-      .then((r) => {
-        if (r.data.success) setFavoritedShows(r.data.favorites || []);
-      })
-      .catch(() => setFavoritedShows([]));
-
-  const fetchWatchedMovies = () =>
-    api
-      .post('/api/watch/getWatchMovie', {})
-      .then((r) => {
-        if (r.data.success) setWatchedMovies(r.data.watch || []);
-      })
-      .catch(() => setWatchedMovies([]));
-
-  const fetchWatchedShows = () =>
-    api
-      .post('/api/tv/watch/getWatchTv', {})
-      .then((r) => {
-        if (r.data.success) setWatchedShows(r.data.watch || []);
-      })
-      .catch(() => setWatchedShows([]));
-
-  useEffect(() => {
-    if (!user?.id) return;
-    setLoading(true);
-    setLoadError('');
-
-    api
-      .get(`/users/getUser/${user.id}`)
-      .then((r) => {
-        if (r.data.success) setUserInfo(r.data.found);
-        else setUserInfo({ username: user.username, email: user.email || '', firstName: '', lastName: '' });
-      })
-      .catch(() => {
-        setLoadError('Could not reach the server. Run npm start from backend-server, then log in again.');
-        setUserInfo({ username: user.username, email: user.email || '', firstName: '', lastName: '' });
-      })
-      .finally(() => {
-        Promise.all([
-          fetchFavoriteMovies(),
-          fetchFavoriteShows(),
-          fetchWatchedMovies(),
-          fetchWatchedShows(),
-        ]).finally(() => {
-          setLoading(false);
-        });
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
   useLayoutEffect(() => {
-    if (!loading) confirmScrollRestore();
-  }, [loading, favoritedMovies.length, watchedMovies.length, favoritedShows.length, watchedShows.length]);
+    if (!initialLoading) confirmScrollRestore();
+  }, [
+    initialLoading,
+    favoritedMovies.length,
+    watchedMovies.length,
+    favoritedShows.length,
+    watchedShows.length,
+  ]);
 
   const profileDisplay = useMemo(() => {
     if (!userInfo) return { title: '', subtitle: '', avatarLetter: '?' };
@@ -149,28 +172,40 @@ export default function Profile() {
     confirm({
       ...favoriteRemoveConfirm(m.movieTitle),
       onConfirm: () =>
-        api.post('/api/favorite/removeFromFavorite', { movieId: m.movieId }).then(fetchFavoriteMovies),
+        api.post('/api/favorite/removeFromFavorite', { movieId: m.movieId }).then(() => {
+          invalidateUserMovieLists();
+          return refresh();
+        }),
     });
 
   const removeFavoriteShow = (s) =>
     confirm({
       ...favoriteRemoveConfirm(s.tvTitle),
       onConfirm: () =>
-        api.post('/api/tv/favorite/removeFromFavorite', { tvId: s.tvId }).then(fetchFavoriteShows),
+        api.post('/api/tv/favorite/removeFromFavorite', { tvId: s.tvId }).then(() => {
+          invalidateUserTvLists();
+          return refresh();
+        }),
     });
 
   const removeWatchedFilm = (m) =>
     confirm({
       ...watchedFilmRemoveConfirm(m.movieTitle),
       onConfirm: () =>
-        api.post('/api/watch/removeFromWatched', { movieId: m.movieId }).then(fetchWatchedMovies),
+        api.post('/api/watch/removeFromWatched', { movieId: m.movieId }).then(() => {
+          invalidateUserMovieLists();
+          return refresh();
+        }),
     });
 
   const removeWatchedShow = (s) =>
     confirm({
       ...watchedTvRemoveConfirm(s.tvTitle),
       onConfirm: () =>
-        api.post('/api/tv/watch/removeFromWatched', { tvId: s.tvId }).then(fetchWatchedShows),
+        api.post('/api/tv/watch/removeFromWatched', { tvId: s.tvId }).then(() => {
+          invalidateUserTvLists();
+          return refresh();
+        }),
     });
 
   const filmTile = (m, onRemove) => (
@@ -199,6 +234,8 @@ export default function Profile() {
     />
   );
 
+  const showSkeleton = initialLoading && !fromCache && !userInfo;
+
   return (
     <>
       <PageTitle title={profileDisplay.title ? `${profileDisplay.title}'s diary` : 'Profile'} />
@@ -206,7 +243,7 @@ export default function Profile() {
       <div className="mx-auto max-w-content px-4 py-6 sm:px-6 md:py-10">
         <BackNav fallback="/" label="Back to home" className="mb-4 md:hidden" />
 
-        {loading && !userInfo ? (
+        {showSkeleton ? (
           <div className="space-y-6">
             <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />
             <div className="h-40 animate-pulse rounded-2xl bg-surface-raised" />

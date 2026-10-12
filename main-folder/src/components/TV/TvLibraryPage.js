@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Tv } from 'lucide-react';
 import api from '../../api/axios';
@@ -12,45 +12,60 @@ import {
   fetchShowEpisodeIndex,
   watchedSetFromEpisodes,
 } from '../../utils/tvProgress';
+import useCachedResource, {
+  CACHE_KEYS,
+  invalidateUserTvLists,
+} from '../../utils/routeCache';
 import PageTitle from '../../utils/PageTitle';
 import { haptic } from '../../utils/haptics';
+import { confirmScrollRestore } from '../ScrollRestoration';
 import BackNav from '../ui/BackNav';
 import EmptyState from '../ui/EmptyState';
 import TvLibraryTile from './TvLibraryTile';
+
+const EMPTY_LIBRARY = {
+  tracks: [],
+  counts: { watching: 0, paused: 0, completed: 0 },
+  staleAfterDays: 90,
+};
+
+async function fetchTvLibraryTab(tab) {
+  const r = await api.get(`/api/tv/tracking/library/${tab}`);
+  if (!r.data.success) return EMPTY_LIBRARY;
+  return {
+    tracks: r.data.tracks || [],
+    counts: r.data.counts || EMPTY_LIBRARY.counts,
+    staleAfterDays: r.data.staleAfterDays || 90,
+  };
+}
 
 export default function TvLibraryPage() {
   const { tab: tabParam } = useParams();
   const tab = TV_LIBRARY_TABS[tabParam] ? tabParam : 'watching';
   const config = TV_LIBRARY_TABS[tab];
+  const invalidTab = tabParam && !TV_LIBRARY_TABS[tabParam];
 
-  const [tracks, setTracks] = useState([]);
-  const [counts, setCounts] = useState({ watching: 0, paused: 0, completed: 0 });
-  const [staleAfterDays, setStaleAfterDays] = useState(90);
-  const [loading, setLoading] = useState(true);
+  const {
+    data,
+    loading,
+    fromCache,
+    refresh,
+  } = useCachedResource(
+    invalidTab ? null : CACHE_KEYS.tvLibrary(tab),
+    () => fetchTvLibraryTab(tab),
+    { ttl: 30_000, enabled: !invalidTab }
+  );
+
+  const { tracks, counts, staleAfterDays } = data || EMPTY_LIBRARY;
+
   const [markingId, setMarkingId] = useState(null);
   const [resumingId, setResumingId] = useState(null);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    api
-      .get(`/api/tv/tracking/library/${tab}`)
-      .then((r) => {
-        if (r.data.success) {
-          setTracks(r.data.tracks || []);
-          setCounts(r.data.counts || { watching: 0, paused: 0, completed: 0 });
-          setStaleAfterDays(r.data.staleAfterDays || 90);
-        }
-      })
-      .catch(() => setTracks([]))
-      .finally(() => setLoading(false));
-  }, [tab]);
+  useLayoutEffect(() => {
+    if (!loading) confirmScrollRestore();
+  }, [loading, tracks.length]);
 
-  useEffect(() => {
-    if (tabParam && !TV_LIBRARY_TABS[tabParam]) return;
-    load();
-  }, [tabParam, tab, load]);
-
-  if (tabParam && !TV_LIBRARY_TABS[tabParam]) {
+  if (invalidTab) {
     return <Navigate to={tvLibraryPath('watching')} replace />;
   }
 
@@ -80,7 +95,8 @@ export default function TvLibraryPage() {
       if (r.data?.success) {
         haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
       }
-      load();
+      invalidateUserTvLists();
+      await refresh();
     } finally {
       setMarkingId(null);
     }
@@ -90,7 +106,8 @@ export default function TvLibraryPage() {
     setResumingId(track.tvId);
     try {
       await api.post('/api/tv/tracking/resume', { tvId: track.tvId });
-      load();
+      invalidateUserTvLists();
+      await refresh();
     } finally {
       setResumingId(null);
     }
@@ -101,6 +118,8 @@ export default function TvLibraryPage() {
     if (key === 'stopped') return counts.paused;
     return counts.completed;
   };
+
+  const showSkeleton = loading && !fromCache && tracks.length === 0;
 
   return (
     <>
@@ -121,10 +140,7 @@ export default function TvLibraryPage() {
           )}
         </header>
 
-        <nav
-          className="seg-tabs mb-6 overflow-x-auto"
-          aria-label="Library tabs"
-        >
+        <nav className="seg-tabs mb-6 overflow-x-auto" aria-label="Library tabs">
           {TV_LIBRARY_TAB_ORDER.map((key) => {
             const t = TV_LIBRARY_TABS[key];
             const active = key === tab;
@@ -150,7 +166,7 @@ export default function TvLibraryPage() {
           })}
         </nav>
 
-        {loading ? (
+        {showSkeleton ? (
           <div
             key={`${tab}-loading`}
             className="state-enter poster-grid"

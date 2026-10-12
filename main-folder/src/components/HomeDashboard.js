@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tv } from 'lucide-react';
 import api from '../api/axios';
@@ -13,10 +13,15 @@ import {
   fetchShowEpisodeIndex,
   watchedSetFromEpisodes,
 } from '../utils/tvProgress';
+import useCachedResource, {
+  CACHE_KEYS,
+  invalidateUserTvLists,
+} from '../utils/routeCache';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import PageTitle from '../utils/PageTitle';
 import { displayName } from '../utils/displayUser';
 import { haptic } from '../utils/haptics';
+import { confirmScrollRestore } from './ScrollRestoration';
 import ContinueWatchingTile from './TV/ContinueWatchingTile';
 import TvTimeWelcomeBanner, {
   dismissTvTimePrompt,
@@ -46,86 +51,104 @@ const emptyTv = (
   </>
 );
 
-const SKELETON_TILE = 'h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]';
+const SKELETON_TILE =
+  'h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]';
+
+const EMPTY_DASHBOARD = {
+  tracks: [],
+  movieWatchlist: [],
+  tvWatchlist: [],
+  recap: null,
+  watchedMovies: [],
+  watchedTv: [],
+  favoriteMovies: [],
+  favoriteTv: [],
+};
+
+/** One call site for every home-screen fetch so cache hits are atomic. */
+async function fetchDashboardSnapshot() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const [
+    continueRes,
+    movies,
+    tvWatchlistItems,
+    recapRes,
+    watchedMovies,
+    watchedTv,
+    favoriteMovies,
+    favoriteTv,
+  ] = await Promise.all([
+    api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
+    api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
+    fetchTvWatchlist().catch(() => []),
+    api
+      .get(`/api/stats/week-recap?tz=${encodeURIComponent(tz)}`)
+      .catch(() => ({ data: { success: false } })),
+    api.post('/api/watch/getWatchMovie', {}).catch(() => ({ data: { success: false } })),
+    api.post('/api/tv/watch/getWatchTv', {}).catch(() => ({ data: { success: false } })),
+    api.post('/api/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
+    api.post('/api/tv/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
+  ]);
+
+  return {
+    tracks: continueRes.data.success ? continueRes.data.tracks || [] : [],
+    movieWatchlist: movies.data.success ? movies.data.watchlist || [] : [],
+    tvWatchlist: tvWatchlistItems,
+    recap: recapRes.data.success ? recapRes.data.recap : null,
+    watchedMovies: watchedMovies.data.success ? watchedMovies.data.watch || [] : [],
+    watchedTv: watchedTv.data.success ? watchedTv.data.watch || [] : [],
+    favoriteMovies: favoriteMovies.data.success ? favoriteMovies.data.favorites || [] : [],
+    favoriteTv: favoriteTv.data.success ? favoriteTv.data.favorites || [] : [],
+  };
+}
 
 export default function HomeDashboard() {
   const { user } = useAuth();
-  const [tracks, setTracks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data,
+    loading: initialLoading,
+    fromCache,
+    refresh,
+  } = useCachedResource(user?.id ? CACHE_KEYS.home : null, fetchDashboardSnapshot, {
+    ttl: 30_000,
+    enabled: Boolean(user?.id),
+  });
+
+  const snapshot = data || EMPTY_DASHBOARD;
+  const {
+    tracks,
+    movieWatchlist,
+    tvWatchlist,
+    recap,
+    watchedMovies,
+    watchedTv,
+    favoriteMovies,
+    favoriteTv,
+  } = snapshot;
+
   const [markingId, setMarkingId] = useState(null);
-  const [movieWatchlist, setMovieWatchlist] = useState([]);
-  const [tvWatchlist, setTvWatchlist] = useState([]);
-  const [watchlistsLoading, setWatchlistsLoading] = useState(true);
-  const [recap, setRecap] = useState(null);
-  const [recapLoading, setRecapLoading] = useState(true);
-  const [showTvTimeBanner, setShowTvTimeBanner] = useState(false);
+  const [dismissedTvTime, setDismissedTvTime] = useState(false);
 
   const refreshAll = useCallback(async () => {
-    setLoading(true);
-    setWatchlistsLoading(true);
-    setRecapLoading(true);
     try {
-      const [
-        continueRes,
-        movies,
-        tvWatchlistItems,
-        recapRes,
-        watchedMovies,
-        watchedTv,
-        favoriteMovies,
-        favoriteTv,
-      ] = await Promise.all([
-        api.get('/api/tv/tracking/continue').catch(() => ({ data: { success: false } })),
-        api.post('/api/watchlist/getMovieWatchlist', {}).catch(() => ({ data: { success: false } })),
-        fetchTvWatchlist().catch(() => []),
-        api.get(`/api/stats/week-recap?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')}`).catch(() => ({ data: { success: false } })),
-        api.post('/api/watch/getWatchMovie', {}).catch(() => ({ data: { success: false } })),
-        api.post('/api/tv/watch/getWatchTv', {}).catch(() => ({ data: { success: false } })),
-        api.post('/api/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
-        api.post('/api/tv/favorite/getFavoriteMovie', {}).catch(() => ({ data: { success: false } })),
-      ]);
-
-      const nextTracks = continueRes.data.success ? continueRes.data.tracks || [] : [];
-      const nextMovieWatchlist = movies.data.success ? movies.data.watchlist || [] : [];
-      const nextTvWatchlist = tvWatchlistItems;
-      const nextWatchedMovies = watchedMovies.data.success ? watchedMovies.data.watch || [] : [];
-      const nextWatchedTv = watchedTv.data.success ? watchedTv.data.watch || [] : [];
-      const nextFavoriteMovies = favoriteMovies.data.success ? favoriteMovies.data.favorites || [] : [];
-      const nextFavoriteTv = favoriteTv.data.success ? favoriteTv.data.favorites || [] : [];
-
-      setTracks(nextTracks);
-      setMovieWatchlist(nextMovieWatchlist);
-      setTvWatchlist(nextTvWatchlist);
-      setRecap(recapRes.data.success ? recapRes.data.recap : null);
-      setShowTvTimeBanner(
-        shouldShowTvTimeBanner({
-          userId: user?.id,
-          tracks: nextTracks,
-          movieWatchlist: nextMovieWatchlist,
-          tvWatchlist: nextTvWatchlist,
-          watchedMovies: nextWatchedMovies,
-          watchedTv: nextWatchedTv,
-          favoriteMovies: nextFavoriteMovies,
-          favoriteTv: nextFavoriteTv,
-        })
-      );
-      clearSessionStats();
+      await refresh();
     } finally {
-      setLoading(false);
-      setWatchlistsLoading(false);
-      setRecapLoading(false);
+      clearSessionStats();
     }
-  }, [user?.id]);
+  }, [refresh]);
 
   const { indicator: pullIndicator } = usePullToRefresh(refreshAll);
 
-  useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
+  // Confirm scroll restore the moment cached content paints — the browser
+  // reserves list height before the images load, so Back lands exactly where
+  // the user left.
+  useLayoutEffect(() => {
+    if (!initialLoading) confirmScrollRestore();
+  }, [initialLoading, tracks.length, movieWatchlist.length, tvWatchlist.length]);
 
   const dismissTvTime = () => {
     dismissTvTimePrompt(user?.id);
-    setShowTvTimeBanner(false);
+    setDismissedTvTime(true);
   };
 
   const markNextFromHome = async (track) => {
@@ -154,13 +177,33 @@ export default function HomeDashboard() {
       if (r.data?.success) {
         haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
       }
-      await refreshAll();
+      invalidateUserTvLists();
+      clearSessionStats();
+      await refresh();
     } finally {
       setMarkingId(null);
     }
   };
 
   const greeting = user ? `Hey, ${displayName(user)}` : 'Welcome back';
+
+  // Only block the whole page with skeletons on the very first visit of
+  // the session; later visits are instant via cache.
+  const loading = initialLoading && !fromCache;
+  const watchlistsLoading = loading;
+
+  const showTvTimeBanner =
+    !dismissedTvTime &&
+    shouldShowTvTimeBanner({
+      userId: user?.id,
+      tracks,
+      movieWatchlist,
+      tvWatchlist,
+      watchedMovies,
+      watchedTv,
+      favoriteMovies,
+      favoriteTv,
+    });
 
   return (
     <>
@@ -176,7 +219,7 @@ export default function HomeDashboard() {
         </header>
 
         <PwaInstallBanner />
-        <WeeklyRecapCard recap={recap} loading={recapLoading} />
+        <WeeklyRecapCard recap={recap} loading={loading} />
         <TvTimeWelcomeBanner visible={showTvTimeBanner} onDismiss={dismissTvTime} />
 
         <section aria-label="Continue watching" className="mb-10 md:mb-12">

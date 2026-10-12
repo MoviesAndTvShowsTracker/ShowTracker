@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { IMAGE_URL } from '../../config/keys';
 import TvGridCard from './TvGridCard';
 import PageTitle from '../../utils/PageTitle';
@@ -7,84 +7,108 @@ import PosterRail from '../ui/PosterRail';
 import GenreChips, { filterCuratedGenres } from '../ui/GenreChips';
 import MediaPosterTiles from '../browse/MediaPosterTiles';
 import { heroSlides, tmdbFetch, withPoster } from '../../utils/tmdb';
+import useCachedResource, { CACHE_KEYS } from '../../utils/routeCache';
+import { confirmScrollRestore } from '../ScrollRestoration';
+
+const EMPTY_LANDING = {
+  hero: [],
+  trendingToday: [],
+  onTheAir: [],
+  airingToday: [],
+  topRated: [],
+  popular: [],
+  popularPage: 1,
+  genres: [],
+};
+
+async function fetchTvLanding() {
+  const [trendingWeek, trendingDay, onAir, today, rated, pop, genreList] = await Promise.all([
+    tmdbFetch('trending/tv/week'),
+    tmdbFetch('trending/tv/day'),
+    tmdbFetch('tv/on_the_air', { page: 1 }),
+    tmdbFetch('tv/airing_today', { page: 1 }),
+    tmdbFetch('tv/top_rated', { page: 1 }),
+    tmdbFetch('tv/popular', { page: 1 }),
+    tmdbFetch('genre/tv/list'),
+  ]);
+
+  const slides = heroSlides(trendingWeek.results, '/tv', 'name').map((s, i) =>
+    i === 0 ? { ...s, badge: 'Trending this week' } : s
+  );
+
+  return {
+    hero: slides,
+    trendingToday: withPoster(trendingDay.results).slice(0, 16),
+    onTheAir: withPoster(onAir.results).slice(0, 16),
+    airingToday: withPoster(today.results).slice(0, 16),
+    topRated: withPoster(rated.results).slice(0, 16),
+    popular: withPoster(pop.results),
+    popularPage: pop.page || 1,
+    genres: filterCuratedGenres(genreList.genres || [], 'tv'),
+  };
+}
 
 export default function TvLandingPage() {
-  const [loading, setLoading] = useState(true);
-  const [hero, setHero] = useState([]);
-  const [trendingToday, setTrendingToday] = useState([]);
-  const [onTheAir, setOnTheAir] = useState([]);
-  const [airingToday, setAiringToday] = useState([]);
-  const [topRated, setTopRated] = useState([]);
-  const [popular, setPopular] = useState([]);
-  const [popularPage, setPopularPage] = useState(1);
-  const [genres, setGenres] = useState([]);
+  const {
+    data,
+    loading,
+    error,
+    fromCache,
+    refresh,
+  } = useCachedResource(CACHE_KEYS.tvLanding, fetchTvLanding, {
+    ttl: 10 * 60_000,
+  });
+
+  const {
+    hero,
+    trendingToday,
+    onTheAir,
+    airingToday,
+    topRated,
+    popular: cachedPopular,
+    popularPage: cachedPage,
+    genres,
+  } = data || EMPTY_LANDING;
+
+  const [extraPopular, setExtraPopular] = useState([]);
+  const [extraPopularPage, setExtraPopularPage] = useState(0);
+  const popular = extraPopularPage > 0 ? [...cachedPopular, ...extraPopular] : cachedPopular;
+  const popularPage = Math.max(cachedPage, extraPopularPage);
+
   const [selectedGenre, setSelectedGenre] = useState(null);
-  const [genreResults, setGenreResults] = useState([]);
-  const [genreLoading, setGenreLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-    setLoading(true);
-    setLoadError(false);
-    Promise.all([
-      tmdbFetch('trending/tv/week'),
-      tmdbFetch('trending/tv/day'),
-      tmdbFetch('tv/on_the_air', { page: 1 }),
-      tmdbFetch('tv/airing_today', { page: 1 }),
-      tmdbFetch('tv/top_rated', { page: 1 }),
-      tmdbFetch('tv/popular', { page: 1 }),
-      tmdbFetch('genre/tv/list'),
-    ])
-      .then(([trendingWeek, trendingDay, onAir, today, rated, pop, genreList]) => {
-        const slides = heroSlides(trendingWeek.results, '/tv', 'name').map((s, i) =>
-          i === 0 ? { ...s, badge: 'Trending this week' } : s
-        );
-        setHero(slides);
-        setTrendingToday(withPoster(trendingDay.results).slice(0, 16));
-        setOnTheAir(withPoster(onAir.results).slice(0, 16));
-        setAiringToday(withPoster(today.results).slice(0, 16));
-        setTopRated(withPoster(rated.results).slice(0, 16));
-        setPopular(withPoster(pop.results));
-        setPopularPage(pop.page || 1);
-        setGenres(filterCuratedGenres(genreList.genres || [], 'tv'));
-      })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  }, [reloadKey]);
-
-  useEffect(() => {
-    if (!selectedGenre) {
-      setGenreResults([]);
-      return;
-    }
-    setGenreLoading(true);
-    tmdbFetch('discover/tv', {
-      with_genres: selectedGenre,
-      sort_by: 'popularity.desc',
-      page: 1,
-    })
-      .then((data) => setGenreResults(withPoster(data.results).slice(0, 16)))
-      .catch(() => setGenreResults([]))
-      .finally(() => setGenreLoading(false));
-  }, [selectedGenre]);
+  const { data: genreData, loading: genreLoading } = useCachedResource(
+    selectedGenre ? CACHE_KEYS.tvGenre(selectedGenre) : null,
+    (signal) =>
+      tmdbFetch(
+        'discover/tv',
+        { with_genres: selectedGenre, sort_by: 'popularity.desc', page: 1 },
+        { signal }
+      ).then((d) => withPoster(d.results).slice(0, 16)),
+    { ttl: 10 * 60_000, enabled: Boolean(selectedGenre) }
+  );
+  const genreResults = genreData || [];
 
   const loadMorePopular = useCallback(() => {
     tmdbFetch('tv/popular', { page: popularPage + 1 })
-      .then((data) => {
-        setPopular((prev) => [...prev, ...withPoster(data.results)]);
-        setPopularPage(data.page);
+      .then((d) => {
+        setExtraPopular((prev) => [...prev, ...withPoster(d.results)]);
+        setExtraPopularPage(d.page);
       })
       .catch(() => {});
   }, [popularPage]);
 
+  useLayoutEffect(() => {
+    if (!loading) confirmScrollRestore();
+  }, [loading, popular.length, genres.length]);
+
   const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name;
+  const showHeroSkeleton = loading && !fromCache && hero.length === 0;
 
   return (
     <>
       <PageTitle title="Browse TV" />
 
-      {loading ? (
+      {showHeroSkeleton ? (
         <div
           className="h-52 animate-pulse bg-surface sm:h-64 md:h-80"
           aria-busy="true"
@@ -95,12 +119,12 @@ export default function TvLandingPage() {
       )}
 
       <div className="mx-auto max-w-content space-y-10 px-4 py-8 sm:px-6 md:space-y-12 md:py-10">
-        {loadError && (
+        {error && !fromCache && (
           <div className="state-enter rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             Couldn&apos;t reach the TV catalog.{' '}
             <button
               type="button"
-              onClick={() => setReloadKey((key) => key + 1)}
+              onClick={() => refresh().catch(() => {})}
               className="focus-ring font-semibold underline"
             >
               Try again
@@ -129,7 +153,10 @@ export default function TvLandingPage() {
             {genreLoading ? (
               <div className="poster-rail" aria-busy="true" aria-label="Loading genre">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]" />
+                  <div
+                    key={i}
+                    className="h-[132px] w-[88px] shrink-0 animate-pulse rounded-xl bg-surface-raised sm:w-[100px]"
+                  />
                 ))}
               </div>
             ) : genreResults.length > 0 ? (
@@ -182,11 +209,13 @@ export default function TvLandingPage() {
               </div>
             ))}
           </div>
-          <div className="text-center">
-            <button type="button" className="btn-secondary" onClick={loadMorePopular}>
-              Load more
-            </button>
-          </div>
+          {popular.length > 0 && (
+            <div className="text-center">
+              <button type="button" className="btn-secondary" onClick={loadMorePopular}>
+                Load more
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </>
