@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bookmark, ChevronRight, Film, MoreVertical, Star, Tv } from 'lucide-react';
+import { Bookmark, Check, ChevronRight, Film, MoreVertical, Star, Tv } from 'lucide-react';
 import api from '../../api/axios';
 import { IMAGE_URL } from '../../config/keys';
 import { useAuth } from '../../context/AuthContext';
@@ -22,19 +22,41 @@ function libraryLabel(track) {
   return 'Watching';
 }
 
-export default function SearchResultTile({ item, mediaType }) {
+function actionForTv(track) {
+  if (!track) return null;
+  if (track.status === 'completed') {
+    return { label: 'Finished', icon: Check, toDetail: true };
+  }
+  if (track.status === 'paused') {
+    return { label: 'Paused', icon: ChevronRight, toDetail: false };
+  }
+  return { label: 'Continue', icon: ChevronRight, toDetail: false };
+}
+
+export default function SearchResultTile({
+  item,
+  mediaType,
+  diaryReady = true,
+  diary = null,
+  onWatchlistChange,
+}) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { confirm, confirmDialog } = useConfirmDialog();
   const type = mediaType || item.media_type;
   const isTv = type === 'tv';
   const title = isTv ? item.name : item.title;
+  const idKey = String(item.id);
   const to = isTv ? `/tv/${item.id}` : `/movies/${item.id}`;
   const year = yearFrom(item, type);
   const rating = item.vote_average > 0 ? Number(item.vote_average).toFixed(1) : null;
 
-  const [watchlisted, setWatchlisted] = useState(false);
-  const [track, setTrack] = useState(null);
+  const track = isTv ? diary?.tvTracks?.get(idKey) || null : null;
+  const watchlisted = isTv
+    ? Boolean(diary?.tvWatchlist?.has(idKey))
+    : Boolean(diary?.movieWatchlist?.has(idKey));
+  const filmWatched = !isTv && Boolean(diary?.watchedMovies?.has(idKey));
+
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,26 +65,8 @@ export default function SearchResultTile({ item, mediaType }) {
   const popoverRef = useRef(null);
   const menuStyle = useAnchoredPopover(menuPresence.rendered, buttonRef, popoverRef);
 
+  const tvAction = actionForTv(track);
   const inLibrary = Boolean(track);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const watchlistEndpoint = isTv
-      ? '/api/tv/watchlist/watchlisted'
-      : '/api/watchlist/watchlisted';
-    const idKey = isTv ? 'tvId' : 'movieId';
-
-    api.post(watchlistEndpoint, { [idKey]: String(item.id) }).then((r) => {
-      if (r.data.success) setWatchlisted(r.data.watchlisted);
-    });
-
-    if (isTv) {
-      api.get(`/api/tv/tracking/show/${item.id}`).then((r) => {
-        if (r.data.success) setTrack(r.data.tracking || null);
-      });
-    }
-  }, [isAuthenticated, isTv, item.id]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -85,7 +89,7 @@ export default function SearchResultTile({ item, mediaType }) {
   };
 
   const applyWatchlistChange = async () => {
-    if (!isAuthenticated || busy || inLibrary) return;
+    if (!isAuthenticated || busy || inLibrary || filmWatched) return;
     setBusy(true);
     setMenuOpen(false);
     try {
@@ -101,7 +105,7 @@ export default function SearchResultTile({ item, mediaType }) {
           : '/api/tv/watchlist/addToWatchlist';
         const r = await api.post(endpoint, watchlisted ? { tvId: String(item.id) } : payload);
         if (r.data.success) {
-          setWatchlisted(!watchlisted);
+          onWatchlistChange?.('tv', item.id, !watchlisted);
           flash(watchlisted ? 'Removed from list' : 'Added to watchlist');
         }
       } else {
@@ -117,7 +121,7 @@ export default function SearchResultTile({ item, mediaType }) {
           : '/api/watchlist/addToWatchlist';
         const r = await api.post(endpoint, watchlisted ? { movieId: String(item.id) } : payload);
         if (r.data.success) {
-          setWatchlisted(!watchlisted);
+          onWatchlistChange?.('movie', item.id, !watchlisted);
           flash(watchlisted ? 'Removed from list' : 'Added to watchlist');
         }
       }
@@ -129,7 +133,7 @@ export default function SearchResultTile({ item, mediaType }) {
   const toggleWatchlist = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    if (!isAuthenticated || busy || inLibrary) return;
+    if (!isAuthenticated || busy || inLibrary || filmWatched) return;
     if (watchlisted) {
       setMenuOpen(false);
       confirm({
@@ -141,11 +145,12 @@ export default function SearchResultTile({ item, mediaType }) {
     applyWatchlistChange();
   };
 
-  const goContinue = (e) => {
+  const goPrimary = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setMenuOpen(false);
-    navigate(`/tv/${item.id}/continue`);
+    if (tvAction?.toDetail) navigate(`/tv/${item.id}`);
+    else navigate(`/tv/${item.id}/continue`);
   };
 
   if (!item.poster_path) return null;
@@ -158,6 +163,48 @@ export default function SearchResultTile({ item, mediaType }) {
         : 'right-1.5 top-1.5';
 
   const statusLabel = libraryLabel(track);
+  const showActions = isAuthenticated && diaryReady;
+  const TvActionIcon = tvAction?.icon;
+
+  let desktopAction = null;
+  if (showActions) {
+    if (isTv && tvAction && TvActionIcon) {
+      desktopAction = (
+        <button
+          type="button"
+          onClick={goPrimary}
+          className="flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent transition-colors cursor-pointer"
+        >
+          <TvActionIcon className="h-3.5 w-3.5" />
+          {tvAction.label}
+        </button>
+      );
+    } else if (filmWatched) {
+      desktopAction = (
+        <span className="flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent">
+          <Check className="h-3.5 w-3.5" />
+          Watched
+        </span>
+      );
+    } else {
+      desktopAction = (
+        <button
+          type="button"
+          onClick={toggleWatchlist}
+          disabled={busy}
+          aria-label={watchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
+          className={`flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
+            watchlisted
+              ? 'bg-accent text-on-accent'
+              : 'bg-surface/90 text-ink hover:bg-surface-raised'
+          }`}
+        >
+          <Bookmark className="h-3.5 w-3.5" />
+          {watchlisted ? 'Listed' : 'Watchlist'}
+        </button>
+      );
+    }
+  }
 
   return (
     <>
@@ -188,7 +235,7 @@ export default function SearchResultTile({ item, mediaType }) {
               </span>
             )}
 
-            {isAuthenticated && (
+            {showActions && (
               <button
                 ref={buttonRef}
                 type="button"
@@ -205,38 +252,14 @@ export default function SearchResultTile({ item, mediaType }) {
               </button>
             )}
 
-            {isAuthenticated && (
+            {showActions && (
               <div className="absolute inset-x-0 bottom-0 hidden gap-1 bg-gradient-to-t from-canvas/95 via-canvas/80 to-transparent p-1.5 pt-6 md:flex">
-                {isTv && inLibrary ? (
-                  <button
-                    type="button"
-                    onClick={goContinue}
-                    className="flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent transition-colors cursor-pointer"
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                    Continue
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={toggleWatchlist}
-                    disabled={busy}
-                    aria-label={watchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
-                    className={`flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
-                      watchlisted
-                        ? 'bg-accent text-on-accent'
-                        : 'bg-surface/90 text-ink hover:bg-surface-raised'
-                    }`}
-                  >
-                    <Bookmark className="h-3.5 w-3.5" />
-                    {watchlisted ? 'Listed' : 'Watchlist'}
-                  </button>
-                )}
+                {desktopAction}
               </div>
             )}
           </div>
 
-          {isAuthenticated && menuPresence.rendered && typeof document !== 'undefined' && createPortal(
+          {showActions && menuPresence.rendered && typeof document !== 'undefined' && createPortal(
             <>
               <div
                 className={`popover-backdrop fixed inset-0 z-[55] bg-canvas/20 md:hidden ${
@@ -254,18 +277,27 @@ export default function SearchResultTile({ item, mediaType }) {
                   menuPresence.exiting ? 'is-exiting' : ''
                 }`}
               >
-                {isTv && inLibrary ? (
+                {isTv && tvAction && TvActionIcon ? (
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={goContinue}
+                    onClick={goPrimary}
                     className="focus-ring flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink active:bg-surface-raised cursor-pointer"
                   >
-                    <ChevronRight className="h-4 w-4 shrink-0 text-link" />
+                    <TvActionIcon className="h-4 w-4 shrink-0 text-link" />
                     <span className="whitespace-nowrap">
-                      Continue{statusLabel ? ` · ${statusLabel}` : ''}
+                      {tvAction.label}
+                      {statusLabel && tvAction.label !== statusLabel ? ` · ${statusLabel}` : ''}
                     </span>
                   </button>
+                ) : filmWatched ? (
+                  <div
+                    role="menuitem"
+                    className="flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink"
+                  >
+                    <Check className="h-4 w-4 shrink-0 text-accent" />
+                    <span className="whitespace-nowrap">Watched</span>
+                  </div>
                 ) : (
                   <button
                     type="button"

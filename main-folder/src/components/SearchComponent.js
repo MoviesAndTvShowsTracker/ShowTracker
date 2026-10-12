@@ -14,11 +14,12 @@ import {
   saveSearchScroll,
 } from '../utils/searchStorage';
 import PageTitle from '../utils/PageTitle';
+import useSearchDiaryContext from '../hooks/useSearchDiaryContext';
+import { FOCUS_SEARCH_EVENT } from '../hooks/useSearchShortcut';
 import BackNav from './ui/BackNav';
 import PosterRail from './ui/PosterRail';
 import PosterTile from './ui/PosterTile';
 import SearchResultTile from './search/SearchResultTile';
-import { FOCUS_SEARCH_EVENT } from '../hooks/useSearchShortcut';
 
 const TABS = [
   { id: 'multi', label: 'All', icon: Search },
@@ -36,6 +37,7 @@ function normalizeMultiResults(results) {
 export default function SearchBox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef(null);
+  const { context: diary, ready: diaryReady, patchWatchlist } = useSearchDiaryContext();
 
   const urlQuery = searchParams.get('q') || '';
   const urlType = searchParams.get('type') || 'multi';
@@ -221,7 +223,7 @@ export default function SearchBox() {
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
                 ref={inputRef}
-                className="input-field min-h-[48px] pl-10 pr-10 text-base"
+                className="input-field search-field min-h-[48px] pl-10 pr-10 text-base"
                 type="search"
                 placeholder="Films, TV shows, actors…"
                 value={query}
@@ -331,6 +333,9 @@ export default function SearchBox() {
                     key={`${item.media_type || type}-${item.id}`}
                     item={item}
                     mediaType={type === 'multi' ? item.media_type : type}
+                    diaryReady={diaryReady}
+                    diary={diary}
+                    onWatchlistChange={patchWatchlist}
                   />
                 ))}
               </div>

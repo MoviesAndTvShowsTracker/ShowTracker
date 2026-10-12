@@ -4,12 +4,12 @@ function normTvId(id) {
   return String(id ?? '').trim();
 }
 
-/** All shows in Watching / Stopped / Finished — works with existing library APIs. */
+/** All shows in Watching / Paused / Finished — library tab paths, not status names. */
 async function fetchInLibraryTvIds() {
   const [watching, stopped, finished] = await Promise.all([
-    api.get('/api/tv/tracking/continue').catch(() => ({ data: {} })),
-    api.get('/api/tv/tracking/library/paused').catch(() => ({ data: {} })),
-    api.get('/api/tv/tracking/library/completed').catch(() => ({ data: {} })),
+    api.get('/api/tv/tracking/library/watching').catch(() => ({ data: {} })),
+    api.get('/api/tv/tracking/library/stopped').catch(() => ({ data: {} })),
+    api.get('/api/tv/tracking/library/finished').catch(() => ({ data: {} })),
   ]);
 
   const ids = new Set();
