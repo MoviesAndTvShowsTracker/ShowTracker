@@ -1,0 +1,68 @@
+name: Marquee
+options:
+  bundleIdPrefix: com.marquee
+  deploymentTarget:
+    iOS: "26.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_CFBundleDisplayName: Marquee
+    INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    GENERATE_INFOPLIST_FILE: YES
+    PRODUCT_BUNDLE_IDENTIFIER: com.marquee.app
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Marquee:
+    type: application
+    platform: iOS
+    sources:
+      - path: Marquee
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jimil.marquee
+        DEVELOPMENT_TEAM: DWXW4WF2VQ
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: Apple Development
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  MarqueeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: MarqueeUITests
+    dependencies:
+      - target: Marquee
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jimil.marquee.uitests
+        TEST_TARGET_NAME: Marquee
+        GENERATE_INFOPLIST_FILE: YES
+        DEVELOPMENT_TEAM: DWXW4WF2VQ
+        CODE_SIGN_STYLE: Automatic
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    info:
+      path: Marquee/Info.plist
+      properties:
+        CFBundleDisplayName: Marquee
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+        UIApplicationSupportsIndirectInputEvents: true
+schemes:
+  Marquee:
+    build:
+      targets:
+        Marquee: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MarqueeUITests

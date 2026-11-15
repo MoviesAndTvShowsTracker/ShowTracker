@@ -1,0 +1,37 @@
+---
+description: Marquee iOS Lobby Light design, Liquid Glass limits, and API conventions
+globs: ios/**/*
+alwaysApply: false
+---
+
+# Marquee iOS
+
+Native SwiftUI app under `ios/`. Reuses Express JWT API in `backend-server/`. See `ios/DESIGN.md`.
+
+## Palette (locked — Lobby Light)
+
+- Salt Grey `#E5E5DE` — light surface
+- Deep Olive `#3D3B2E` — ink / dark chrome
+- Hibiscus Pink `#FF4F8B` — actions only (CTAs, mark, rate, progress)
+- Dark surface `#1C1B16`, elevated `#2A281F`; dark text uses Salt Grey
+- Never introduce Butter Yellow, Acid Citron, Haze Lavender, purple/indigo gradients, or a second accent
+
+## Liquid Glass
+
+- Glass on chrome only: tab bar, toolbars, sheets, search, FABs
+- No `.glassEffect()` on posters, list rows, or full-screen backgrounds
+- Prefer system `TabView`, `ToolbarItem`, `sheet`, `searchable`
+- Group custom glass in `GlassEffectContainer`
+
+## Code
+
+- SwiftUI + `@Observable`; async/await networking; Keychain for JWT
+- Bearer token on all protected routes; clear session on 401
+- Image loading: cached/downsampled posters (not raw `AsyncImage` for rails)
+- Motion: 100–250ms springs; Reduce Motion respected
+- Copy: short diary voice; no AI filler
+
+## API
+
+- Base URL from config (debug: `http://localhost:5001`)
+- TMDB via `GET /api/tmdb/...` only — never embed TMDB API keys in the client

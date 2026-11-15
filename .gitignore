@@ -122,3 +122,13 @@ uiux-designer/
 gdpr-data/
 .agents/
 .skills-lock.json
+
+# Xcode / iOS
+ios/**/xcuserdata/
+ios/**/DerivedData/
+ios/**/*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM

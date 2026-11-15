@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Marquee">
+  <rect width="1024" height="1024" rx="224" fill="#1C1B16"/>
+  <rect x="72" y="72" width="880" height="880" rx="180" fill="#2A281F"/>
+  <g fill="none" stroke="#E5E5DE" stroke-width="92" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M292 720 V360"/>
+    <path d="M732 720 V360"/>
+    <path d="M292 360 L512 560 L732 360"/>
+  </g>
+  <g fill="#FF4F8B">
+    <circle cx="292" cy="268" r="28"/>
+    <circle cx="512" cy="248" r="32"/>
+    <circle cx="732" cy="268" r="28"/>
+  </g>
+  <g fill="none" stroke="#FF4F8B" stroke-opacity="0.35" stroke-width="6">
+    <circle cx="292" cy="268" r="42"/>
+    <circle cx="512" cy="248" r="48"/>
+    <circle cx="732" cy="268" r="42"/>
+  </g>
+</svg>
