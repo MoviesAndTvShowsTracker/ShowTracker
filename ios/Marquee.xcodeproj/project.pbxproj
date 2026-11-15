@@ -17,6 +17,7 @@
 		528B462DC39BAAD11715776F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E1C91523079756EDFCC574 /* MainTabView.swift */; };
 		54DE90A44B1319DC37F0DE59 /* TVContinueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EA3A27C094384FAFB77658C /* TVContinueView.swift */; };
 		5E699388F9EEF6B8EBC53A40 /* DiaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9EBDE5E160366D8BB89E26E /* DiaryService.swift */; };
+		69DF6EDA01122D6FCE3E2F86 /* StatsCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFE372EE43F08FB8680BFA4 /* StatsCharts.swift */; };
 		72A52E431FC8347D7D7AB38F /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB3011284050A06E0E42FA0F /* ImageCache.swift */; };
 		74CEACC5D759CB6F40397425 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D05D2846E8942BC732FCB8 /* KeychainStore.swift */; };
 		773D7B00B93D774856B3BFFF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E5682D970346C9AFB989EC /* RootView.swift */; };
@@ -46,6 +47,7 @@
 		EDC8E2826C63C76E984290A2 /* DiaryChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40095993909287866C995224 /* DiaryChrome.swift */; };
 		F6C28AB9869FA4CCE6D76695 /* MarqueeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */; };
 		FDEB8FCB25D31F6308595F81 /* AccessibilityMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549888C1A8ED8E3CA8B0C049 /* AccessibilityMotion.swift */; };
+		FEF8359DC8FE085E48906BFE /* StatsBadges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,9 +79,11 @@
 		59D15FA5617EB176D557EA51 /* Skeletons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeletons.swift; sourceTree = "<group>"; };
 		5AD95B7E214227F1C398E970 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		61AEFEDC3EE99990A8C67B6B /* TVDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDetailView.swift; sourceTree = "<group>"; };
+		65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsBadges.swift; sourceTree = "<group>"; };
 		6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeApp.swift; sourceTree = "<group>"; };
 		7D6A7B5C1976974BAD871910 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		84516D28A281EAA8D5B69914 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		8BFE372EE43F08FB8680BFA4 /* StatsCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCharts.swift; sourceTree = "<group>"; };
 		92A7EFBC0F456A8329839FD6 /* HeroCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroCarousel.swift; sourceTree = "<group>"; };
 		954E4EB8E8BBB1C883EF41B3 /* GlassChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChrome.swift; sourceTree = "<group>"; };
 		9C0CA2C6489447764AC72E2A /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
@@ -174,6 +178,8 @@
 			isa = PBXGroup;
 			children = (
 				AE4D3606E3C5198CAF8D2257 /* ProfileView.swift */,
+				65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */,
+				8BFE372EE43F08FB8680BFA4 /* StatsCharts.swift */,
 				26B4AA6F74B3219716AE585E /* StatsView.swift */,
 			);
 			path = Profile;
@@ -402,6 +408,8 @@
 				D92ACC1CD3710DC289E71408 /* SettingsView.swift in Sources */,
 				9AB9DCBF9FD490D258F3C2A5 /* ShowProgress.swift in Sources */,
 				B466889B0963A1F303E96B05 /* Skeletons.swift in Sources */,
+				FEF8359DC8FE085E48906BFE /* StatsBadges.swift in Sources */,
+				69DF6EDA01122D6FCE3E2F86 /* StatsCharts.swift in Sources */,
 				D46759F1B229DD7FA57A1C6D /* StatsView.swift in Sources */,
 				4F02FB4B185C5FA067A9733F /* SwipeBack.swift in Sources */,
 				DBB3E517C4F3BD17E3569C90 /* TMDBService.swift in Sources */,

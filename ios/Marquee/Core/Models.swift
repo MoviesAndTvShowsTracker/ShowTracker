@@ -491,6 +491,14 @@ struct StatsTaste: Decodable {
 struct StatsTasteBucket: Decodable {
     let genreByEpisodes: [TasteGenre]?
     let genreByCount: [TasteGenre]?
+    let decades: [TasteDecade]?
+}
+
+struct TasteDecade: Decodable, Identifiable {
+    var id: String { decade ?? UUID().uuidString }
+    let decade: String?
+    let count: Int?
+    let minutes: Int?
 }
 
 struct TasteGenre: Decodable, Identifiable {
@@ -515,12 +523,46 @@ struct StatsActivity: Decodable {
     let streak: Int?
     let longestStreak: Int?
     let busiestDay: StatsBusiestDay?
+    let busiestMonth: StatsBusiestMonth?
     let lastWatchedAt: String?
     let firstLoggedOn: String?
     let activeDays: Int?
     let episodesThisWeek: Int?
     let filmsThisWeek: Int?
+    let tvMinsThisWeek: Int?
+    let filmMinsThisWeek: Int?
     let totalMinsThisWeek: Int?
+    let weeklyTrend: [StatsTrendBucket]?
+    let monthlyTrend: [StatsTrendBucket]?
+    let dailyActivity: [StatsDayBucket]?
+}
+
+struct StatsBusiestMonth: Decodable {
+    let month: String?
+    let count: Int?
+    let minutes: Int?
+}
+
+struct StatsTrendBucket: Decodable, Identifiable {
+    var id: String { weekStart ?? month ?? UUID().uuidString }
+    let weekStart: String?
+    let weekEnd: String?
+    let month: String?
+    let episodes: Int?
+    let films: Int?
+    let minutes: Int?
+    let tvMinutes: Int?
+    let filmMinutes: Int?
+}
+
+struct StatsDayBucket: Decodable, Identifiable {
+    var id: String { date ?? UUID().uuidString }
+    let date: String?
+    let episodes: Int?
+    let films: Int?
+    let minutes: Int?
+    let tvMinutes: Int?
+    let filmMinutes: Int?
 }
 
 struct StatsBusiestDay: Decodable {
@@ -532,6 +574,8 @@ struct StatsFunFacts: Decodable {
     let biggestBinge: StatsBinge?
     let mostWatchedShow: StatsMostWatched?
     let avgMinsPerActiveDay: Int?
+    let avgEpisodeMins: Int?
+    let avgPerActiveDay: Double?
 }
 
 struct StatsBinge: Decodable {
@@ -551,9 +595,13 @@ struct StatsMostWatched: Decodable {
 }
 
 struct StatsFilmsBlock: Decodable {
+    let count: Int?
+    let filmMins: Int?
     let longest: StatsFilmExtreme?
     let shortest: StatsFilmExtreme?
     let avgRuntime: Int?
+    let thisWeek: Int?
+    let thisYear: Int?
 }
 
 struct StatsFilmExtreme: Decodable {

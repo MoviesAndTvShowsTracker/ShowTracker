@@ -6,15 +6,25 @@ struct StatsView: View {
     @State private var recap: WeekRecap?
     @State private var loading = true
     @State private var error: String?
+    @State private var tasteRoom: TasteRoom = .tv
+
+    private enum TasteRoom: String, CaseIterable, Identifiable {
+        case tv = "TV"
+        case films = "Films"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 if loading && stats == nil {
                     VStack(spacing: 14) {
-                        SkeletonBlock(height: 180, radius: 24)
-                        SkeletonBlock(height: 90, radius: 18)
-                        SkeletonBlock(height: 140, radius: 18)
+                        HStack(spacing: 10) {
+                            SkeletonBlock(height: 150, radius: 22)
+                            SkeletonBlock(height: 150, radius: 22)
+                        }
+                        SkeletonBlock(height: 180, radius: 20)
+                        SkeletonBlock(height: 140, radius: 20)
                     }
                 } else if let error, stats == nil {
                     EmptyDiaryCard(title: "Couldn’t load stats", message: error, cta: "Try again") {
@@ -23,18 +33,28 @@ struct StatsView: View {
                 } else if isEmpty {
                     EmptyDiaryCard(
                         title: "The house lights are still up",
-                        message: "Mark a film or an episode and this page becomes your screening log — hours in the dark, habits, taste.",
+                        message: "Mark a film or an episode and this page becomes two diaries — TV hours, film hours, badges, and the days you actually sat down.",
                         cta: nil
                     )
                 } else {
-                    marqueeHero
-                    if let recap { weekTickets(recap) }
-                    habitRow
-                    libraryBlock
-                    mostWatched
+                    twinReels
+                    if let recap { weekStrip(recap) }
+                    if !weekdayPoints.isEmpty {
+                        WeekdayRhythmChart(days: weekdayPoints)
+                    }
+                    if !weekTrendPoints.isEmpty {
+                        TwelveWeekChart(points: weekTrendPoints)
+                    }
+                    if !(stats?.activity?.dailyActivity ?? []).isEmpty {
+                        DiaryHeatmap(days: stats?.activity?.dailyActivity ?? [])
+                    }
+                    spotlight
                     tasteBlock
-                    funFacts
-                    milestones
+                    if let decades = stats?.taste?.films?.decades, decades.count >= 2 {
+                        DecadeChart(decades: decades)
+                    }
+                    libraryBlock
+                    BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
                 }
             }
             .padding(20)
@@ -61,97 +81,196 @@ struct StatsView: View {
             && (stats?.library?.totalTracked ?? 0) == 0
     }
 
-    private var marqueeHero: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(theme.olive)
-            Circle()
-                .fill(theme.accent.opacity(0.38))
-                .frame(width: 180, height: 180)
-                .blur(radius: 46)
-                .offset(x: 210, y: -50)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("IN THE DARK")
-                    .font(.caption.weight(.bold))
-                    .tracking(1.4)
-                    .foregroundStyle(MarqueeColor.saltGrey.opacity(0.7))
-                Text(formatMinutes(stats?.overview?.totalMins ?? stats?.year?.totalMins ?? 0))
-                    .font(.system(size: 44, weight: .bold, design: .serif))
-                    .foregroundStyle(MarqueeColor.saltGrey)
-                Text(screenDaysLine)
-                    .font(.subheadline)
-                    .foregroundStyle(MarqueeColor.saltGrey.opacity(0.78))
-                Text(stats?.insight?.text ?? heroSubtitle)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(MarqueeColor.saltGrey.opacity(0.88))
-                    .padding(.top, 4)
-
-                HStack(spacing: 8) {
-                    heroChip("\(stats?.overview?.filmCount ?? 0) films")
-                    heroChip("\(stats?.overview?.episodeCount ?? 0) episodes")
-                    if let shows = stats?.overview?.tvShowCount, shows > 0 {
-                        heroChip("\(shows) shows")
-                    }
-                }
-                .padding(.top, 6)
-            }
-            .padding(22)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var heroSubtitle: String {
-        let films = stats?.overview?.filmCount ?? 0
-        let eps = stats?.overview?.episodeCount ?? 0
-        return "\(films) films · \(eps) episodes logged"
-    }
-
-    private var screenDaysLine: String {
-        let mins = stats?.overview?.totalMins ?? 0
-        guard mins >= 60 else { return "Estimated watch time so far" }
-        let days = Double(mins) / (60 * 24)
-        if days < 1 {
-            let hours = Int((Double(mins) / 60).rounded())
-            return "About \(hours) hour\(hours == 1 ? "" : "s") of continuous watching"
-        }
-        let rounded = days < 10 ? (days * 10).rounded() / 10 : days.rounded()
-        let label = rounded == 1 ? "1 day" : "\(rounded.clean) days"
-        return "About \(label) of continuous watching"
-    }
-
-    private func heroChip(_ text: String) -> some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(MarqueeColor.saltGrey)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(MarqueeColor.saltGrey.opacity(0.16))
-            .clipShape(Capsule())
-    }
-
-    private func weekTickets(_ recap: WeekRecap) -> some View {
+    private var twinReels: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let text = stats?.insight?.text, !text.isEmpty {
+                Text(text)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(theme.inkMuted)
+            }
+            HStack(alignment: .top, spacing: 10) {
+                ReelCard(
+                    kicker: "TV",
+                    time: StatsFormat.minutes(stats?.overview?.tvMins ?? stats?.year?.tvMins ?? 0),
+                    line: tvReelLine,
+                    tint: theme.olive,
+                    symbol: "tv.fill"
+                )
+                ReelCard(
+                    kicker: "Films",
+                    time: StatsFormat.minutes(stats?.overview?.filmMins ?? stats?.films?.filmMins ?? 0),
+                    line: filmReelLine,
+                    tint: theme.accent,
+                    symbol: "film.fill"
+                )
+            }
+        }
+    }
+
+    private var tvReelLine: String {
+        let eps = stats?.overview?.episodeCount ?? 0
+        let shows = stats?.overview?.tvShowCount ?? 0
+        var parts: [String] = []
+        if eps > 0 { parts.append("\(eps) episodes") }
+        if shows > 0 { parts.append("\(shows) shows") }
+        return parts.isEmpty ? "No episodes yet" : parts.joined(separator: " · ")
+    }
+
+    private var filmReelLine: String {
+        let films = stats?.overview?.filmCount ?? stats?.films?.count ?? 0
+        if films == 0 { return "No films yet" }
+        if let avg = stats?.films?.avgRuntime, avg > 0 {
+            return "\(films) films · \(avg)m typical"
+        }
+        return "\(films) films"
+    }
+
+    private func weekStrip(_ recap: WeekRecap) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             SectionKicker(text: "This week", accented: true)
             HStack(spacing: 10) {
-                weekCell("Films", recap.filmsThisWeek ?? 0)
-                weekCell("Episodes", recap.episodesThisWeek ?? 0)
-                weekCell("Minutes", recap.totalMinsThisWeek ?? 0)
+                weekCell(
+                    "TV",
+                    recap.episodesThisWeek ?? 0,
+                    StatsFormat.minutes(recap.tvMinsThisWeek ?? stats?.activity?.tvMinsThisWeek ?? 0),
+                    theme.olive
+                )
+                weekCell(
+                    "Films",
+                    recap.filmsThisWeek ?? 0,
+                    StatsFormat.minutes(recap.filmMinsThisWeek ?? stats?.activity?.filmMinsThisWeek ?? 0),
+                    theme.accent
+                )
             }
         }
     }
 
-    private func weekCell(_ label: String, _ value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("\(value)")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(theme.accent)
-            Text(label)
+    private func weekCell(_ kind: String, _ count: Int, _ time: String, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(kind)
+                .font(.caption2.weight(.bold))
+                .tracking(0.8)
+                .textCase(.uppercase)
+                .foregroundStyle(tint)
+            Text("\(count)")
+                .font(.title.weight(.bold))
+                .foregroundStyle(theme.ink)
+                .monospacedDigit()
+            Text(kind == "TV" ? "episodes" : "films")
                 .font(.caption)
                 .foregroundStyle(theme.inkMuted)
+            Text(time)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(theme.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(theme.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var weekdayPoints: [WeekdayPoint] {
+        let names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        var tv = Array(repeating: 0, count: 7)
+        var films = Array(repeating: 0, count: 7)
+        for day in stats?.activity?.dailyActivity ?? [] {
+            guard let key = day.date, let idx = StatsFormat.weekdayIndex(for: key) else { continue }
+            let tvMins = day.tvMinutes ?? 0
+            let filmMins = day.filmMinutes ?? 0
+            if tvMins + filmMins > 0 {
+                tv[idx] += tvMins
+                films[idx] += filmMins
+            } else {
+                tv[idx] += (day.episodes ?? 0) * 42
+                films[idx] += (day.films ?? 0) * 110
+            }
+        }
+        return zip(labels, zip(names, zip(tv, films))).map { label, rest in
+            WeekdayPoint(label: label, fullName: rest.0, tvMins: rest.1.0, filmMins: rest.1.1)
+        }
+    }
+
+    private var weekTrendPoints: [TrendPoint] {
+        let weeks = stats?.activity?.weeklyTrend ?? []
+        return weeks.suffix(12).enumerated().flatMap { index, bucket -> [TrendPoint] in
+            let label = bucket.weekStart ?? "\(index)"
+            let tv = bucket.tvMinutes ?? max(0, (bucket.minutes ?? 0) - (bucket.filmMinutes ?? 0))
+            let films = bucket.filmMinutes ?? 0
+            return [
+                TrendPoint(id: "tv-\(label)", label: label, kind: "TV", minutes: tv),
+                TrendPoint(id: "film-\(label)", label: label, kind: "Films", minutes: films)
+            ]
+        }
+    }
+
+    @ViewBuilder
+    private var spotlight: some View {
+        let show = stats?.funFacts?.mostWatchedShow
+        let longest = stats?.films?.longest
+        let shortest = stats?.films?.shortest
+        if show != nil || longest != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("On a loop")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                if let show, (show.episodeCount ?? 0) > 0 {
+                    HStack(spacing: 14) {
+                        CachedAsyncImage(url: AppConfig.posterURL(path: show.tvPosterImage))
+                            .frame(width: 56, height: 84)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        VStack(alignment: .leading, spacing: 4) {
+                            SectionKicker(text: "Most watched show")
+                            Text(show.tvTitle ?? "Show")
+                                .font(.headline)
+                                .foregroundStyle(theme.ink)
+                            Text("\(show.episodeCount ?? 0) episodes · \(StatsFormat.minutes(show.minutes ?? 0))")
+                                .font(.caption)
+                                .foregroundStyle(theme.olive)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(12)
+                    .background(theme.oliveSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                if longest != nil || shortest != nil {
+                    HStack(spacing: 10) {
+                        if let longest {
+                            filmFact("Longest film", longest.movieTitle ?? "Film", StatsFormat.minutes(longest.minutes ?? 0), theme.accent)
+                        }
+                        if let shortest, shortest.movieId != longest?.movieId {
+                            filmFact("Shortest film", shortest.movieTitle ?? "Film", StatsFormat.minutes(shortest.minutes ?? 0), theme.olive)
+                        }
+                    }
+                }
+                ratingsRow
+            }
+        }
+    }
+
+    private func filmFact(_ kicker: String, _ title: String, _ meta: String, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(kicker)
+                .font(.caption2.weight(.bold))
+                .tracking(0.7)
+                .textCase(.uppercase)
+                .foregroundStyle(tint)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(theme.ink)
+                .lineLimit(2)
+                .frame(minHeight: 36, alignment: .top)
+            Text(meta)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tint)
+        }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.surfaceElevated)
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -161,69 +280,89 @@ struct StatsView: View {
     }
 
     @ViewBuilder
-    private var habitRow: some View {
-        let tickets = habitTickets
-        if !tickets.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Habits")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(tickets, id: \.kicker) { ticket in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(ticket.kicker)
-                                .font(.caption2.weight(.bold))
-                                .tracking(0.8)
-                                .textCase(.uppercase)
-                                .foregroundStyle(theme.accent)
-                            Text(ticket.headline)
-                                .font(.title2.weight(.bold))
-                                .foregroundStyle(theme.olive)
-                            Text(ticket.line)
-                                .font(.caption)
-                                .foregroundStyle(theme.inkMuted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(theme.oliveSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
+    private var ratingsRow: some View {
+        let filmAvg = stats?.ratings?.films?.average ?? 0
+        let showAvg = stats?.ratings?.shows?.average ?? 0
+        if filmAvg > 0 || showAvg > 0 {
+            HStack(spacing: 10) {
+                if filmAvg > 0 {
+                    ratingCard("Film ratings", filmAvg, stats?.ratings?.films?.count ?? 0, theme.accent)
+                }
+                if showAvg > 0 {
+                    ratingCard("Show ratings", showAvg, stats?.ratings?.shows?.count ?? 0, theme.olive)
                 }
             }
         }
     }
 
-    private var habitTickets: [(kicker: String, headline: String, line: String)] {
-        var out: [(kicker: String, headline: String, line: String)] = []
-        if let day = stats?.activity?.busiestDay?.day {
-            out.append(("Habit", day, weekdayQuirk(day)))
+    private func ratingCard(_ title: String, _ avg: Double, _ count: Int, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .tracking(0.7)
+                .textCase(.uppercase)
+                .foregroundStyle(theme.inkMuted)
+            HStack(spacing: 4) {
+                Image(systemName: "star.fill")
+                    .font(.caption)
+                    .foregroundStyle(tint)
+                Text(String(format: "%.1f", avg))
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(theme.ink)
+                    .monospacedDigit()
+            }
+            Text("\(count) rated")
+                .font(.caption)
+                .foregroundStyle(theme.inkMuted)
         }
-        if let streak = stats?.activity?.streak, streak > 1 {
-            let best = stats?.activity?.longestStreak ?? streak
-            out.append(("On a run", "\(streak)d", best > streak ? "Best ever \(best) days" : "Consecutive days logged"))
-        } else if let best = stats?.activity?.longestStreak, best > 1 {
-            out.append(("Personal best", "\(best)d", "Longest stretch of daily logging"))
-        }
-        if let binge = stats?.funFacts?.biggestBinge, (binge.count ?? 0) > 1 {
-            out.append(("Biggest day", "\(binge.count ?? 0)", "Titles in a single sitting"))
-        }
-        if let avg = stats?.funFacts?.avgMinsPerActiveDay, avg > 0 {
-            out.append(("Typical night", "\(avg)m", "Average minutes on days you log"))
-        }
-        return Array(out.prefix(4))
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func weekdayQuirk(_ day: String) -> String {
-        switch day {
-        case "Monday": return "You ease into the week on the couch"
-        case "Tuesday": return "Tuesdays are when you actually press play"
-        case "Wednesday": return "Midweek is your sweet spot"
-        case "Thursday": return "Almost-weekend energy"
-        case "Friday": return "Friday nights belong to your queue"
-        case "Saturday": return "Saturdays are for settling in"
-        case "Sunday": return "Sundays are your screening day"
-        default: return "\(day)s show up most in your diary"
+    @ViewBuilder
+    private var tasteBlock: some View {
+        let tvGenres = stats?.taste?.tv?.genreByEpisodes ?? []
+        let filmGenres = stats?.taste?.films?.genreByCount ?? []
+        if !tvGenres.isEmpty || !filmGenres.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Taste")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                    Spacer()
+                    Picker("Taste", selection: $tasteRoom) {
+                        ForEach(TasteRoom.allCases) { room in
+                            Text(room.rawValue).tag(room)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 160)
+                }
+                if tasteRoom == .tv {
+                    if tvGenres.isEmpty {
+                        Text("Log more episodes to see TV taste.")
+                            .font(.caption)
+                            .foregroundStyle(theme.inkMuted)
+                    } else {
+                        GenreMeterList(items: tvGenres, tint: theme.olive)
+                    }
+                } else if filmGenres.isEmpty {
+                    Text("Log more films to see movie taste.")
+                        .font(.caption)
+                        .foregroundStyle(theme.inkMuted)
+                } else {
+                    GenreMeterList(items: filmGenres, tint: theme.accent)
+                }
+            }
+            .padding(16)
+            .background(theme.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(theme.border, lineWidth: 1)
+            )
         }
     }
 
@@ -243,11 +382,6 @@ struct StatsView: View {
                     .font(.caption)
                     .foregroundStyle(theme.inkMuted)
             }
-            if let backlog = lib?.backlog, backlog > 0 {
-                Text("\(backlog) aired episodes still waiting")
-                    .font(.caption)
-                    .foregroundStyle(theme.olive)
-            }
         }
     }
 
@@ -256,6 +390,7 @@ struct StatsView: View {
             Text("\(count)")
                 .font(.title.weight(.bold))
                 .foregroundStyle(theme.olive)
+                .monospacedDigit()
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(theme.inkMuted)
@@ -268,146 +403,6 @@ struct StatsView: View {
                 .stroke(theme.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var mostWatched: some View {
-        if let show = stats?.funFacts?.mostWatchedShow, (show.episodeCount ?? 0) > 1 {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Most watched")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                HStack(spacing: 14) {
-                    CachedAsyncImage(url: AppConfig.posterURL(path: show.tvPosterImage))
-                        .frame(width: 64, height: 96)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(show.tvTitle ?? "Show")
-                            .font(.headline)
-                            .foregroundStyle(theme.ink)
-                        Text("\(show.episodeCount ?? 0) episodes")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(theme.olive)
-                        if let mins = show.minutes, mins > 0 {
-                            Text(formatMinutes(mins))
-                                .font(.caption)
-                                .foregroundStyle(theme.inkMuted)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(14)
-                .background(theme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var tasteBlock: some View {
-        let genres = stats?.taste?.genres ?? []
-        if !genres.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Taste")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                let maxCount = max(genres.prefix(6).map(\.amount).max() ?? 1, 1)
-                ForEach(Array(genres.prefix(6))) { g in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(g.name ?? "Genre")
-                                .foregroundStyle(theme.ink)
-                            Spacer()
-                            Text("\(g.amount)")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(theme.olive)
-                        }
-                        GeometryReader { geo in
-                            Capsule()
-                                .fill(theme.olive.opacity(0.18))
-                                .overlay(alignment: .leading) {
-                                    Capsule()
-                                        .fill(theme.olive)
-                                        .frame(width: geo.size.width * CGFloat(g.amount) / CGFloat(maxCount))
-                                }
-                        }
-                        .frame(height: 7)
-                    }
-                }
-            }
-            .padding(16)
-            .background(theme.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-    }
-
-    @ViewBuilder
-    private var funFacts: some View {
-        let longest = stats?.films?.longest
-        let avg = stats?.ratings?.films?.average
-        if longest != nil || (avg ?? 0) > 0 {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("In the booth")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                if let longest, let title = longest.movieTitle {
-                    factRow("Longest film", title, longest.minutes.map { formatMinutes($0) })
-                }
-                if let avg, avg > 0 {
-                    factRow("Film ratings", String(format: "%.1f / 5", avg), "\(stats?.ratings?.films?.count ?? 0) rated")
-                }
-                if let showAvg = stats?.ratings?.shows?.average, showAvg > 0 {
-                    factRow("Show ratings", String(format: "%.1f / 5", showAvg), "\(stats?.ratings?.shows?.count ?? 0) rated")
-                }
-            }
-        }
-    }
-
-    private func factRow(_ kicker: String, _ title: String, _ meta: String?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(kicker)
-                .font(.caption2.weight(.bold))
-                .tracking(0.8)
-                .textCase(.uppercase)
-                .foregroundStyle(theme.olive)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(theme.ink)
-            if let meta {
-                Text(meta)
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.oliveSoft)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var milestones: some View {
-        if let items = stats?.milestones, !items.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Punched tickets")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                FlexibleChipWrap(items: items.compactMap(\.label))
-            }
-        }
-    }
-
-    private func formatMinutes(_ mins: Int) -> String {
-        if mins <= 0 { return "—" }
-        let h = mins / 60
-        let m = mins % 60
-        if h >= 24 {
-            let d = h / 24
-            let rh = h % 24
-            return rh == 0 ? "\(d)d" : "\(d)d \(rh)h"
-        }
-        if h == 0 { return "\(m)m" }
-        return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
 
     private func load(refresh: Bool) async {
@@ -425,27 +420,42 @@ struct StatsView: View {
     }
 }
 
-private struct FlexibleChipWrap: View {
+private struct ReelCard: View {
     @Environment(\.marqueeTheme) private var theme
-    let items: [String]
+    let kicker: String
+    let time: String
+    let line: String
+    let tint: Color
+    let symbol: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(items, id: \.self) { item in
-                Text(item)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(theme.olive)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(theme.oliveSoft)
-                    .clipShape(Capsule())
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: symbol)
+                    .font(.caption.weight(.bold))
+                Text(kicker)
+                    .font(.caption.weight(.bold))
+                    .tracking(1.1)
+                    .textCase(.uppercase)
             }
-        }
-    }
-}
+            .foregroundStyle(MarqueeColor.saltGrey.opacity(0.78))
 
-private extension Double {
-    var clean: String {
-        truncatingRemainder(dividingBy: 1) == 0 ? String(Int(self)) : String(self)
+            Text(time)
+                .font(.system(size: 30, weight: .bold, design: .serif))
+                .foregroundStyle(MarqueeColor.saltGrey)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+
+            Text(line)
+                .font(.caption)
+                .foregroundStyle(MarqueeColor.saltGrey.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(tint)
+        }
     }
 }

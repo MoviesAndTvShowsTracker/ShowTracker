@@ -87,6 +87,8 @@ function dailyActivityWindow(dayMap, todayKey, days = 371) {
       episodes: bucket.episodes || 0,
       films: bucket.films || 0,
       minutes: (bucket.tvMinutes || 0) + (bucket.filmMinutes || 0),
+      tvMinutes: bucket.tvMinutes || 0,
+      filmMinutes: bucket.filmMinutes || 0,
     }));
 }
 
@@ -279,7 +281,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 3;
+const STATS_SCHEMA_VERSION = 4;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
