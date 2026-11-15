@@ -117,12 +117,7 @@ struct LandingSkeleton: View {
             VStack(alignment: .leading, spacing: 12) {
                 SkeletonBlock(height: 18, width: 140)
                     .padding(.horizontal, 20)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(0..<6, id: \.self) { _ in
-                        SkeletonBlock(height: 150, radius: 12)
-                    }
-                }
-                .padding(.horizontal, 20)
+                RailSkeleton()
             }
         }
         .padding(.vertical, 16)

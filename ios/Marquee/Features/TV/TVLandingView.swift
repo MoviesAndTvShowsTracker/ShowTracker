@@ -24,9 +24,9 @@ struct TVLandingView: View {
                         HeroCarousel(items: trending, kind: .tv)
                     }
                     libraryStudio
-                    PosterGridSection(title: "On the air", items: onTheAir, kind: .tv)
-                    PosterGridSection(title: "Airing today", items: airingToday, kind: .tv)
-                    PosterGridSection(title: "Top rated", items: topRated, kind: .tv)
+                    NavigationRail(title: "On the air", items: onTheAir, kind: .tv)
+                    NavigationRail(title: "Airing today", items: airingToday, kind: .tv)
+                    NavigationRail(title: "Top rated", items: topRated, kind: .tv)
                 }
                 if let error {
                     Text(error).font(.footnote).foregroundStyle(theme.inkMuted).padding(.horizontal, 20)
