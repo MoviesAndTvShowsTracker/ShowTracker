@@ -150,12 +150,12 @@ enum DiaryService {
         let _: SuccessMessage = try await APIClient.shared.post("/api/tv/episodes/unmark", body: body)
     }
 
-    static func markBatch(_ body: BatchEpisodesBody) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/episodes/mark-batch", body: body)
+    static func markBatch(_ body: BatchEpisodesBody) async throws -> EpisodeBatchResponse {
+        try await APIClient.shared.post("/api/tv/episodes/mark-batch", body: body)
     }
 
-    static func unmarkBatch(_ body: BatchEpisodesBody) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/episodes/unmark-batch", body: body)
+    static func unmarkBatch(_ body: BatchEpisodesBody) async throws -> EpisodeBatchResponse {
+        try await APIClient.shared.post("/api/tv/episodes/unmark-batch", body: body)
     }
 
     static func rateEpisode(_ body: RateEpisodeBody) async throws {

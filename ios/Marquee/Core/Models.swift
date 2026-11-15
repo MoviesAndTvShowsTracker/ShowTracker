@@ -193,6 +193,24 @@ struct TVEpisode: Codable, Identifiable, Hashable {
     let season_number: Int?
     let runtime: Int?
     let air_date: String?
+
+    var diaryKey: String { "\(season_number ?? 0)-\(episode_number)" }
+
+    /// Released today or earlier. Missing dates count as aired, matching the web diary.
+    var hasAired: Bool {
+        guard let air_date, air_date.count >= 10 else { return true }
+        let parts = air_date.split(separator: "-")
+        guard parts.count >= 3,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else {
+            return true
+        }
+        var comps = DateComponents()
+        comps.year = y
+        comps.month = m
+        comps.day = d
+        guard let date = Calendar.current.date(from: comps) else { return true }
+        return Calendar.current.startOfDay(for: date) <= Calendar.current.startOfDay(for: Date())
+    }
 }
 
 // MARK: - Diary / tracking API payloads
@@ -322,13 +340,28 @@ struct MarkEpisodeBody: Encodable {
 struct BatchEpisodesBody: Encodable {
     let tvId: String
     let episodes: [EpisodeRef]
+    var tvTitle: String? = nil
+    var tvPosterImage: String? = nil
+    var tvBackdropImage: String? = nil
+    var totalEpisodes: Int? = nil
+    var airedEpisodeCount: Int? = nil
+    var nextSeason: Int? = nil
+    var nextEpisode: Int? = nil
+    var nextEpisodeName: String? = nil
 }
 
 struct EpisodeRef: Encodable {
     let seasonNumber: Int
     let episodeNumber: Int
-    let runtimeMinutes: Int?
-    let episodeName: String?
+    var runtimeMinutes: Int? = nil
+    var episodeName: String? = nil
+    var tmdbEpisodeId: String? = nil
+}
+
+struct EpisodeBatchResponse: Decodable {
+    let success: Bool?
+    let tracking: TrackingRecord?
+    let episodes: [WatchedEpisodeDoc]?
 }
 
 struct RateEpisodeBody: Encodable {

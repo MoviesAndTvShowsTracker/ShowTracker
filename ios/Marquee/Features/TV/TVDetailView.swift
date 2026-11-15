@@ -22,6 +22,47 @@ struct TVDetailView: View {
     @State private var episodePendingUnmark: TVEpisode?
     @State private var showUnmarkConfirm = false
     @State private var showRatingSheet = false
+    @State private var episodeIndex: [TVEpisode] = []
+    @State private var batching = false
+    @State private var pendingBatch: BatchAction?
+    @State private var showBatchConfirm = false
+
+    private enum BatchAction {
+        case markSeason(season: Int, count: Int)
+        case unmarkSeason(season: Int, count: Int)
+        case markShow(count: Int)
+
+        var title: String {
+            switch self {
+            case .markSeason: return "Mark this season?"
+            case .unmarkSeason: return "Unmark this season?"
+            case .markShow: return "Mark the whole show?"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .markSeason(_, let count):
+                return "\(count) released episode\(count == 1 ? "" : "s") in this season will be marked watched."
+            case .unmarkSeason(_, let count):
+                return "\(count) episode\(count == 1 ? "" : "s") in this season will be unmarked."
+            case .markShow(let count):
+                return "\(count) released episode\(count == 1 ? "" : "s") across every season will be marked watched."
+            }
+        }
+
+        var confirmLabel: String {
+            switch self {
+            case .unmarkSeason: return "Unmark season"
+            case .markSeason, .markShow: return "Mark watched"
+            }
+        }
+
+        var isDestructive: Bool {
+            if case .unmarkSeason = self { return true }
+            return false
+        }
+    }
 
     private enum LoadPhase { case loading, ready, failed(String) }
     private var idString: String { String(tvId) }
@@ -50,13 +91,12 @@ struct TVDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .background(EnableSwipeBack())
-        .confirmationDialog(
+        .alert(
             "Unmark episode?",
             isPresented: $showUnmarkConfirm,
-            titleVisibility: .visible,
             presenting: episodePendingUnmark
         ) { ep in
-            Button("Unmark watched", role: .destructive) {
+            Button("Unmark", role: .destructive) {
                 Task { await performUnmark(ep) }
             }
             Button("Cancel", role: .cancel) {
@@ -70,6 +110,21 @@ struct TVDetailView: View {
             ratingSheet
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+        .alert(
+            pendingBatch?.title ?? "Confirm",
+            isPresented: $showBatchConfirm
+        ) {
+            Button(pendingBatch?.confirmLabel ?? "Confirm", role: pendingBatch?.isDestructive == true ? .destructive : nil) {
+                if let pendingBatch {
+                    Task { await performBatch(pendingBatch) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingBatch = nil
+            }
+        } message: {
+            Text(pendingBatch?.message ?? "")
         }
         .task { await load() }
     }
@@ -416,34 +471,72 @@ struct TVDetailView: View {
 
     private func episodesBlock(_ detail: TVDetail) -> some View {
         let seasons = (detail.seasons ?? []).filter { $0.season_number > 0 }
-        return VStack(alignment: .leading, spacing: 14) {
-            SectionKicker(text: "Episodes")
-            Text("Mark as you go")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(theme.ink)
+        let airedSeason = episodes.filter(\.hasAired)
+        let watchedAiredSeason = airedSeason.filter { watchedKeys.contains($0.diaryKey) }
+        let unwatchedAiredSeason = airedSeason.filter { !watchedKeys.contains($0.diaryKey) }
+        let seasonComplete = !airedSeason.isEmpty && unwatchedAiredSeason.isEmpty
+        let seasonFraction = airedSeason.isEmpty ? 0 : Double(watchedAiredSeason.count) / Double(airedSeason.count)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(seasons) { season in
-                        Button {
-                            selectedSeason = season.season_number
-                            Task { await loadSeason() }
-                        } label: {
-                            Text(season.name ?? "S\(season.season_number)")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 9)
-                                .foregroundStyle(selectedSeason == season.season_number ? theme.onAccent : theme.olive)
-                                .background(selectedSeason == season.season_number ? theme.olive : theme.oliveSoft)
-                                .clipShape(Capsule())
+        return VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                SectionKicker(text: "Episodes")
+                Text("Mark as you go")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+            }
+
+            if seasons.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(seasons) { season in
+                            Button {
+                                selectedSeason = season.season_number
+                                Task { await loadSeason() }
+                            } label: {
+                                Text(season.name ?? "S\(season.season_number)")
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .foregroundStyle(selectedSeason == season.season_number ? theme.onAccent : theme.olive)
+                                    .background(selectedSeason == season.season_number ? theme.olive : theme.oliveSoft)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(batching)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
 
+            if !seasonLoading, !episodes.isEmpty {
+                episodeBatchActions(
+                    seasonComplete: seasonComplete,
+                    unwatchedCount: unwatchedAiredSeason.count,
+                    watchedCount: watchedInSeason.count
+                )
+            }
+
             GlassCard(padding: 0) {
-                Group {
+                VStack(spacing: 0) {
+                    if !seasonLoading, !episodes.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(selectedSeasonName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(theme.ink)
+                                Spacer()
+                                Text("\(watchedAiredSeason.count) of \(airedSeason.count) aired")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(theme.inkMuted)
+                                    .monospacedDigit()
+                            }
+                            ProgressTrack(progress: seasonFraction, completed: seasonComplete)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.top, 14)
+                        .padding(.bottom, 8)
+                    }
+
                     if seasonLoading {
                         VStack(spacing: 0) {
                             ForEach(0..<4, id: \.self) { _ in
@@ -468,7 +561,7 @@ struct TVDetailView: View {
 
     private func episodeRow(_ ep: TVEpisode) -> some View {
         let season = ep.season_number ?? selectedSeason
-        let key = "\(season)-\(ep.episode_number)"
+        let key = ep.diaryKey
         let marked = watchedKeys.contains(key)
         let isNext = showProgress(detail: detail, tracking: tracking).next.map {
             $0.season == season && $0.episode == ep.episode_number
@@ -534,6 +627,7 @@ struct TVDetailView: View {
             .background(isNext ? theme.accent.opacity(0.06) : Color.clear)
         }
         .buttonStyle(.plain)
+        .disabled(batching)
     }
 
     // MARK: - Progress helpers
@@ -677,6 +771,149 @@ struct TVDetailView: View {
             tracking = try? await DiaryService.tracking(for: idString)
         } catch {
             watchedKeys.insert(key)
+        }
+    }
+
+    private var watchedInSeason: [TVEpisode] {
+        episodes.filter { watchedKeys.contains($0.diaryKey) }
+    }
+
+    private var unwatchedAiredAll: [TVEpisode] {
+        let catalog = episodeIndex.isEmpty ? episodes : episodeIndex
+        return catalog.filter { $0.hasAired && !watchedKeys.contains($0.diaryKey) }
+    }
+
+    private var canMarkWholeShow: Bool {
+        if tracking?.status == "completed" { return false }
+        if episodeIndex.isEmpty { return true }
+        return !unwatchedAiredAll.isEmpty
+    }
+
+    private func confirmMarkShow() async {
+        guard !batching else { return }
+        if episodeIndex.isEmpty, let detail {
+            batching = true
+            episodeIndex = await fetchEpisodeIndex(from: detail)
+            batching = false
+        }
+        let count = unwatchedAiredAll.count
+        guard count > 0 else { return }
+        pendingBatch = .markShow(count: count)
+        showBatchConfirm = true
+    }
+
+    private func performBatch(_ action: BatchAction) async {
+        pendingBatch = nil
+        guard let detail, !batching else { return }
+        batching = true
+        defer { batching = false }
+
+        let catalog = episodeIndex.isEmpty ? episodes : episodeIndex
+        let targets: [TVEpisode]
+        let marking: Bool
+        switch action {
+        case .markSeason:
+            targets = episodes.filter { $0.hasAired && !watchedKeys.contains($0.diaryKey) }
+            marking = true
+        case .unmarkSeason:
+            targets = watchedInSeason
+            marking = false
+        case .markShow:
+            targets = catalog.filter { $0.hasAired && !watchedKeys.contains($0.diaryKey) }
+            marking = true
+        }
+        guard !targets.isEmpty else { return }
+
+        var keys = watchedKeys
+        for ep in targets {
+            if marking { keys.insert(ep.diaryKey) } else { keys.remove(ep.diaryKey) }
+        }
+        watchedKeys = keys
+        if marking { Haptics.medium() } else { Haptics.light() }
+
+        do {
+            let body = batchBody(targets, keys: keys, catalog: catalog, detail: detail)
+            let response = marking
+                ? try await DiaryService.markBatch(body)
+                : try await DiaryService.unmarkBatch(body)
+            applyBatch(response)
+            if marking, tracking?.status == "completed" {
+                Haptics.success()
+            }
+        } catch {
+            if marking {
+                for ep in targets { watchedKeys.remove(ep.diaryKey) }
+            } else {
+                for ep in targets { watchedKeys.insert(ep.diaryKey) }
+            }
+        }
+    }
+
+    private func batchBody(
+        _ targets: [TVEpisode],
+        keys: Set<String>,
+        catalog: [TVEpisode],
+        detail: TVDetail
+    ) -> BatchEpisodesBody {
+        let next = catalog
+            .sorted {
+                let ls = $0.season_number ?? 0
+                let rs = $1.season_number ?? 0
+                return ls == rs ? $0.episode_number < $1.episode_number : ls < rs
+            }
+            .first { $0.hasAired && !keys.contains($0.diaryKey) }
+        let airedCount = catalog.filter(\.hasAired).count
+        return BatchEpisodesBody(
+            tvId: idString,
+            episodes: targets.map {
+                EpisodeRef(
+                    seasonNumber: $0.season_number ?? selectedSeason,
+                    episodeNumber: $0.episode_number,
+                    runtimeMinutes: $0.runtime,
+                    episodeName: $0.name,
+                    tmdbEpisodeId: String($0.id)
+                )
+            },
+            tvTitle: detail.name,
+            tvPosterImage: detail.poster_path,
+            tvBackdropImage: detail.backdrop_path,
+            totalEpisodes: detail.number_of_episodes ?? catalog.count,
+            airedEpisodeCount: airedCount > 0 ? airedCount : detail.number_of_episodes,
+            nextSeason: next?.season_number,
+            nextEpisode: next?.episode_number,
+            nextEpisodeName: next?.name
+        )
+    }
+
+    private func applyBatch(_ response: EpisodeBatchResponse) {
+        if let docs = response.episodes {
+            watchedKeys = Set(docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
+                return "\(s)-\(e)"
+            })
+        }
+        if let tracking = response.tracking {
+            self.tracking = tracking
+        }
+    }
+
+    private func fetchEpisodeIndex(from detail: TVDetail) async -> [TVEpisode] {
+        let seasons = (detail.seasons ?? [])
+            .filter { $0.season_number > 0 }
+            .sorted { $0.season_number < $1.season_number }
+        guard !seasons.isEmpty else { return episodes }
+        return await withTaskGroup(of: (Int, [TVEpisode]).self) { group in
+            for season in seasons {
+                group.addTask {
+                    let loaded = try? await TMDBService.season(tvId: tvId, season: season.season_number)
+                    return (season.season_number, loaded?.episodes ?? [])
+                }
+            }
+            var bySeason: [Int: [TVEpisode]] = [:]
+            for await pair in group {
+                bySeason[pair.0] = pair.1
+            }
+            return seasons.flatMap { bySeason[$0.season_number] ?? [] }
         }
     }
 

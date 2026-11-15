@@ -107,8 +107,10 @@ struct ProfileView: View {
                         .font(.subheadline)
                         .foregroundStyle(theme.inkMuted)
                     TimeSplitBar(
-                        films: overview?.filmCount ?? 0,
-                        episodes: overview?.episodeCount ?? 0
+                        filmMins: overview?.filmMins ?? 0,
+                        tvMins: overview?.tvMins ?? 0,
+                        filmShare: overview?.filmShare,
+                        tvShare: overview?.tvShare
                     )
                 }
             }
@@ -119,9 +121,16 @@ struct ProfileView: View {
     private var catalogueLine: String {
         let films = overview?.filmCount ?? watchedFilms.count
         let eps = overview?.episodeCount ?? 0
+        let shows = overview?.tvShowCount ?? 0
         var parts: [String] = []
         if films > 0 { parts.append("\(films) films") }
-        if eps > 0 { parts.append("\(eps) episodes") }
+        if shows > 0, eps > 0 {
+            parts.append("\(shows) TV shows (\(eps) episodes)")
+        } else if eps > 0 {
+            parts.append("\(eps) TV episodes")
+        } else if shows > 0 {
+            parts.append("\(shows) TV shows")
+        }
         return parts.isEmpty ? "Start logging to see your rhythm." : parts.joined(separator: " · ")
     }
 
@@ -285,29 +294,56 @@ struct ProfileView: View {
 
 struct TimeSplitBar: View {
     @Environment(\.marqueeTheme) private var theme
-    let films: Int
-    let episodes: Int
+    let filmMins: Int
+    let tvMins: Int
+    var filmShare: Int? = nil
+    var tvShare: Int? = nil
+
+    private var filmFraction: CGFloat {
+        let shareTotal = (filmShare ?? 0) + (tvShare ?? 0)
+        if shareTotal > 0 {
+            return CGFloat(filmShare ?? 0) / CGFloat(shareTotal)
+        }
+        let total = max(filmMins + tvMins, 1)
+        return CGFloat(filmMins) / CGFloat(total)
+    }
 
     var body: some View {
-        let total = max(films + episodes, 1)
-        let filmShare = CGFloat(films) / CGFloat(total)
-        VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { geo in
-                HStack(spacing: 2) {
-                    Capsule().fill(theme.olive).frame(width: max(4, geo.size.width * filmShare))
-                    Capsule().fill(theme.accent).frame(maxWidth: .infinity)
+        if filmMins + tvMins <= 0, (filmShare ?? 0) + (tvShare ?? 0) <= 0 {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                GeometryReader { geo in
+                    let hasFilms = filmMins > 0 || (filmShare ?? 0) > 0
+                    let hasTV = tvMins > 0 || (tvShare ?? 0) > 0
+                    HStack(spacing: 2) {
+                        if hasFilms {
+                            Capsule()
+                                .fill(theme.olive)
+                                .frame(width: hasTV ? max(4, geo.size.width * filmFraction) : nil)
+                                .frame(maxWidth: hasTV ? nil : .infinity)
+                        }
+                        if hasTV {
+                            Capsule().fill(theme.accent).frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                .frame(height: 8)
+                HStack(alignment: .firstTextBaseline) {
+                    legend(theme.olive, "Films")
+                    Spacer()
+                    legend(theme.accent, "TV shows (episodes)")
                 }
             }
-            .frame(height: 8)
-            HStack {
-                Label("Films", systemImage: "circle.fill")
-                    .foregroundStyle(theme.olive)
-                Spacer()
-                Label("TV", systemImage: "circle.fill")
-                    .foregroundStyle(theme.accent)
-            }
-            .font(.caption2.weight(.semibold))
-            .labelStyle(.titleAndIcon)
+        }
+    }
+
+    private func legend(_ color: Color, _ title: String) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(color)
         }
     }
 }
