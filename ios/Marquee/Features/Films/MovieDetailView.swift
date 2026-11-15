@@ -32,7 +32,7 @@ struct MovieDetailView: View {
                 if let detail { content(detail) }
             }
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
@@ -213,7 +213,7 @@ struct MovieDetailView: View {
                 .disabled(rating <= 0)
             }
             .padding(24)
-            .background(theme.surface.ignoresSafeArea())
+            .marqueeCanvas()
             .navigationTitle("Rate film")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

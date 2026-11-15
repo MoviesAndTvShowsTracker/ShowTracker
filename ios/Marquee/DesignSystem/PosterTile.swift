@@ -41,6 +41,85 @@ struct PosterTile: View {
     }
 }
 
+struct PosterGridTile: View {
+    @Environment(\.marqueeTheme) private var theme
+    let title: String
+    let posterPath: String?
+    var caption: String? = nil
+    var progress: Double? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Color.clear
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .overlay {
+                    CachedAsyncImage(url: AppConfig.posterURL(path: posterPath))
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .bottom) {
+                    if let progress {
+                        ProgressTrack(progress: progress)
+                            .padding(7)
+                    }
+                }
+                .accessibilityLabel(title)
+
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(theme.ink)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            if let caption {
+                Text(caption)
+                    .font(.caption2)
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityIdentifier("posterTile")
+    }
+}
+
+struct PosterGridSection: View {
+    @Environment(\.marqueeTheme) private var theme
+    let title: String
+    let items: [MediaItem]
+    let kind: MediaKind
+    var limit: Int = 6
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
+    ]
+
+    var body: some View {
+        if items.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                LazyVGrid(columns: columns, spacing: 14) {
+                    ForEach(items.prefix(limit)) { item in
+                        MediaNavLink(id: item.id, kind: kind) {
+                            PosterGridTile(
+                                title: item.displayTitle,
+                                posterPath: item.poster_path,
+                                caption: item.year
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+}
+
 struct CastBubble: View {
     @Environment(\.marqueeTheme) private var theme
     let name: String
@@ -165,24 +244,19 @@ struct GridDensityToggle: View {
 }
 
 struct MediaNavLink<Label: View>: View {
-    @Namespace private var zoom
     let id: Int
     let kind: MediaKind
     @ViewBuilder var label: () -> Label
 
     var body: some View {
         NavigationLink {
-            Group {
-                switch kind {
-                case .movie: MovieDetailView(movieId: id)
-                case .tv: TVDetailView(tvId: id)
-                }
+            switch kind {
+            case .movie: MovieDetailView(movieId: id)
+            case .tv: TVDetailView(tvId: id)
             }
-            .navigationTransition(.zoom(sourceID: id, in: zoom))
         } label: {
             label()
         }
-        .matchedTransitionSource(id: id, in: zoom)
         .buttonStyle(PressablePosterStyle())
     }
 }

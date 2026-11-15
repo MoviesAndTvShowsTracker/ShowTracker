@@ -45,14 +45,8 @@ struct StatsView: View {
                     if !weekTrendPoints.isEmpty {
                         TwelveWeekChart(points: weekTrendPoints)
                     }
-                    if !(stats?.activity?.dailyActivity ?? []).isEmpty {
-                        DiaryHeatmap(days: stats?.activity?.dailyActivity ?? [])
-                    }
                     spotlight
                     tasteBlock
-                    if let decades = stats?.taste?.films?.decades, decades.count >= 2 {
-                        DecadeChart(decades: decades)
-                    }
                     libraryBlock
                     BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
                 }
@@ -60,7 +54,7 @@ struct StatsView: View {
             .padding(20)
             .padding(.bottom, 32)
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle("Stats")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -91,14 +85,14 @@ struct StatsView: View {
             HStack(alignment: .top, spacing: 10) {
                 ReelCard(
                     kicker: "TV",
-                    time: StatsFormat.minutes(stats?.overview?.tvMins ?? stats?.year?.tvMins ?? 0),
+                    time: StatsFormat.span(stats?.overview?.tvMins ?? stats?.year?.tvMins ?? 0),
                     line: tvReelLine,
                     tint: theme.olive,
                     symbol: "tv.fill"
                 )
                 ReelCard(
                     kicker: "Films",
-                    time: StatsFormat.minutes(stats?.overview?.filmMins ?? stats?.films?.filmMins ?? 0),
+                    time: StatsFormat.span(stats?.overview?.filmMins ?? stats?.films?.filmMins ?? 0),
                     line: filmReelLine,
                     tint: theme.accent,
                     symbol: "film.fill"
@@ -325,8 +319,10 @@ struct StatsView: View {
     private var tasteBlock: some View {
         let tvGenres = stats?.taste?.tv?.genreByEpisodes ?? []
         let filmGenres = stats?.taste?.films?.genreByCount ?? []
-        if !tvGenres.isEmpty || !filmGenres.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
+        let tvDecades = stats?.taste?.tv?.decades ?? []
+        let filmDecades = stats?.taste?.films?.decades ?? []
+        if !tvGenres.isEmpty || !filmGenres.isEmpty || tvDecades.count > 1 || filmDecades.count > 1 {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("Taste")
                         .font(.title3.weight(.semibold))
@@ -348,16 +344,24 @@ struct StatsView: View {
                     } else {
                         GenreMeterList(items: tvGenres, tint: theme.olive)
                     }
-                } else if filmGenres.isEmpty {
-                    Text("Log more films to see movie taste.")
-                        .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
+                    if tvDecades.count > 1 {
+                        DecadeMeterList(title: "First-aired decades", decades: tvDecades, tint: theme.olive)
+                    }
                 } else {
-                    GenreMeterList(items: filmGenres, tint: theme.accent)
+                    if filmGenres.isEmpty {
+                        Text("Log more films to see movie taste.")
+                            .font(.caption)
+                            .foregroundStyle(theme.inkMuted)
+                    } else {
+                        GenreMeterList(items: filmGenres, tint: theme.accent)
+                    }
+                    if filmDecades.count > 1 {
+                        DecadeMeterList(title: "Release decades", decades: filmDecades, tint: theme.accent)
+                    }
                 }
             }
             .padding(16)
-            .background(theme.surfaceElevated)
+            .background(theme.surfaceElevated.opacity(0.86))
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -406,16 +410,19 @@ struct StatsView: View {
     }
 
     private func load(refresh: Bool) async {
-        loading = true
-        defer { loading = false }
+        if stats == nil { loading = true }
         do {
             async let s = DiaryService.dashboardStats(refresh: refresh)
             async let r = DiaryService.weekRecap()
-            stats = try await s
-            recap = try? await r
+            let dash = try await s
+            let week = try? await r
+            stats = dash
+            recap = week
             error = nil
+            loading = false
         } catch {
             self.error = error.localizedDescription
+            loading = false
         }
     }
 }

@@ -65,12 +65,67 @@ struct RailSkeleton: View {
 
 struct ProfileSkeleton: View {
     var body: some View {
-        VStack(spacing: 16) {
-            SkeletonBlock(height: 88, radius: 20)
-            SkeletonBlock(height: 120, radius: 20)
-            SkeletonBlock(height: 100, radius: 20)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 14) {
+                SkeletonBlock(height: 56, width: 56, radius: 16)
+                VStack(alignment: .leading, spacing: 8) {
+                    SkeletonBlock(height: 10, width: 72)
+                    SkeletonBlock(height: 22, width: 140)
+                    SkeletonBlock(height: 12, width: 180)
+                }
+                Spacer()
+            }
+            SkeletonBlock(height: 148, radius: 20)
+            HStack(spacing: 10) {
+                SkeletonBlock(height: 72, radius: 14)
+                SkeletonBlock(height: 72, radius: 14)
+                SkeletonBlock(height: 72, radius: 14)
+            }
+            rail
+            rail
         }
-        .padding(20)
+    }
+
+    private var rail: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SkeletonBlock(height: 18, width: 120)
+            RailSkeleton()
+                .padding(.horizontal, -20)
+        }
+    }
+}
+
+struct LandingSkeleton: View {
+    var showLibrary: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            SkeletonBlock(height: 210, radius: 22)
+                .padding(.horizontal, 20)
+            if showLibrary {
+                VStack(alignment: .leading, spacing: 12) {
+                    SkeletonBlock(height: 18, width: 110)
+                    SkeletonBlock(height: 132, radius: 20)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            SkeletonBlock(height: 150, radius: 12)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonBlock(height: 18, width: 140)
+                    .padding(.horizontal, 20)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        SkeletonBlock(height: 150, radius: 12)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.vertical, 16)
     }
 }
 

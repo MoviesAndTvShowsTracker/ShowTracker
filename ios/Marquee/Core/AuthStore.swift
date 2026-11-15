@@ -162,6 +162,7 @@ final class AuthStore {
     }
 
     func signOut() {
+        GoogleAuth.signOut()
         clearSession()
     }
 

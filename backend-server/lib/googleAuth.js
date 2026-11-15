@@ -13,17 +13,38 @@ function registerUser(user, password) {
   });
 }
 
+function googleAudiences() {
+  return [...new Set(
+    [process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_IOS_CLIENT_ID]
+      .flatMap((value) => (value || '').split(','))
+      .map((value) => value.trim())
+      .filter(Boolean)
+  )];
+}
+
 async function verifyGoogleIdToken(idToken) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  if (!clientId) {
+  const audiences = googleAudiences();
+  if (!audiences.length) {
     const err = new Error('Google sign-in is not configured on the server.');
     err.status = 503;
     throw err;
   }
 
-  const client = new OAuth2Client(clientId);
-  const ticket = await client.verifyIdToken({ idToken, audience: clientId });
-  return ticket.getPayload();
+  const client = new OAuth2Client();
+  let lastError;
+  for (const audience of audiences) {
+    try {
+      const ticket = await client.verifyIdToken({ idToken, audience });
+      return ticket.getPayload();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  const err = new Error('Google sign-in could not be verified.');
+  err.status = 401;
+  err.cause = lastError;
+  throw err;
 }
 
 async function findOrCreateGoogleUser(payload) {

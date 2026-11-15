@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AuthFlowView: View {
-    @Environment(\.marqueeTheme) private var theme
     @State private var mode: Mode = .signIn
 
     enum Mode {
@@ -10,19 +9,18 @@ struct AuthFlowView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                theme.surface.ignoresSafeArea()
-                Group {
-                    switch mode {
-                    case .signIn:
-                        SignInView(onSignUp: { mode = .signUp }, onForgot: { mode = .forgot })
-                    case .signUp:
-                        SignUpView(onSignIn: { mode = .signIn })
-                    case .forgot:
-                        ForgotPasswordView(onBack: { mode = .signIn })
-                    }
+            Group {
+                switch mode {
+                case .signIn:
+                    SignInView(
+                        onSignUp: { withAnimation(MarqueeMotion.standard) { mode = .signUp } },
+                        onForgot: { withAnimation(MarqueeMotion.standard) { mode = .forgot } }
+                    )
+                case .signUp:
+                    SignUpView(onSignIn: { withAnimation(MarqueeMotion.standard) { mode = .signIn } })
+                case .forgot:
+                    ForgotPasswordView(onBack: { withAnimation(MarqueeMotion.standard) { mode = .signIn } })
                 }
-                .padding(24)
             }
             .navigationBarHidden(true)
         }
@@ -39,67 +37,59 @@ struct SignInView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var busy = false
+    @State private var googleBusy = false
     @State private var error: String?
-    @State private var googleToken = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Spacer(minLength: 40)
-            BrandMark(size: 72)
-            Text("Marquee")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundStyle(theme.olive)
-            Text("your watch diary")
-                .font(.title3)
-                .foregroundStyle(theme.inkMuted)
+        AuthScaffold(
+            kicker: "Marquee",
+            title: "Sign in",
+            subtitle: "Use Google or email."
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                ContinueWithGoogleButton(busy: googleBusy) {
+                    Task { await googleSignIn() }
+                }
+                .disabled(busy)
 
-            VStack(spacing: 12) {
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding()
-                    .background(theme.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                AuthOrDivider()
 
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-                    .padding()
-                    .background(theme.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .foregroundStyle(theme.ink)
+                AuthTextField(
+                    title: "Email",
+                    text: $email,
+                    keyboard: .emailAddress,
+                    contentType: .emailAddress
+                )
+                AuthTextField(
+                    title: "Password",
+                    text: $password,
+                    isSecure: true,
+                    contentType: .password
+                )
 
-            if let error {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(theme.accent)
-            }
+                if let error {
+                    Text(error)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(theme.accent)
+                }
 
-            Button {
-                Task { await signIn() }
-            } label: {
-                if busy { ProgressView().tint(theme.onAccent) }
-                else { Text("Sign in") }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(busy || email.isEmpty || password.isEmpty)
+                Button {
+                    Task { await signIn() }
+                } label: {
+                    if busy { ProgressView().tint(theme.onAccent) }
+                    else { Text("Sign in") }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(busy || googleBusy || email.isEmpty || password.isEmpty)
 
-            Button("Forgot password?", action: onForgot)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(theme.inkMuted)
-
-            GoogleSignInPlaceholder(token: $googleToken) {
-                Task { await googleSignIn() }
-            }
-
-            Spacer()
-            Button(action: onSignUp) {
-                Text("New here? Create an account")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(theme.ink)
+                Button("Forgot password?", action: onForgot)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(theme.inkMuted)
                     .frame(maxWidth: .infinity)
+
+                Spacer(minLength: 28)
+
+                AuthFooterLink(title: "Create an account", action: onSignUp)
             }
         }
     }
@@ -116,16 +106,14 @@ struct SignInView: View {
     }
 
     private func googleSignIn() async {
-        guard !googleToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            error = "Paste a Google ID token, or wire Google Sign-In SDK."
-            return
-        }
-        busy = true
+        googleBusy = true
         error = nil
-        defer { busy = false }
+        defer { googleBusy = false }
         do {
-            try await auth.signInWithGoogle(idToken: googleToken.trimmingCharacters(in: .whitespacesAndNewlines))
+            let token = try await GoogleAuth.signIn()
+            try await auth.signInWithGoogle(idToken: token)
         } catch {
+            if GoogleAuth.isCancellation(error) { return }
             self.error = error.localizedDescription
         }
     }
@@ -139,51 +127,60 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var busy = false
+    @State private var googleBusy = false
     @State private var error: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Spacer(minLength: 40)
-            Text("Join Marquee")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(theme.ink)
-            Text("Track films and shows in one diary.")
-                .foregroundStyle(theme.inkMuted)
+        AuthScaffold(
+            kicker: "Marquee",
+            title: "Create an account",
+            subtitle: "Use Google or email."
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                ContinueWithGoogleButton(busy: googleBusy) {
+                    Task { await googleSignIn() }
+                }
+                .disabled(busy)
 
-            TextField("Email", text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .padding()
-                .background(theme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                AuthOrDivider()
 
-            SecureField("Password (6+ characters)", text: $password)
-                .textContentType(.newPassword)
-                .padding()
-                .background(theme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                AuthTextField(
+                    title: "Email",
+                    text: $email,
+                    keyboard: .emailAddress,
+                    contentType: .emailAddress
+                )
+                AuthTextField(
+                    title: "Password",
+                    text: $password,
+                    isSecure: true,
+                    contentType: .newPassword
+                )
 
-            if let error {
-                Text(error).font(.footnote).foregroundStyle(theme.accent)
+                Text("At least 6 characters.")
+                    .font(.caption)
+                    .foregroundStyle(theme.inkMuted)
+
+                if let error {
+                    Text(error)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(theme.accent)
+                }
+
+                Button {
+                    Task { await signUp() }
+                } label: {
+                    if busy { ProgressView().tint(theme.onAccent) }
+                    else { Text("Create account") }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(busy || googleBusy || email.isEmpty || password.count < 6)
+
+                Spacer(minLength: 28)
+
+                AuthFooterLink(title: "Sign in", action: onSignIn)
             }
-
-            Button {
-                Task { await signUp() }
-            } label: {
-                if busy { ProgressView().tint(theme.onAccent) }
-                else { Text("Create account") }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(busy)
-
-            Spacer()
-            Button("Already have an account? Sign in", action: onSignIn)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(theme.ink)
-                .frame(maxWidth: .infinity)
         }
-        .foregroundStyle(theme.ink)
     }
 
     private func signUp() async {
@@ -193,6 +190,19 @@ struct SignUpView: View {
         do {
             try await auth.signUp(email: email, password: password)
         } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func googleSignIn() async {
+        googleBusy = true
+        error = nil
+        defer { googleBusy = false }
+        do {
+            let token = try await GoogleAuth.signIn()
+            try await auth.signInWithGoogle(idToken: token)
+        } catch {
+            if GoogleAuth.isCancellation(error) { return }
             self.error = error.localizedDescription
         }
     }
@@ -208,41 +218,39 @@ struct ForgotPasswordView: View {
     @State private var busy = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Spacer(minLength: 40)
-            Text("Reset password")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(theme.ink)
-            Text("We'll email a reset link if that account exists.")
-                .foregroundStyle(theme.inkMuted)
+        AuthScaffold(
+            kicker: "Marquee",
+            title: "Reset password",
+            subtitle: "Enter the email on your account."
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                AuthTextField(
+                    title: "Email",
+                    text: $email,
+                    keyboard: .emailAddress,
+                    contentType: .emailAddress
+                )
 
-            TextField("Email", text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .padding()
-                .background(theme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                if let message {
+                    Text(message)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(theme.olive)
+                }
 
-            if let message {
-                Text(message).font(.footnote).foregroundStyle(theme.inkMuted)
+                Button {
+                    Task { await send() }
+                } label: {
+                    if busy { ProgressView().tint(theme.onAccent) }
+                    else { Text("Send reset link") }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(busy || email.isEmpty)
+
+                Spacer(minLength: 28)
+
+                AuthFooterLink(title: "Back to sign in", action: onBack)
             }
-
-            Button {
-                Task { await send() }
-            } label: {
-                if busy { ProgressView().tint(theme.onAccent) }
-                else { Text("Send reset link") }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-
-            Spacer()
-            Button("Back to sign in", action: onBack)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(theme.ink)
-                .frame(maxWidth: .infinity)
         }
-        .foregroundStyle(theme.ink)
     }
 
     private func send() async {
@@ -253,29 +261,6 @@ struct ForgotPasswordView: View {
             message = "If that email is registered, a reset link is on its way."
         } catch {
             message = error.localizedDescription
-        }
-    }
-}
-
-/// Drop-in until GoogleSignIn SDK is added via SPM. Paste token for API testing.
-struct GoogleSignInPlaceholder: View {
-    @Environment(\.marqueeTheme) private var theme
-    @Binding var token: String
-    var onSubmit: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Google sign-in")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(theme.inkMuted)
-            TextField("ID token (dev)", text: $token)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(10)
-                .background(theme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            Button("Continue with Google token", action: onSubmit)
-                .buttonStyle(SecondaryButtonStyle())
         }
     }
 }

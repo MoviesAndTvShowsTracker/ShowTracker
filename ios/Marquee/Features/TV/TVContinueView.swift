@@ -34,7 +34,7 @@ struct TVContinueView: View {
             .padding(.top, 12)
             .padding(.bottom, 48)
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle("Continue")
         .navigationBarTitleDisplayMode(.inline)
         .task { await hydrate() }

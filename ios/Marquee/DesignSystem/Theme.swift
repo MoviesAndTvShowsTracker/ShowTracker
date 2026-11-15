@@ -9,8 +9,10 @@ enum MarqueeColor {
     static let oliveLeaf = Color(hex: 0x5C6B4A)
     static let hibiscus = Color(hex: 0xFF4F8B)
     static let surfaceElevatedLight = Color(hex: 0xF3F3EE)
-    static let surfaceDark = Color(hex: 0x1C1B16)
-    static let surfaceElevatedDark = Color(hex: 0x2A281F)
+    /// Warm lobby dark — lifted so captions stay readable
+    static let surfaceDark = Color(hex: 0x2F2D24)
+    static let surfaceElevatedDark = Color(hex: 0x3E3B31)
+    static let inkDark = Color(hex: 0xF3F2EA)
     static let onAccent = Color.white
 }
 
@@ -44,13 +46,13 @@ struct MarqueeTheme {
             return MarqueeTheme(
                 surface: MarqueeColor.surfaceDark,
                 surfaceElevated: MarqueeColor.surfaceElevatedDark,
-                ink: MarqueeColor.saltGrey,
-                inkMuted: MarqueeColor.saltGrey.opacity(0.55),
+                ink: MarqueeColor.inkDark,
+                inkMuted: MarqueeColor.inkDark.opacity(0.72),
                 accent: MarqueeColor.hibiscus,
                 onAccent: MarqueeColor.onAccent,
-                olive: MarqueeColor.oliveLeaf,
-                oliveSoft: MarqueeColor.oliveLeaf.opacity(0.18),
-                border: MarqueeColor.saltGrey.opacity(0.12)
+                olive: Color(hex: 0xA3B389),
+                oliveSoft: MarqueeColor.oliveLeaf.opacity(0.28),
+                border: MarqueeColor.inkDark.opacity(0.16)
             )
         default:
             return MarqueeTheme(
@@ -99,6 +101,11 @@ enum MarqueeMotion {
     static let micro = Animation.spring(response: 0.22, dampingFraction: 0.86)
     static let standard = Animation.spring(response: 0.32, dampingFraction: 0.84)
     static let press = Animation.spring(response: 0.18, dampingFraction: 0.78)
+    /// Splash lifts off; content settles in.
+    static let handoff = Animation.spring(response: 0.72, dampingFraction: 0.92)
+    static let reveal = Animation.spring(response: 0.78, dampingFraction: 0.9)
+    /// Splash zooms through into the app.
+    static let zoom = Animation.spring(response: 0.86, dampingFraction: 0.92)
 }
 
 struct PressablePosterStyle: ButtonStyle {

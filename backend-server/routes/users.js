@@ -97,6 +97,10 @@ router.post('/google', async (req, res, next) => {
     if (err.status) {
       return res.status(err.status).json({ success: false, message: err.message });
     }
+    const message = String(err.message || '');
+    if (/audience|wrong recipient/i.test(message)) {
+      return res.status(401).json({ success: false, message: 'Google sign-in could not be verified.' });
+    }
     return next(err);
   }
 });

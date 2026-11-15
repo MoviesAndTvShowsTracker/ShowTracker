@@ -74,7 +74,7 @@ struct HomeView: View {
             }
             .padding(.vertical, 16)
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
         .task { await load() }
@@ -178,21 +178,25 @@ struct HomeView: View {
     }
 
     private func load() async {
-        loading = true
-        defer { loading = false }
         do {
             async let c = DiaryService.continueWatching()
             async let f = DiaryService.movieWatchlist()
             async let t = DiaryService.tvWatchlist()
             async let r = DiaryService.weekRecap()
-            continueItems = try await c
-            filmWatchlist = try await f
-            tvWatchlist = try await t
-            recap = try? await r
+            let cont = try await c
+            let films = try await f
+            let shows = try await t
+            let week = try? await r
+            continueItems = cont
+            filmWatchlist = films
+            tvWatchlist = shows
+            recap = week
             error = nil
+            loading = false
             await enrichCatalogTotals()
         } catch {
             self.error = error.localizedDescription
+            loading = false
         }
     }
 

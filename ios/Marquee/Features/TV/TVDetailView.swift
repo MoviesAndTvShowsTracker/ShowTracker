@@ -45,7 +45,7 @@ struct TVDetailView: View {
                 if let detail { content(detail) }
             }
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
@@ -341,7 +341,7 @@ struct TVDetailView: View {
                 .disabled(showRating <= 0)
             }
             .padding(24)
-            .background(theme.surface.ignoresSafeArea())
+            .marqueeCanvas()
             .navigationTitle("Rate show")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

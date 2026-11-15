@@ -10,6 +10,7 @@ settings:
     SWIFT_VERSION: "5.0"
     TARGETED_DEVICE_FAMILY: "1"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UILaunchScreen_BackgroundColor: LaunchBackground
     INFOPLIST_KEY_CFBundleDisplayName: Marquee
     INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
     GENERATE_INFOPLIST_FILE: YES
@@ -22,6 +23,17 @@ targets:
     platform: iOS
     sources:
       - path: Marquee
+    postCompileScripts:
+      - name: Bundle dotenv
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          SRC="${SRCROOT}/.env"
+          DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/.env"
+          if [ -f "$SRC" ]; then
+            mkdir -p "$(dirname "$DEST")"
+            cp "$SRC" "$DEST"
+          fi
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jimil.marquee
@@ -31,6 +43,18 @@ targets:
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Marquee/Info.plist
+      properties:
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        API_BASE_URL: https://marquee-4kjw.onrender.com
+        GIDClientID: 375100697427-dk86bn82i5edmfd1m82u1uc05o2dq3h5.apps.googleusercontent.com
+        GIDServerClientID: 375100697427-oahuj0bruvllnjg2safa4igmnthuihmm.apps.googleusercontent.com
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - com.googleusercontent.apps.375100697427-dk86bn82i5edmfd1m82u1uc05o2dq3h5
   MarqueeUITests:
     type: bundle.ui-testing
     platform: iOS

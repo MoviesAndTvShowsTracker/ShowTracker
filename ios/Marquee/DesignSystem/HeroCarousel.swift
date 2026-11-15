@@ -4,6 +4,7 @@ import SwiftUI
 struct HeroCarousel: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppPreferences.self) private var preferences
     let items: [MediaItem]
     let kind: MediaKind
     @State private var page = 0
@@ -39,7 +40,7 @@ struct HeroCarousel: View {
         }
         .padding(.horizontal, 20)
         .onReceive(timer) { _ in
-            guard !reduceMotion, slides.count > 1 else { return }
+            guard !reduceMotion, preferences.heroAutoplay, slides.count > 1 else { return }
             withAnimation(MarqueeMotion.standard) {
                 page = (page + 1) % slides.count
             }

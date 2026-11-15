@@ -22,9 +22,20 @@ cd backend-server && npm run start:api
 
 Override with UserDefaults key `apiBaseURL` (e.g. LAN IP for a physical device, or production URL).
 
+## Config
+
+Copy `.env.example` to `.env` in this folder. `.env` is gitignored.
+
+```
+API_BASE_URL=https://marquee-4kjw.onrender.com
+GOOGLE_CLIENT_ID=your_web_oauth_client_id.apps.googleusercontent.com
+```
+
 ## Google Sign-In
 
-Auth includes a dev ID-token field that posts to `POST /users/google`. For production, add the Google Sign-In iOS SDK (SPM), configure `GIDClientID` in Info.plist to match `GOOGLE_CLIENT_ID` on the API, and replace the placeholder with the SDK button.
+The iOS client ID lives in `GoogleService-Info.plist`. The web client ID stays `GOOGLE_CLIENT_ID` (also `GIDServerClientID`) so the API can verify the ID token.
+
+Add `GOOGLE_IOS_CLIENT_ID` on Render if you want the API to accept iOS-audience tokens as well as web ones.
 
 ## App Store checklist
 

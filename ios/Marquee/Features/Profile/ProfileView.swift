@@ -10,7 +10,7 @@ struct ProfileView: View {
     @State private var favoritesTV: [FavoriteTVDoc] = []
     @State private var watchedTV: [FavoriteTVDoc] = []
     @State private var overview: StatsOverview?
-    @State private var loading = true
+    @State private var ready = false
     @State private var error: String?
 
     private var displayName: String {
@@ -26,11 +26,10 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                header
-
-                if loading && favoritesFilms.isEmpty && watchedFilms.isEmpty {
+                if !ready {
                     ProfileSkeleton()
                 } else {
+                    header
                     statsTeaser
                     librarySummary
                     if hasDiary {
@@ -47,7 +46,7 @@ struct ProfileView: View {
             .padding(.vertical, 16)
             .padding(.horizontal, 20)
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle("You")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -98,9 +97,12 @@ struct ProfileView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(theme.olive)
                     }
-                    Text(formatMinutes(overview?.totalMins ?? 0))
-                        .font(.system(size: 34, weight: .bold, design: .serif))
+                    Text(StatsFormat.span(overview?.totalMins ?? 0))
+                        .font(.system(size: 32, weight: .bold, design: .serif))
                         .foregroundStyle(theme.olive)
+                        .minimumScaleFactor(0.65)
+                        .lineLimit(1)
+                        .monospacedDigit()
                     Text(catalogueLine)
                         .font(.subheadline)
                         .foregroundStyle(theme.inkMuted)
@@ -248,18 +250,7 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func formatMinutes(_ mins: Int) -> String {
-        if mins <= 0 { return "—" }
-        let h = mins / 60
-        let m = mins % 60
-        if h == 0 { return "\(m)m" }
-        if m == 0 { return "\(h)h" }
-        return "\(h)h \(m)m"
-    }
-
     private func load() async {
-        loading = true
-        defer { loading = false }
         do {
             async let sum = DiaryService.librarySummary()
             async let ff = DiaryService.favoriteMovies()
@@ -267,15 +258,27 @@ struct ProfileView: View {
             async let ft = DiaryService.favoriteTV()
             async let wt = DiaryService.watchedTV()
             async let stats = DiaryService.dashboardStats()
-            summary = try await sum.counts
-            favoritesFilms = try await ff
-            watchedFilms = try await wf
-            favoritesTV = try await ft
-            watchedTV = try await wt
-            overview = try await stats.overview
-            error = nil
+            let counts = try await sum.counts
+            let favFilms = try await ff
+            let watched = try await wf
+            let favTV = try await ft
+            let watchedShows = try await wt
+            let dash = try await stats.overview
+            var transaction = Transaction()
+            transaction.disablesAnimations = !ready
+            withTransaction(transaction) {
+                summary = counts
+                favoritesFilms = favFilms
+                watchedFilms = watched
+                favoritesTV = favTV
+                watchedTV = watchedShows
+                overview = dash
+                ready = true
+                error = nil
+            }
         } catch {
             self.error = error.localizedDescription
+            ready = true
         }
     }
 }
@@ -330,12 +333,9 @@ struct ProfileListView: View {
     @State private var movies: [(id: String, title: String, poster: String?)] = []
     @State private var isTV = false
     @State private var loading = true
-    @AppStorage("marquee.gridDensity") private var densityRaw: Int = GridDensity.cozy.rawValue
+    @Environment(AppPreferences.self) private var preferences
 
-    private var density: GridDensity {
-        get { GridDensity(rawValue: densityRaw) ?? .cozy }
-        nonmutating set { densityRaw = newValue.rawValue }
-    }
+    private var density: GridDensity { preferences.gridDensity }
 
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 12), count: density.rawValue)
@@ -372,14 +372,11 @@ struct ProfileListView: View {
                 }
             }
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle(kind.title)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                GridDensityToggle(density: Binding(
-                    get: { GridDensity(rawValue: densityRaw) ?? .cozy },
-                    set: { densityRaw = $0.rawValue }
-                ))
+                GridDensityToggle(density: Bindable(preferences).gridDensity)
             }
         }
         .task { await load() }

@@ -12,19 +12,6 @@ struct WelcomeSplashView: View {
 
     var body: some View {
         ZStack {
-            theme.surface.ignoresSafeArea()
-            // Soft olive wash so brand green is present from first screen
-            Circle()
-                .fill(theme.olive.opacity(0.14))
-                .frame(width: 320, height: 320)
-                .blur(radius: 60)
-                .offset(x: 120, y: -220)
-            Circle()
-                .fill(theme.accent.opacity(0.12))
-                .frame(width: 240, height: 240)
-                .blur(radius: 50)
-                .offset(x: -140, y: 280)
-
             VStack(alignment: .leading, spacing: 28) {
                 Spacer(minLength: 24)
 

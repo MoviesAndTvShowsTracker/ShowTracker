@@ -2,7 +2,13 @@ import SwiftUI
 
 struct TVLibraryView: View {
     @Environment(\.marqueeTheme) private var theme
-    @State private var tab: LibraryTab = .watching
+    var initialTab: LibraryTab = .watching
+    @State private var tab: LibraryTab
+
+    init(initialTab: LibraryTab = .watching) {
+        self.initialTab = initialTab
+        _tab = State(initialValue: initialTab)
+    }
     @State private var items: [TrackingRecord] = []
     @State private var summary: LibraryCounts?
     @State private var error: String?
@@ -111,7 +117,7 @@ struct TVLibraryView: View {
                 }
             }
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle("TV library")
         .onChange(of: tab) { _, _ in
             Task { await load() }

@@ -14,13 +14,16 @@
 		410D29321BECCAAD96294669 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84516D28A281EAA8D5B69914 /* SearchView.swift */; };
 		460D5781FC20B103A86EE496 /* TVLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5580EADE84F261177D26C /* TVLandingView.swift */; };
 		4F02FB4B185C5FA067A9733F /* SwipeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = E124EF284A5E5A27001E90C6 /* SwipeBack.swift */; };
+		4F646CF8A61B195730C36F65 /* AuthChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61808C50465A2A227EE63BAB /* AuthChrome.swift */; };
 		528B462DC39BAAD11715776F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E1C91523079756EDFCC574 /* MainTabView.swift */; };
 		54DE90A44B1319DC37F0DE59 /* TVContinueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EA3A27C094384FAFB77658C /* TVContinueView.swift */; };
 		5E699388F9EEF6B8EBC53A40 /* DiaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9EBDE5E160366D8BB89E26E /* DiaryService.swift */; };
 		69DF6EDA01122D6FCE3E2F86 /* StatsCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFE372EE43F08FB8680BFA4 /* StatsCharts.swift */; };
+		718316EF70B8E71DBE27500B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 39F9290092A63D9094EE5450 /* GoogleService-Info.plist */; };
 		72A52E431FC8347D7D7AB38F /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB3011284050A06E0E42FA0F /* ImageCache.swift */; };
 		74CEACC5D759CB6F40397425 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D05D2846E8942BC732FCB8 /* KeychainStore.swift */; };
 		773D7B00B93D774856B3BFFF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E5682D970346C9AFB989EC /* RootView.swift */; };
+		77A70877E78732C99276ACD0 /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFEF23C7DA78F1793DA99919 /* GoogleAuth.swift */; };
 		80B645A1B1E67656F1118382 /* WatchProvidersRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA605E0878BF82EF3BF3CC00 /* WatchProvidersRow.swift */; };
 		8364E1DDBD52BA9C900F619D /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0CA2C6489447764AC72E2A /* AuthStore.swift */; };
 		8B113923BF8EF8434CD1E34A /* GlassChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 954E4EB8E8BBB1C883EF41B3 /* GlassChrome.swift */; };
@@ -28,8 +31,10 @@
 		9CBCDD367ADDD130F9514D36 /* HeroCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A7EFBC0F456A8329839FD6 /* HeroCarousel.swift */; };
 		9F9E59AA0E6E583F66FCCF81 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2CFFBA1B5298C1464531FB1 /* Models.swift */; };
 		A8634BB2C2D8046F7AF49F82 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 069DF1516D03B3473151F921 /* HomeView.swift */; };
+		AA1FE325ABBBB9AC23F8BDCA /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */; };
 		B0D46860BEDB1205438ECDC7 /* TVDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AEFEDC3EE99990A8C67B6B /* TVDetailView.swift */; };
 		B23D94C5BB982D32C320BF32 /* ScreenWalkthroughTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039EFB2C8EA16F5DF59E16D1 /* ScreenWalkthroughTests.swift */; };
+		B440E716D7605CAF65C1A1AF /* Atmosphere.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C345BFA1BA9318A2EF83954 /* Atmosphere.swift */; };
 		B466889B0963A1F303E96B05 /* Skeletons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D15FA5617EB176D557EA51 /* Skeletons.swift */; };
 		B5D50C66DEAAF10C811D35C6 /* TVLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F4F2A01B742FFE5DBCD2855 /* TVLibraryView.swift */; };
 		B7EAA5330005A40380136F8A /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4D3606E3C5198CAF8D2257 /* ProfileView.swift */; };
@@ -68,16 +73,20 @@
 		0B9744CC16339404350C682E /* MovieDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieDetailView.swift; sourceTree = "<group>"; };
 		1E2ED70AC49D5B4F667C4059 /* TMDBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDBService.swift; sourceTree = "<group>"; };
 		1EA3A27C094384FAFB77658C /* TVContinueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVContinueView.swift; sourceTree = "<group>"; };
+		1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		1FB401AB82FED2D51A0D6579 /* BrandMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandMark.swift; sourceTree = "<group>"; };
 		236A1676876592D69CFAA55A /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		26B4AA6F74B3219716AE585E /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		2F4F2A01B742FFE5DBCD2855 /* TVLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVLibraryView.swift; sourceTree = "<group>"; };
 		37095F35B989872BBA4B99A9 /* ShowProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowProgress.swift; sourceTree = "<group>"; };
+		39F9290092A63D9094EE5450 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		4008A22CC8C03698DEEBF42E /* Marquee.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Marquee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		40095993909287866C995224 /* DiaryChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryChrome.swift; sourceTree = "<group>"; };
 		549888C1A8ED8E3CA8B0C049 /* AccessibilityMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityMotion.swift; sourceTree = "<group>"; };
 		59D15FA5617EB176D557EA51 /* Skeletons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeletons.swift; sourceTree = "<group>"; };
 		5AD95B7E214227F1C398E970 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5C345BFA1BA9318A2EF83954 /* Atmosphere.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Atmosphere.swift; sourceTree = "<group>"; };
+		61808C50465A2A227EE63BAB /* AuthChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthChrome.swift; sourceTree = "<group>"; };
 		61AEFEDC3EE99990A8C67B6B /* TVDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDetailView.swift; sourceTree = "<group>"; };
 		65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsBadges.swift; sourceTree = "<group>"; };
 		6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeApp.swift; sourceTree = "<group>"; };
@@ -93,6 +102,7 @@
 		AA605E0878BF82EF3BF3CC00 /* WatchProvidersRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersRow.swift; sourceTree = "<group>"; };
 		AD2D378EA169072EF9D6E463 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		AE4D3606E3C5198CAF8D2257 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		AFEF23C7DA78F1793DA99919 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		BAB5580EADE84F261177D26C /* TVLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVLandingView.swift; sourceTree = "<group>"; };
 		BD1DA5BA7C1FBB75A78EFD26 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		C21BD1248B6E41C7DE62EFAD /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
@@ -119,6 +129,7 @@
 		302F9502AA6E155369574197 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				61808C50465A2A227EE63BAB /* AuthChrome.swift */,
 				F34B7B1A0409179151349F83 /* AuthFlowView.swift */,
 			);
 			path = Auth;
@@ -189,6 +200,7 @@
 			isa = PBXGroup;
 			children = (
 				5AD95B7E214227F1C398E970 /* Assets.xcassets */,
+				39F9290092A63D9094EE5450 /* GoogleService-Info.plist */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -219,6 +231,7 @@
 			isa = PBXGroup;
 			children = (
 				549888C1A8ED8E3CA8B0C049 /* AccessibilityMotion.swift */,
+				5C345BFA1BA9318A2EF83954 /* Atmosphere.swift */,
 				1FB401AB82FED2D51A0D6579 /* BrandMark.swift */,
 				40095993909287866C995224 /* DiaryChrome.swift */,
 				954E4EB8E8BBB1C883EF41B3 /* GlassChrome.swift */,
@@ -245,8 +258,10 @@
 				7D6A7B5C1976974BAD871910 /* APIClient.swift */,
 				C21BD1248B6E41C7DE62EFAD /* APIError.swift */,
 				236A1676876592D69CFAA55A /* AppConfig.swift */,
+				1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */,
 				9C0CA2C6489447764AC72E2A /* AuthStore.swift */,
 				A9EBDE5E160366D8BB89E26E /* DiaryService.swift */,
+				AFEF23C7DA78F1793DA99919 /* GoogleAuth.swift */,
 				BD1DA5BA7C1FBB75A78EFD26 /* Haptics.swift */,
 				FB3011284050A06E0E42FA0F /* ImageCache.swift */,
 				D5D05D2846E8942BC732FCB8 /* KeychainStore.swift */,
@@ -312,6 +327,7 @@
 			buildConfigurationList = 7D9F4EDB0A9A621B30A714B1 /* Build configuration list for PBXNativeTarget "Marquee" */;
 			buildPhases = (
 				05E7BD4A0AD3A888096FC112 /* Sources */,
+				8E13CF50E3BC32342D8C5748 /* Bundle dotenv */,
 				94F522412ABA15B43F69CC91 /* Resources */,
 			);
 			buildRules = (
@@ -371,10 +387,33 @@
 			buildActionMask = 2147483647;
 			files = (
 				C35B10E68014E10C2C48B756 /* Assets.xcassets in Resources */,
+				718316EF70B8E71DBE27500B /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		8E13CF50E3BC32342D8C5748 /* Bundle dotenv */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle dotenv";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nSRC=\"${SRCROOT}/.env\"\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/.env\"\nif [ -f \"$SRC\" ]; then\n  mkdir -p \"$(dirname \"$DEST\")\"\n  cp \"$SRC\" \"$DEST\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		05E7BD4A0AD3A888096FC112 /* Sources */ = {
@@ -385,6 +424,9 @@
 				B991FBDA822738CB6B93B13D /* APIError.swift in Sources */,
 				FDEB8FCB25D31F6308595F81 /* AccessibilityMotion.swift in Sources */,
 				B84981866352AFCDC9CF983B /* AppConfig.swift in Sources */,
+				AA1FE325ABBBB9AC23F8BDCA /* AppPreferences.swift in Sources */,
+				B440E716D7605CAF65C1A1AF /* Atmosphere.swift in Sources */,
+				4F646CF8A61B195730C36F65 /* AuthChrome.swift in Sources */,
 				E30C5A16911EBB362A9A27EC /* AuthFlowView.swift in Sources */,
 				8364E1DDBD52BA9C900F619D /* AuthStore.swift in Sources */,
 				D7859F8BF9BC478DD1D198B0 /* BrandMark.swift in Sources */,
@@ -392,6 +434,7 @@
 				5E699388F9EEF6B8EBC53A40 /* DiaryService.swift in Sources */,
 				E7304E266C0D3E0391698A66 /* FilmsLandingView.swift in Sources */,
 				8B113923BF8EF8434CD1E34A /* GlassChrome.swift in Sources */,
+				77A70877E78732C99276ACD0 /* GoogleAuth.swift in Sources */,
 				B90D56A5CE2659D5EC32BCA2 /* Haptics.swift in Sources */,
 				9CBCDD367ADDD130F9514D36 /* HeroCarousel.swift in Sources */,
 				A8634BB2C2D8046F7AF49F82 /* HomeView.swift in Sources */,
@@ -510,6 +553,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Marquee;
+				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -621,6 +665,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Marquee;
+				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;

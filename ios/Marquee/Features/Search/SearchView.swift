@@ -22,7 +22,7 @@ struct SearchView: View {
                 resultsList
             }
         }
-        .background(theme.surface.ignoresSafeArea())
+        .marqueeCanvas()
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .searchable(

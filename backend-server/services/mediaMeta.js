@@ -65,7 +65,7 @@ function buildDecadeBreakdown(filmsWithMeta) {
     if (!year || year < 1900) continue;
     const decade = `${Math.floor(year / 10) * 10}s`;
     const bucket = decades.get(decade) || { count: 0, minutes: 0 };
-    bucket.count += 1;
+    bucket.count += film.weight ?? 1;
     bucket.minutes += film.minutes || 0;
     decades.set(decade, bucket);
   }
@@ -136,6 +136,13 @@ function buildTasteProfileFromMaps(films, episodes, filmMetaMap, tvMetaMap, part
         tvIds.map((tvId) => ({
           genres: tvMetaMap.get(String(tvId))?.genres || [],
           weight: epCountByShow.get(tvId) || 0,
+        }))
+      ),
+      decades: buildDecadeBreakdown(
+        tvIds.map((tvId) => ({
+          releaseYear: tvMetaMap.get(String(tvId))?.releaseYear,
+          minutes: 0,
+          weight: epCountByShow.get(tvId) || 1,
         }))
       ),
       avgRating: weightedAverageRating(

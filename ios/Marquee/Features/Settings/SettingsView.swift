@@ -3,22 +3,221 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(AuthStore.self) private var auth
+    @Environment(AppPreferences.self) private var preferences
     @Environment(\.marqueeTheme) private var theme
+    @State private var confirmSignOut = false
+
+    private var displayName: String {
+        let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
+        return first.isEmpty ? "You" : first
+    }
+
+    var body: some View {
+        List {
+            Section {
+                accountHeader
+            }
+
+            Section {
+                AppearancePicker(selection: Bindable(preferences).appearance)
+            } header: {
+                Text("Look")
+            } footer: {
+                Text("Night uses a warm lobby grey so posters and captions stay readable.")
+            }
+
+            Section {
+                Toggle(isOn: Bindable(preferences).blobsEnabled) {
+                    SettingsLabel("Ambient color", systemImage: "circle.hexagongrid.fill")
+                }
+                Toggle(isOn: Bindable(preferences).heroAutoplay) {
+                    SettingsLabel("Autoplay carousels", systemImage: "play.square.stack")
+                }
+                Toggle(isOn: Bindable(preferences).hapticsEnabled) {
+                    SettingsLabel("Haptics", systemImage: "hand.tap")
+                }
+                Picker(selection: Bindable(preferences).gridDensity) {
+                    Text("Cozy").tag(GridDensity.cozy)
+                    Text("Compact").tag(GridDensity.compact)
+                } label: {
+                    SettingsLabel("Poster size", systemImage: "square.grid.2x2")
+                }
+            } header: {
+                Text("Feel")
+            } footer: {
+                Text("Ambient color slowly drifts olive and pink behind the diary. Turn it off if you want a still canvas.")
+            }
+
+            Section {
+                NavigationLink {
+                    EditProfileView()
+                } label: {
+                    SettingsLabel("Profile", systemImage: "person.text.rectangle")
+                }
+                NavigationLink {
+                    ChangePasswordView()
+                } label: {
+                    SettingsLabel("Password", systemImage: "key")
+                }
+                NavigationLink {
+                    TVTimeImportView()
+                } label: {
+                    SettingsLabel("TV Time import", systemImage: "square.and.arrow.down")
+                }
+            } header: {
+                Text("Account")
+            }
+
+            Section {
+                Button {
+                    preferences.clearSearchHistory()
+                    Haptics.success()
+                } label: {
+                    SettingsLabel("Clear search history", systemImage: "clock.arrow.circlepath")
+                }
+            } header: {
+                Text("Diary")
+            }
+
+            Section {
+                LabeledContent("Signed in as") {
+                    Text(auth.session?.email ?? "—")
+                        .foregroundStyle(theme.inkMuted)
+                        .lineLimit(1)
+                }
+                LabeledContent("API") {
+                    Text(AppConfig.apiBaseURL.host() ?? "Marquee")
+                        .foregroundStyle(theme.inkMuted)
+                }
+                LabeledContent("Version") {
+                    Text(appVersion)
+                        .foregroundStyle(theme.inkMuted)
+                }
+            } header: {
+                Text("About")
+            }
+
+            Section {
+                Button("Sign out", role: .destructive) {
+                    confirmSignOut = true
+                }
+                .alert("Sign out of Marquee?", isPresented: $confirmSignOut) {
+                    Button("Sign out", role: .destructive) {
+                        auth.signOut()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("You’ll stay signed out on this iPhone until you sign in again.")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .marqueeCanvas()
+        .tint(theme.olive)
+        .navigationTitle("Settings")
+    }
+
+    private var accountHeader: some View {
+        HStack(spacing: 14) {
+            Text(String(displayName.prefix(1)).uppercased())
+                .font(.title2.weight(.bold))
+                .foregroundStyle(MarqueeColor.saltGrey)
+                .frame(width: 52, height: 52)
+                .background(theme.olive)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayName)
+                    .font(.headline)
+                    .foregroundStyle(theme.ink)
+                Text(auth.session?.email ?? "")
+                    .font(.subheadline)
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+}
+
+private struct SettingsLabel: View {
+    @Environment(\.marqueeTheme) private var theme
+    let title: String
+    let systemImage: String
+
+    init(_ title: String, systemImage: String) {
+        self.title = title
+        self.systemImage = systemImage
+    }
+
+    var body: some View {
+        Label {
+            Text(title)
+                .foregroundStyle(theme.ink)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(theme.olive)
+        }
+    }
+}
+
+private struct AppearancePicker: View {
+    @Environment(\.marqueeTheme) private var theme
+    @Binding var selection: AppPreferences.Appearance
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(AppPreferences.Appearance.allCases) { option in
+                Button {
+                    selection = option
+                    Haptics.light()
+                } label: {
+                    VStack(spacing: 8) {
+                        Image(systemName: option.symbol)
+                            .font(.title3)
+                        Text(option.title)
+                            .font(.caption.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(selection == option ? theme.olive : theme.inkMuted)
+                    .background(selection == option ? theme.oliveSoft : theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(selection == option ? theme.olive.opacity(0.35) : theme.border, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+        .listRowBackground(Color.clear)
+    }
+}
+
+struct EditProfileView: View {
+    @Environment(AuthStore.self) private var auth
+    @Environment(\.marqueeTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
 
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
     @State private var phone = ""
-    @State private var currentPassword = ""
-    @State private var newPassword = ""
     @State private var message: String?
     @State private var busy = false
-    @State private var importStatus: ImportJob?
-    @State private var showImporter = false
 
     var body: some View {
         Form {
-            Section("Profile") {
+            Section {
                 TextField("First name", text: $firstName)
                 TextField("Last name", text: $lastName)
                 TextField("Email", text: $email)
@@ -26,65 +225,157 @@ struct SettingsView: View {
                     .keyboardType(.emailAddress)
                 TextField("Phone", text: $phone)
                     .keyboardType(.numberPad)
-                Button("Save profile") {
-                    Task { await saveProfile() }
-                }
-                .disabled(busy)
-            }
-
-            Section("Password") {
-                SecureField("Current password", text: $currentPassword)
-                SecureField("New password", text: $newPassword)
-                Button("Change password") {
-                    Task { await changePassword() }
-                }
-                .disabled(busy || newPassword.count < 6)
-            }
-
-            Section("TV Time import") {
-                if let importStatus {
-                    Text("Status: \(importStatus.status ?? "unknown")")
-                        .foregroundStyle(theme.inkMuted)
-                    if let report = importStatus.report {
-                        Text(report).font(.caption).foregroundStyle(theme.inkMuted)
-                    }
-                }
-                Button("Choose GDPR zip") {
-                    showImporter = true
-                }
-                Button("Refresh status") {
-                    Task { await refreshImport() }
-                }
-            }
-
-            Section("API") {
-                Text(AppConfig.apiBaseURL.absoluteString)
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
+            } footer: {
+                Text("This is how you show up in your diary.")
             }
 
             if let message {
                 Section {
-                    Text(message).foregroundStyle(theme.accent)
-                }
-            }
-
-            Section {
-                Button("Sign out", role: .destructive) {
-                    auth.signOut()
+                    Text(message).foregroundStyle(theme.olive)
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(theme.surface.ignoresSafeArea())
-        .navigationTitle("Settings")
+        .marqueeCanvas()
+        .navigationTitle("Profile")
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    Task { await save() }
+                }
+                .disabled(busy)
+            }
+        }
         .onAppear {
             firstName = auth.profile?.firstName ?? auth.session?.firstName ?? ""
             lastName = auth.profile?.lastName ?? ""
             email = auth.profile?.email ?? auth.session?.email ?? ""
             phone = auth.profile?.phonenumber ?? ""
         }
-        .task { await refreshImport() }
+    }
+
+    private func save() async {
+        busy = true
+        defer { busy = false }
+        do {
+            try await auth.updateProfile(firstName: firstName, lastName: lastName, email: email, phone: phone)
+            message = "Saved."
+            Haptics.success()
+            dismiss()
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+}
+
+struct ChangePasswordView: View {
+    @Environment(AuthStore.self) private var auth
+    @Environment(\.marqueeTheme) private var theme
+
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var message: String?
+    @State private var busy = false
+
+    var body: some View {
+        Form {
+            Section {
+                SecureField("Current password", text: $currentPassword)
+                SecureField("New password", text: $newPassword)
+            } footer: {
+                Text("Use at least 6 characters. Skip this if you only sign in with Google.")
+            }
+
+            Section {
+                Button("Update password") {
+                    Task { await change() }
+                }
+                .disabled(busy || newPassword.count < 6 || currentPassword.isEmpty)
+            }
+
+            if let message {
+                Section {
+                    Text(message).foregroundStyle(theme.olive)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .marqueeCanvas()
+        .navigationTitle("Password")
+    }
+
+    private func change() async {
+        busy = true
+        defer { busy = false }
+        do {
+            try await auth.changePassword(current: currentPassword, newPassword: newPassword)
+            currentPassword = ""
+            newPassword = ""
+            message = "Password updated."
+            Haptics.success()
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+}
+
+struct TVTimeImportView: View {
+    @Environment(\.marqueeTheme) private var theme
+    @State private var importStatus: ImportJob?
+    @State private var showImporter = false
+    @State private var message: String?
+    @State private var busy = false
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Export your data from TV Time (GDPR zip) and Marquee will pull in the shows you’ve logged.")
+                    .foregroundStyle(theme.inkMuted)
+            }
+
+            Section {
+                if let importStatus {
+                    LabeledContent("Status") {
+                        Text(importStatus.status ?? "unknown")
+                            .foregroundStyle(theme.olive)
+                    }
+                    if let report = importStatus.report ?? importStatus.message {
+                        Text(report)
+                            .font(.caption)
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                } else {
+                    Text("No import running.")
+                        .foregroundStyle(theme.inkMuted)
+                }
+            } header: {
+                Text("Last job")
+            }
+
+            Section {
+                Button {
+                    showImporter = true
+                } label: {
+                    SettingsLabel("Choose GDPR zip", systemImage: "archivebox")
+                }
+                .disabled(busy)
+                Button {
+                    Task { await refresh() }
+                } label: {
+                    SettingsLabel("Refresh status", systemImage: "arrow.clockwise")
+                }
+            }
+
+            if let message {
+                Section {
+                    Text(message).foregroundStyle(theme.olive)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .marqueeCanvas()
+        .navigationTitle("TV Time")
+        .task { await refresh() }
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.zip],
@@ -100,33 +391,7 @@ struct SettingsView: View {
         }
     }
 
-    private func saveProfile() async {
-        busy = true
-        defer { busy = false }
-        do {
-            try await auth.updateProfile(firstName: firstName, lastName: lastName, email: email, phone: phone)
-            message = "Profile saved."
-            Haptics.success()
-        } catch {
-            message = error.localizedDescription
-        }
-    }
-
-    private func changePassword() async {
-        busy = true
-        defer { busy = false }
-        do {
-            try await auth.changePassword(current: currentPassword, newPassword: newPassword)
-            currentPassword = ""
-            newPassword = ""
-            message = "Password updated."
-            Haptics.success()
-        } catch {
-            message = error.localizedDescription
-        }
-    }
-
-    private func refreshImport() async {
+    private func refresh() async {
         if let res = try? await DiaryService.importStatus() {
             importStatus = res.job
         }

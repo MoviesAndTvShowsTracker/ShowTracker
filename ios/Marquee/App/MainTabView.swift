@@ -28,6 +28,9 @@ struct MainTabView: View {
             }
         }
         .tint(theme.accent)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .background(.clear)
     }
 
     private var tabBinding: Binding<AppTab> {

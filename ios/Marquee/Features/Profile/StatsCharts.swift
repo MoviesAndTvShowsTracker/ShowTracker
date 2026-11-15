@@ -3,14 +3,35 @@ import SwiftUI
 
 enum StatsFormat {
     static func minutes(_ mins: Int) -> String {
+        if mins >= 24 * 60 { return span(mins) }
+        return compact(mins)
+    }
+
+    /// Integer calendar pieces: `5 mo 16d 16h`. Never a decimal like 5.9 months.
+    static func span(_ mins: Int) -> String {
+        if mins <= 0 { return "—" }
+        let hours = mins / 60
+        if hours < 24 { return compact(mins) }
+
+        let years = hours / (24 * 365)
+        var leftover = hours % (24 * 365)
+        let months = leftover / (24 * 30)
+        leftover %= 24 * 30
+        let days = leftover / 24
+        let remHours = leftover % 24
+
+        var parts: [String] = []
+        if years > 0 { parts.append("\(years)y") }
+        if months > 0 { parts.append("\(months) mo") }
+        if days > 0 { parts.append("\(days)d") }
+        if remHours > 0 { parts.append("\(remHours)h") }
+        return parts.isEmpty ? compact(mins) : parts.joined(separator: " ")
+    }
+
+    private static func compact(_ mins: Int) -> String {
         if mins <= 0 { return "—" }
         let h = mins / 60
         let m = mins % 60
-        if h >= 24 {
-            let d = h / 24
-            let rh = h % 24
-            return rh == 0 ? "\(d)d" : "\(d)d \(rh)h"
-        }
         if h == 0 { return "\(m)m" }
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
@@ -205,187 +226,46 @@ struct TwelveWeekChart: View {
     }
 }
 
-struct DiaryHeatmap: View {
+struct DecadeMeterList: View {
     @Environment(\.marqueeTheme) private var theme
-    let days: [StatsDayBucket]
-    private let weeks = 16
-    private let labels = ["M", "T", "W", "T", "F", "S", "S"]
-
-    private var cells: [[HeatCell]] {
-        let byDate = Dictionary(uniqueKeysWithValues: days.compactMap { day -> (String, StatsDayBucket)? in
-            guard let date = day.date else { return nil }
-            return (date, day)
-        })
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today)
-        let daysFromMonday = (weekday + 5) % 7
-        guard let thisMonday = cal.date(byAdding: .day, value: -daysFromMonday, to: today) else { return [] }
-        guard let start = cal.date(byAdding: .weekOfYear, value: -(weeks - 1), to: thisMonday) else { return [] }
-
-        return (0..<weeks).map { week in
-            (0..<7).map { dow in
-                let date = cal.date(byAdding: .day, value: week * 7 + dow, to: start) ?? today
-                let key = Self.key(date)
-                let bucket = byDate[key]
-                return HeatCell(
-                    date: key,
-                    tv: bucket?.episodes ?? 0,
-                    films: bucket?.films ?? 0,
-                    minutes: bucket?.minutes ?? 0
-                )
-            }
-        }
-    }
-
-    private var maxMinutes: Int {
-        max(cells.flatMap { $0 }.map(\.minutes).max() ?? 1, 1)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                SectionKicker(text: "Diary heat")
-                Spacer()
-                Text("16 weeks")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(theme.inkMuted)
-            }
-
-            GeometryReader { geo in
-                let labelW: CGFloat = 12
-                let gap: CGFloat = 3
-                let cell = max(8, floor((geo.size.width - labelW - gap) / CGFloat(weeks) - gap))
-                HStack(alignment: .top, spacing: gap) {
-                    VStack(spacing: gap) {
-                        ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
-                            Text(label)
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(theme.inkMuted)
-                                .frame(width: labelW, height: cell)
-                        }
-                    }
-                    HStack(spacing: gap) {
-                        ForEach(Array(cells.enumerated()), id: \.offset) { _, column in
-                            VStack(spacing: gap) {
-                                ForEach(column) { item in
-                                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                        .fill(fill(for: item))
-                                        .frame(width: cell, height: cell)
-                                }
-                            }
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-            .frame(height: 7 * 15)
-
-            HStack(spacing: 8) {
-                Text("Empty")
-                    .font(.caption2)
-                    .foregroundStyle(theme.inkMuted)
-                heatmapKey
-                Text("Busy")
-                    .font(.caption2)
-                    .foregroundStyle(theme.inkMuted)
-                Spacer()
-                HStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 2).fill(theme.accent).frame(width: 8, height: 8)
-                    Text("Film day")
-                        .font(.caption2)
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-        }
-        .padding(16)
-        .background(theme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-    }
-
-    private var heatmapKey: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<4, id: \.self) { i in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(theme.olive.opacity(0.18 + Double(i) * 0.22))
-                    .frame(width: 10, height: 10)
-            }
-        }
-    }
-
-    private func fill(for cell: HeatCell) -> Color {
-        if cell.minutes <= 0 && cell.tv == 0 && cell.films == 0 {
-            return theme.border.opacity(0.7)
-        }
-        if cell.films > 0 && cell.tv == 0 {
-            let t = min(1, Double(cell.minutes) / Double(maxMinutes))
-            return theme.accent.opacity(0.35 + t * 0.55)
-        }
-        let t = min(1, Double(cell.minutes) / Double(maxMinutes))
-        return theme.olive.opacity(0.28 + t * 0.72)
-    }
-
-    private static func key(_ date: Date) -> String {
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
-    }
-}
-
-private struct HeatCell: Identifiable {
-    var id: String { date }
-    let date: String
-    let tv: Int
-    let films: Int
-    let minutes: Int
-}
-
-struct DecadeChart: View {
-    @Environment(\.marqueeTheme) private var theme
+    let title: String
     let decades: [TasteDecade]
+    var tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionKicker(text: "Film decades")
-            Chart(decades) { item in
-                BarMark(
-                    x: .value("Count", item.count ?? 0),
-                    y: .value("Decade", item.decade ?? "")
-                )
-                .foregroundStyle(theme.accent)
-                .cornerRadius(4)
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 3)) { _ in
-                    AxisGridLine().foregroundStyle(theme.border)
-                    AxisValueLabel()
-                        .font(.caption2)
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-            .chartYAxis {
-                AxisMarks { value in
-                    AxisValueLabel {
-                        if let label = value.as(String.self) {
-                            Text(label)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.ink)
-                        }
+        let rows = decades.filter { ($0.count ?? 0) > 0 }
+        let maxValue = max(rows.map { $0.count ?? 0 }.max() ?? 1, 1)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .tracking(0.8)
+                .textCase(.uppercase)
+                .foregroundStyle(theme.inkMuted)
+                .padding(.top, 4)
+            ForEach(rows) { decade in
+                HStack(spacing: 10) {
+                    Text(decade.decade ?? "")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                        .frame(width: 52, alignment: .leading)
+                    GeometryReader { geo in
+                        Capsule()
+                            .fill(tint.opacity(0.14))
+                            .overlay(alignment: .leading) {
+                                Capsule()
+                                    .fill(tint)
+                                    .frame(width: geo.size.width * CGFloat(decade.count ?? 0) / CGFloat(maxValue))
+                            }
                     }
+                    .frame(height: 8)
+                    Text("\(decade.count ?? 0)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(tint)
+                        .monospacedDigit()
+                        .frame(width: 36, alignment: .trailing)
                 }
             }
-            .frame(height: max(120, CGFloat(decades.count) * 28))
         }
-        .padding(16)
-        .background(theme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
     }
 }
 

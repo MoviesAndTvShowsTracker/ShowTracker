@@ -281,7 +281,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 4;
+const STATS_SCHEMA_VERSION = 5;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
