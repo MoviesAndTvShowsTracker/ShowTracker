@@ -30,6 +30,8 @@ struct TVDetailView: View {
     @State var episodeRating: Double = 0
     @State var showEpisodeRatingSheet = false
     @State var episodeRatings: [String: Double] = [:]
+    @State private var loadGeneration = 0
+    @State private var scrollToEpisodesToken = 0
 
     enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
@@ -138,7 +140,8 @@ struct TVDetailView: View {
     }
 
     private func content(_ detail: TVDetail) -> some View {
-        ScrollView {
+        ScrollViewReader { proxy in
+            ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 DetailHero(path: detail.backdrop_path ?? detail.poster_path)
                 VStack(alignment: .leading, spacing: 22) {
@@ -164,6 +167,7 @@ struct TVDetailView: View {
                     crewSection(detail)
                     castSection(detail)
                     episodesBlock(detail)
+                        .id("episodes")
 
                     if let similar = detail.similar?.results, !similar.isEmpty {
                         NavigationRail(title: "More like this", items: similar, kind: .tv)
@@ -174,23 +178,29 @@ struct TVDetailView: View {
                 .padding(.bottom, 72)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .top) {
-            HStack {
-                GlassBackButton { dismiss() }
-                Spacer()
-                ShareLink(item: shareText(for: detail)) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(theme.olive)
-                        .frame(width: 40, height: 40)
-                        .background(.ultraThinMaterial, in: Circle())
+            }
+            .ignoresSafeArea(edges: .top)
+            .onChange(of: scrollToEpisodesToken) { _, _ in
+                withAnimation(MarqueeMotion.standard) {
+                    proxy.scrollTo("episodes", anchor: .top)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .safeAreaPadding(.top)
+            .overlay(alignment: .top) {
+                HStack {
+                    GlassBackButton { dismiss() }
+                    Spacer()
+                    ShareLink(item: shareText(for: detail)) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(theme.olive)
+                            .frame(width: 40, height: 40)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .safeAreaPadding(.top)
+            }
         }
     }
 
@@ -325,10 +335,12 @@ struct TVDetailView: View {
                 }
             }
         } else {
+            // Match web: tracking starts when you mark an episode — don't create a 0-ep Watching row.
             Button {
-                Task { await startTracking(detail) }
+                scrollToEpisodesToken += 1
+                Haptics.light()
             } label: {
-                Label("Start tracking this show", systemImage: "play.circle.fill")
+                Label("Mark an episode to start", systemImage: "checklist")
                     .font(.headline)
                     .foregroundStyle(theme.olive)
                     .frame(maxWidth: .infinity)
@@ -573,10 +585,13 @@ struct TVDetailView: View {
     // MARK: - Data
 
     private func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         phase = .loading
         diaryReady = false
         do {
-            // Fetch show + diary together so status isn’t a late flash
+            // Paint the page as soon as TMDB detail arrives — diary/season trail behind
+            // (movies feel fast because they don't wait on episode lists).
             async let detailTask = TMDBService.tvDetail(id: tvId)
             async let favTask = DiaryService.tvFavorited(id: idString)
             async let listTask = DiaryService.tvWatchlisted(id: idString)
@@ -585,16 +600,33 @@ struct TVDetailView: View {
             async let providersTask = WatchProviderService.load(kind: .tv, id: tvId)
 
             let loaded = try await detailTask
+            guard generation == loadGeneration else { return }
             detail = loaded
+            let firstSeason = loaded.seasons?.first(where: { $0.season_number > 0 })?.season_number ?? 1
+            selectedSeason = firstSeason
+            phase = .ready
+
+            async let seasonLoad: Void = loadSeason()
             let loadedProviders = await providersTask
+            guard generation == loadGeneration else { return }
             providers = loadedProviders.providers
             providerRegion = loadedProviders.region
 
             favorited = (try? await favTask) ?? false
             watchlisted = (try? await listTask) ?? false
-            tracking = try? await trackTask
+            // Don't clobber a track the user just started while this load was in flight.
+            if tracking == nil {
+                tracking = try? await trackTask
+            }
             if let r = tracking?.rating { showRating = min(5, r / 2) }
+            if let next = tracking?.nextSeason,
+               loaded.seasons?.contains(where: { $0.season_number == next }) == true,
+               selectedSeason != next {
+                selectedSeason = next
+                await loadSeason()
+            }
             let docs = (try? await epsTask) ?? []
+            guard generation == loadGeneration else { return }
             watchedKeys = Set(docs.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
                 return "\(s)-\(e)"
@@ -603,20 +635,12 @@ struct TVDetailView: View {
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber, let rating = doc.rating else { return nil }
                 return ("\(s)-\(e)", rating)
             })
-
-            let firstSeason = loaded.seasons?.first(where: { $0.season_number > 0 })?.season_number ?? 1
-            if let next = tracking?.nextSeason,
-               loaded.seasons?.contains(where: { $0.season_number == next }) == true {
-                selectedSeason = next
-            } else {
-                selectedSeason = firstSeason
-            }
-
             diaryReady = true
-            phase = .ready
-            await loadSeason()
+            _ = await seasonLoad
         } catch {
-            phase = .failed(error.localizedDescription)
+            if generation == loadGeneration {
+                phase = .failed(error.localizedDescription)
+            }
         }
     }
 
@@ -835,17 +859,6 @@ struct TVDetailView: View {
                 watchlisted = true
             }
             Haptics.light()
-        } catch {}
-    }
-
-    private func startTracking(_ detail: TVDetail) async {
-        do {
-            try await DiaryService.startTracking(
-                TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
-            )
-            tracking = try await DiaryService.tracking(for: idString)
-            watchlisted = false
-            Haptics.success()
         } catch {}
     }
 

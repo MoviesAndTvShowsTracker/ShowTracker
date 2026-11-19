@@ -6,11 +6,24 @@ import UserNotifications
 enum PushRegistration {
     private static let tokenKey = "marquee.apns.token"
 
+    /// Explicit opt-in (e.g. Settings). Avoid calling from Home onAppear.
     static func requestAndRegister() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
             guard granted else { return }
             DispatchQueue.main.async {
                 UIApplication.shared.registerForRemoteNotifications()
+            }
+        }
+    }
+
+    static func syncIfAuthorized() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+                return
+            }
+            DispatchQueue.main.async {
+                UIApplication.shared.registerForRemoteNotifications()
+                syncIfNeeded()
             }
         }
     }

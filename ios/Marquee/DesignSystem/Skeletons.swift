@@ -18,32 +18,41 @@ struct DetailPageSkeleton: View {
     @Environment(\.marqueeTheme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SkeletonBlock(height: 220, radius: 0)
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
-                    SkeletonBlock(height: 132, width: 88, radius: 12)
-                    VStack(alignment: .leading, spacing: 8) {
-                        SkeletonBlock(height: 22, width: 180)
-                        SkeletonBlock(height: 14, width: 120)
-                        SkeletonBlock(height: 12, width: 80)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                SkeletonBlock(height: 260, radius: 0)
+                    .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top, spacing: 14) {
+                        SkeletonBlock(height: 144, width: 96, radius: 14)
+                            .offset(y: -28)
+                            .padding(.bottom, -28)
+                        VStack(alignment: .leading, spacing: 8) {
+                            SkeletonBlock(height: 22, width: 180)
+                            SkeletonBlock(height: 14, width: 120)
+                            SkeletonBlock(height: 12, width: 80)
+                        }
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 8)
-                }
-                HStack(spacing: 10) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        SkeletonBlock(height: 52, radius: 14)
+                    HStack(spacing: 10) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            SkeletonBlock(height: 52, radius: 14)
+                        }
                     }
-                }
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(0..<6, id: \.self) { _ in
-                        SkeletonBlock(height: 56, radius: 12)
+                    SkeletonBlock(height: 90, radius: 16)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            SkeletonBlock(height: 56, radius: 12)
+                        }
                     }
+                    SkeletonBlock(height: 160, radius: 18)
                 }
+                .padding(20)
             }
-            .padding(20)
         }
-        .background(theme.surface)
+        .scrollDisabled(true)
+        .background(theme.surface.ignoresSafeArea())
+        .accessibilityLabel("Loading")
     }
 }
 

@@ -13,10 +13,16 @@ struct SearchView: View {
     @State private var error: String?
     @State private var debounceTask: Task<Void, Never>?
     @State private var searchPresented = false
+    @State private var searchGeneration = 0
+    @State private var activeQuery = ""
+
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
         Group {
-            if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+            if trimmedQuery.count < 2 {
                 idleState
             } else {
                 resultsList
@@ -31,20 +37,11 @@ struct SearchView: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Films and shows"
         )
-        .onChange(of: query) { _, newValue in
-            debounceTask?.cancel()
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.count >= 2 {
-                searching = true
-            }
-            debounceTask = Task {
-                try? await Task.sleep(nanoseconds: 280_000_000)
-                guard !Task.isCancelled else { return }
-                await runSearch()
-            }
+        .onChange(of: query) { _, _ in
+            scheduleSearch()
         }
         .onChange(of: type) { _, _ in
-            Task { await runSearch() }
+            scheduleSearch(immediate: true)
         }
         .onChange(of: focusToken) { _, _ in
             searchPresented = true
@@ -85,7 +82,7 @@ struct SearchView: View {
                                     Button {
                                         query = term
                                         searchPresented = true
-                                        Task { await runSearch() }
+                                        scheduleSearch(immediate: true)
                                     } label: {
                                         Label(term, systemImage: "clock")
                                             .font(.subheadline.weight(.medium))
@@ -147,25 +144,33 @@ struct SearchView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
-                } else if results.isEmpty, let error {
+                } else if !searching, results.isEmpty, let error {
                     ErrorStateView(message: error) {
-                        Task { await runSearch() }
+                        scheduleSearch(immediate: true)
                     }
                     .padding(.top, 12)
-                } else if results.isEmpty {
+                } else if !searching, results.isEmpty {
                     ContentUnavailableView.search(text: query)
                         .padding(.top, 24)
                 } else {
+                    if searching, !results.isEmpty, activeQuery != trimmedQuery {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(theme.accent)
+                            Text("Updating…")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(theme.inkMuted)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                    }
+
                     ForEach(results) { item in
                         MediaNavLink(id: item.id, kind: kind(for: item)) {
                             SearchResultRow(item: item)
                         }
-                    }
-                    if let error {
-                        InlineErrorBanner(message: error) {
-                            Task { await runSearch() }
-                        }
-                        .padding(.top, 8)
                     }
                 }
             }
@@ -205,26 +210,93 @@ struct SearchView: View {
         return kind == "movie" || kind == "tv" || kind == nil
     }
 
-    private func runSearch() async {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func scheduleSearch(immediate: Bool = false) {
+        debounceTask?.cancel()
+        let q = trimmedQuery
         guard q.count >= 2 else {
+            searching = false
+            error = nil
             results = []
+            activeQuery = ""
             return
         }
+        // Keep current results on screen while typing; only clear the hard error.
+        error = nil
+        debounceTask = Task {
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 320_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            await runSearch(for: q)
+        }
+    }
+
+    private func runSearch(for q: String) async {
+        searchGeneration += 1
+        let generation = searchGeneration
         searching = true
-        defer { searching = false }
+        defer {
+            if generation == searchGeneration {
+                searching = false
+            }
+        }
+
         do {
             let page = try await TMDBService.search(query: q, type: type)
+            guard !Task.isCancelled, generation == searchGeneration else { return }
+            // Drop stale responses if the query moved on.
+            guard trimmedQuery == q || immediateMatch(q) else { return }
             results = page.results.filter { isFilmOrShow($0) }
+            activeQuery = q
+            error = nil
             if !recent.contains(q) {
                 recent.insert(q, at: 0)
                 recent = Array(recent.prefix(8))
                 UserDefaults.standard.set(recent, forKey: "recentSearches")
             }
-            error = nil
+        } catch is CancellationError {
+            return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
         } catch {
-            self.error = error.localizedDescription
+            guard !Task.isCancelled, generation == searchGeneration else { return }
+            if isCancellation(error) { return }
+            // Only surface a hard error when we have nothing useful to show.
+            if results.isEmpty {
+                self.error = friendlyMessage(for: error)
+            }
         }
+    }
+
+    private func immediateMatch(_ q: String) -> Bool {
+        trimmedQuery == q
+    }
+
+    private func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let api = error as? APIError, case .transport(let inner) = api {
+            return isCancellation(inner)
+        }
+        let ns = error as NSError
+        return ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled
+    }
+
+    private func friendlyMessage(for error: Error) -> String {
+        if let api = error as? APIError {
+            return api.errorDescription ?? "Search failed."
+        }
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            switch ns.code {
+            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+                return "No internet connection."
+            case NSURLErrorTimedOut:
+                return "Search timed out. Try again."
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
     }
 }
 

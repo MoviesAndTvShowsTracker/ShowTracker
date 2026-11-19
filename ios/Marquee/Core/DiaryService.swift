@@ -162,8 +162,10 @@ enum DiaryService {
         let _: SuccessMessage = try await APIClient.shared.post("/api/tv/episodes/rate-episode", body: body)
     }
 
-    static func startTracking(_ body: TrackingStartBody) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/tracking/start", body: body)
+    @discardableResult
+    static func startTracking(_ body: TrackingStartBody) async throws -> TrackingRecord? {
+        let res: TrackingStartResponse = try await APIClient.shared.post("/api/tv/tracking/start", body: body)
+        return res.tracking
     }
 
     static func stopTracking(tvId: String, status: String = "paused") async throws {

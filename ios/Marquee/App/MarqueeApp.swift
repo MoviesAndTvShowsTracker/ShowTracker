@@ -19,8 +19,7 @@ struct MarqueeApp: App {
                 }
                 .onChange(of: auth.isAuthenticated) { _, isAuth in
                     if isAuth {
-                        PushRegistration.requestAndRegister()
-                        PushRegistration.syncIfNeeded()
+                        PushRegistration.syncIfAuthorized()
                     }
                 }
         }

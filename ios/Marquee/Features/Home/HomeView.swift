@@ -14,6 +14,7 @@ struct HomeView: View {
     @State private var watchlistFilter: WatchlistFilter = .all
     @State private var schedule: [ScheduleEpisode] = []
     @State private var recommendations: [MediaItem] = []
+    @State private var continuePage = 0
 
     private enum WatchlistFilter: String, CaseIterable, Identifiable {
         case all = "All"
@@ -26,8 +27,6 @@ struct HomeView: View {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
         return first.isEmpty ? "there" : first
     }
-
-    private var heroItem: TrackingRecord? { continueItems.first }
 
     private var mergedWatchlist: [(id: Int, title: String, poster: String?, kind: MediaKind)] {
         let films = filmWatchlist.map {
@@ -57,19 +56,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 header
-
-                if let hero = heroItem {
-                    NavigationLink {
-                        TVContinueView(tvId: Int(hero.tvId) ?? 0, seed: hero, catalogTotal: catalogTotals[hero.tvId])
-                    } label: {
-                        ContinueHeroCard(item: hero, catalogTotal: catalogTotals[hero.tvId])
-                    }
-                    .buttonStyle(PressablePosterStyle())
-                    .padding(.horizontal, 20)
-                } else if loading {
-                    SkeletonBlock(height: 220, radius: 22)
-                        .padding(.horizontal, 20)
-                }
+                continueCarousel
 
                 if let recap {
                     NavigationLink { StatsView() } label: {
@@ -79,10 +66,6 @@ struct HomeView: View {
                     .padding(.horizontal, 20)
                 }
 
-                if continueItems.count > 1 {
-                    continueRail
-                }
-
                 scheduleSection
                 watchlistSection
 
@@ -90,7 +73,7 @@ struct HomeView: View {
                     NavigationRail(title: "For you", items: recommendations, kind: .movie)
                 }
 
-                diaryLink
+                calendarLink
 
                 if continueItems.isEmpty, filmWatchlist.isEmpty, tvWatchlist.isEmpty, !loading, let error {
                     ErrorStateView(message: error) {
@@ -107,28 +90,47 @@ struct HomeView: View {
         .marqueeCanvas()
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
-        .task { await load() }
+        .task {
+            if UITestingFixtures.isEnabled {
+                continueItems = UITestingFixtures.continueItems
+                loading = false
+                return
+            }
+            await load()
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionKicker(text: "Your diary", accented: true)
+            SectionKicker(text: "Lobby", accented: true)
             Text("Hey, \(greetingName)")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(theme.olive)
-            Text("Pick up where you left off.")
+            Text(continueItems.isEmpty
+                  ? "Nothing in progress — start a show from TV."
+                  : "Swipe to switch shows you’re mid-season.")
                 .foregroundStyle(theme.inkMuted)
         }
         .padding(.horizontal, 20)
     }
 
     @ViewBuilder
-    private var continueRail: some View {
+    private var continueCarousel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Also watching")
+            HStack(alignment: .firstTextBaseline) {
+                Text("Continue")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
+                if continueItems.count > 1 {
+                    Text("\(continuePage + 1) of \(continueItems.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(theme.olive)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(theme.oliveSoft)
+                        .clipShape(Capsule())
+                        .monospacedDigit()
+                }
                 Spacer()
                 NavigationLink("Library") { TVLibraryView() }
                     .font(.caption.weight(.semibold))
@@ -136,18 +138,40 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 14) {
-                    ForEach(continueItems.dropFirst()) { item in
+            if loading && continueItems.isEmpty {
+                SkeletonBlock(height: 240, radius: 22)
+                    .padding(.horizontal, 20)
+            } else if continueItems.isEmpty {
+                EmptyDiaryCard(
+                    title: "Nothing in progress",
+                    message: "Start tracking a show and your next episode will land here.",
+                    chip: "Continue"
+                )
+                .padding(.horizontal, 20)
+            } else {
+                TabView(selection: $continuePage) {
+                    ForEach(Array(continueItems.enumerated()), id: \.element.id) { index, item in
                         NavigationLink {
-                            TVContinueView(tvId: Int(item.tvId) ?? 0, seed: item, catalogTotal: catalogTotals[item.tvId])
+                            TVContinueView(
+                                tvId: Int(item.tvId) ?? 0,
+                                seed: item,
+                                catalogTotal: catalogTotals[item.tvId]
+                            )
                         } label: {
-                            ContinueCard(item: item, catalogTotal: catalogTotals[item.tvId])
+                            ContinueHeroCard(item: item, catalogTotal: catalogTotals[item.tvId])
                         }
                         .buttonStyle(PressablePosterStyle())
+                        .padding(.horizontal, 20)
+                        .tag(index)
                     }
                 }
-                .padding(.horizontal, 20)
+                .tabViewStyle(.page(indexDisplayMode: continueItems.count > 1 ? .automatic : .never))
+                .frame(height: 268)
+                .onChange(of: continueItems.map(\.id)) { _, _ in
+                    if continuePage >= continueItems.count {
+                        continuePage = max(0, continueItems.count - 1)
+                    }
+                }
             }
         }
     }
@@ -201,16 +225,22 @@ struct HomeView: View {
         }
     }
 
-    private var diaryLink: some View {
+    private var calendarLink: some View {
         NavigationLink {
             DiaryActivityView()
         } label: {
-            HStack {
+            HStack(spacing: 14) {
+                Image(systemName: "calendar")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                    .frame(width: 40, height: 40)
+                    .background(theme.oliveSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Diary feed")
+                    Text("Watch calendar")
                         .font(.headline)
                         .foregroundStyle(theme.ink)
-                    Text("Everything you’ve marked, in order.")
+                    Text("See what you marked, day by day.")
                         .font(.caption)
                         .foregroundStyle(theme.inkMuted)
                 }
@@ -229,6 +259,7 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 20)
+        .accessibilityIdentifier("watch-calendar-link")
     }
 
     private var watchlistSection: some View {
@@ -385,13 +416,19 @@ struct ContinueHeroCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            CachedAsyncImage(url: AppConfig.backdropURL(path: item.posterPath) ?? AppConfig.posterURL(path: item.posterPath, size: "w780"))
-                .frame(maxWidth: .infinity)
-                .frame(height: 240)
-                .clipped()
+            theme.olive
+
+            CachedAsyncImage(
+                url: AppConfig.posterURL(path: item.posterPath, size: "w780"),
+                contentMode: .fill
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .scaleEffect(1.12)
+            .blur(radius: 16)
+            .opacity(0.9)
 
             LinearGradient(
-                colors: [.black.opacity(0.05), .black.opacity(0.72)],
+                colors: [.black.opacity(0.2), .black.opacity(0.82)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -400,10 +437,6 @@ struct ContinueHeroCard: View {
                 CachedAsyncImage(url: AppConfig.posterURL(path: item.posterPath))
                     .frame(width: 88, height: 132)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Continue watching")
@@ -442,11 +475,9 @@ struct ContinueHeroCard: View {
             }
             .padding(16)
         }
+        .frame(height: 248)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
+        .compositingGroup()
     }
 }
 

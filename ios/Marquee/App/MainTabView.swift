@@ -8,7 +8,6 @@ struct MainTabView: View {
     @Environment(\.marqueeTheme) private var theme
     @State private var tab: AppTab = .home
     @State private var searchFocusToken = 0
-    @State private var showQuickAdd = false
     @Namespace private var posterNamespace
 
     var body: some View {
@@ -22,7 +21,7 @@ struct MainTabView: View {
             Tab("TV", systemImage: "tv.fill", value: .tv) {
                 NavigationStack { TVLandingView() }
             }
-            Tab("Search", systemImage: "magnifyingglass", value: .search, role: .search) {
+            Tab("Search", systemImage: "magnifyingglass", value: .search) {
                 NavigationStack { SearchView(focusToken: $searchFocusToken) }
             }
             Tab("You", systemImage: "person.fill", value: .you) {
@@ -31,33 +30,10 @@ struct MainTabView: View {
         }
         .tint(theme.accent)
         .environment(\.marqueePosterNamespace, posterNamespace)
-        .overlay(alignment: .bottomTrailing) {
-            if tab != .search {
-                GlassFAB(systemName: "plus") {
-                    Haptics.light()
-                    showQuickAdd = true
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 88)
-                .accessibilityLabel("Quick add")
-            }
-        }
-        .sheet(isPresented: $showQuickAdd) {
-            NavigationStack {
-                SearchView(focusToken: .constant(1))
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close") { showQuickAdd = false }
-                        }
-                    }
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .onAppear {
             Haptics.prepare()
-            PushRegistration.requestAndRegister()
-            PushRegistration.syncIfNeeded()
+            // Don't prompt for push on every lobby open — sync only if already authorized.
+            PushRegistration.syncIfAuthorized()
         }
     }
 

@@ -92,38 +92,43 @@ struct TVLandingView: View {
                     .pickerStyle(.segmented)
                 }
 
-                if active.tab == .watching, let featured = active.items.first {
-                    NavigationLink {
-                        TVDetailView(tvId: Int(featured.tvId) ?? 0)
-                    } label: {
-                        WatchingFeatureCard(item: featured)
-                    }
-                    .buttonStyle(PressablePosterStyle())
-                }
-
-                let gridItems = active.tab == .watching ? Array(active.items.dropFirst().prefix(6)) : Array(active.items.prefix(6))
-                if !gridItems.isEmpty {
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 10),
-                            GridItem(.flexible(), spacing: 10),
-                            GridItem(.flexible(), spacing: 10)
-                        ],
-                        spacing: 14
-                    ) {
-                        ForEach(gridItems) { item in
+                if active.tab == .watching {
+                    // Same card style for every show — no featured+poster mix.
+                    VStack(spacing: 12) {
+                        ForEach(Array(active.items.prefix(6))) { item in
                             NavigationLink {
                                 TVDetailView(tvId: Int(item.tvId) ?? 0)
                             } label: {
-                                let progress = ShowProgress.from(track: item)
-                                PosterGridTile(
-                                    title: item.tvTitle ?? "Show",
-                                    posterPath: item.posterPath,
-                                    caption: active.tab == .finished ? "Finished" : progress.episodeLine,
-                                    progress: active.tab == .watching ? progress.fraction : nil
-                                )
+                                WatchingFeatureCard(item: item)
                             }
                             .buttonStyle(PressablePosterStyle())
+                        }
+                    }
+                } else {
+                    let gridItems = Array(active.items.prefix(6))
+                    if !gridItems.isEmpty {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)
+                            ],
+                            spacing: 14
+                        ) {
+                            ForEach(gridItems) { item in
+                                NavigationLink {
+                                    TVDetailView(tvId: Int(item.tvId) ?? 0)
+                                } label: {
+                                    let progress = ShowProgress.from(track: item)
+                                    PosterGridTile(
+                                        title: item.tvTitle ?? "Show",
+                                        posterPath: item.posterPath,
+                                        caption: active.tab == .finished ? "Finished" : progress.episodeLine,
+                                        progress: nil
+                                    )
+                                }
+                                .buttonStyle(PressablePosterStyle())
+                            }
                         }
                     }
                 }
@@ -231,12 +236,7 @@ private struct WatchingFeatureCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
-        .background(theme.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 

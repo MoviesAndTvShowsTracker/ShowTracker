@@ -95,13 +95,14 @@ struct EmptyDiaryCard: View {
     @Environment(\.marqueeTheme) private var theme
     let title: String
     let message: String
+    var chip: String = "Lobby"
     var cta: String? = nil
     var action: (() -> Void)? = nil
 
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
-                OliveChip(text: "Diary")
+                OliveChip(text: chip)
                 Text(title)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(theme.ink)

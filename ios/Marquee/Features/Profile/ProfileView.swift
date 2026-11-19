@@ -37,7 +37,7 @@ struct ProfileView: View {
                         DiaryActivityView()
                     } label: {
                         HStack {
-                            Label("Diary feed", systemImage: "book")
+                            Label("Watch calendar", systemImage: "calendar")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(theme.olive)
                             Spacer()

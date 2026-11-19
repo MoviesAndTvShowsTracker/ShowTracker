@@ -38,6 +38,20 @@ final class AuthStore {
             self?.clearSession()
         }
         restoreFromKeychain()
+        #if DEBUG
+        if UITestingFixtures.isEnabled {
+            OnboardingStore.hasSeenWelcome = true
+            session = AuthSession(
+                token: "ui-testing-token",
+                userId: "ui-testing",
+                email: "jimil@marquee.test",
+                firstName: "Jimil",
+                username: "jimil"
+            )
+            isRestoring = false
+            return
+        }
+        #endif
         if session != nil {
             do {
                 try await refreshProfile()

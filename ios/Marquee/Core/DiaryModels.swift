@@ -185,6 +185,11 @@ struct TrackingShowResponse: Decodable, Sendable{
     let tracking: TrackingRecord?
 }
 
+struct TrackingStartResponse: Decodable, Sendable {
+    let success: Bool?
+    let tracking: TrackingRecord?
+}
+
 struct TrackingRecord: Codable, Identifiable, Sendable{
     var id: String { tvId }
     let tvId: String
