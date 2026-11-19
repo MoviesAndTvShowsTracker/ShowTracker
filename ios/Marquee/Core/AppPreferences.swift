@@ -52,6 +52,15 @@ final class AppPreferences {
         didSet { defaults.set(gridDensity.rawValue, forKey: Keys.grid) }
     }
 
+    var episodeAlertsEnabled: Bool {
+        didSet { defaults.set(episodeAlertsEnabled, forKey: Keys.episodeAlerts) }
+    }
+
+    /// TMDB watch-provider ids the user cares about (empty = any service).
+    var preferredProviderIds: Set<Int> {
+        didSet { defaults.set(Array(preferredProviderIds), forKey: Keys.providers) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let appearanceRaw = defaults.string(forKey: Keys.appearance) ?? Appearance.system.rawValue
@@ -61,6 +70,9 @@ final class AppPreferences {
         heroAutoplay = defaults.object(forKey: Keys.autoplay) as? Bool ?? true
         let densityRaw = defaults.object(forKey: Keys.grid) as? Int ?? GridDensity.cozy.rawValue
         gridDensity = GridDensity(rawValue: densityRaw) ?? .cozy
+        episodeAlertsEnabled = defaults.object(forKey: Keys.episodeAlerts) as? Bool ?? false
+        let storedProviders = defaults.array(forKey: Keys.providers) as? [Int] ?? []
+        preferredProviderIds = Set(storedProviders)
     }
 
     func clearSearchHistory() {
@@ -75,5 +87,7 @@ final class AppPreferences {
         static let haptics = "marquee.haptics"
         static let autoplay = "marquee.heroAutoplay"
         static let grid = "marquee.gridDensity"
+        static let episodeAlerts = "marquee.episodeAlerts"
+        static let providers = "marquee.preferredProviders"
     }
 }

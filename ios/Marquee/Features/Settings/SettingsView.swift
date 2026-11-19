@@ -15,6 +15,20 @@ struct SettingsView: View {
         return first.isEmpty ? "You" : first
     }
 
+    private var episodeAlertsBinding: Binding<Bool> {
+        Binding(
+            get: { preferences.episodeAlertsEnabled },
+            set: { enabled in
+                preferences.episodeAlertsEnabled = enabled
+                if enabled {
+                    PushRegistration.requestAndRegister()
+                } else {
+                    Task { await EpisodeAlertScheduler.refresh(schedule: [], enabled: false) }
+                }
+            }
+        )
+    }
+
     var body: some View {
         List {
             Section {
@@ -49,6 +63,16 @@ struct SettingsView: View {
                 Text("Feel")
             } footer: {
                 Text("Ambient color slowly drifts olive and pink behind the diary. Turn it off if you want a still canvas.")
+            }
+
+            Section {
+                Toggle(isOn: episodeAlertsBinding) {
+                    SettingsLabel("Episode air alerts", systemImage: "bell.badge")
+                }
+            } header: {
+                Text("Alerts")
+            } footer: {
+                Text("Marquee reminds you at 9am on days your tracked shows drop a new episode. Add the Up Next widget from your Home Screen for a one-tap jump back in.")
             }
 
             Section {
