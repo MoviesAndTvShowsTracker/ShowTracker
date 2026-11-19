@@ -8,7 +8,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(theme.oliveSoft)
+            .fill(theme.skeleton)
             .frame(width: width, height: height)
             .shimmering()
     }

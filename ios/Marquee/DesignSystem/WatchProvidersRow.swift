@@ -63,9 +63,29 @@ struct WatchProvidersRow: View {
     @Environment(\.marqueeTheme) private var theme
     let providers: [WatchProvider]
     var region: String?
+    /// Size-matched placeholder so “Where to watch” doesn’t pop the layout later.
+    var isLoading: Bool = false
 
     var body: some View {
-        if !providers.isEmpty {
+        if isLoading {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    SkeletonBlock(height: 12, width: 110)
+                    Spacer()
+                    SkeletonBlock(height: 10, width: 72)
+                }
+                HStack(spacing: 10) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        VStack(spacing: 6) {
+                            SkeletonBlock(height: 40, width: 40, radius: 9)
+                            SkeletonBlock(height: 8, width: 44)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .accessibilityLabel("Loading where to watch")
+        } else if !providers.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     SectionKicker(text: "Where to watch")

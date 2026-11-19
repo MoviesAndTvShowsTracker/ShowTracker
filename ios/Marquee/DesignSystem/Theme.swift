@@ -39,6 +39,8 @@ struct MarqueeTheme {
     let olive: Color
     let oliveSoft: Color
     let border: Color
+    /// Loading bones — must read clearly on `surface` (oliveSoft is too faint for this).
+    let skeleton: Color
 
     static func resolve(colorScheme: ColorScheme) -> MarqueeTheme {
         switch colorScheme {
@@ -52,7 +54,8 @@ struct MarqueeTheme {
                 onAccent: MarqueeColor.onAccent,
                 olive: Color(hex: 0xA3B389),
                 oliveSoft: MarqueeColor.oliveLeaf.opacity(0.28),
-                border: MarqueeColor.inkDark.opacity(0.16)
+                border: MarqueeColor.inkDark.opacity(0.16),
+                skeleton: MarqueeColor.inkDark.opacity(0.14)
             )
         default:
             return MarqueeTheme(
@@ -64,7 +67,8 @@ struct MarqueeTheme {
                 onAccent: MarqueeColor.onAccent,
                 olive: MarqueeColor.deepOlive,
                 oliveSoft: MarqueeColor.deepOlive.opacity(0.10),
-                border: MarqueeColor.deepOlive.opacity(0.12)
+                border: MarqueeColor.deepOlive.opacity(0.12),
+                skeleton: Color(hex: 0xCDCBC0)
             )
         }
     }

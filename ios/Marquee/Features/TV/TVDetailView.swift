@@ -3,6 +3,7 @@ import SwiftUI
 struct TVDetailView: View {
     @Environment(\.marqueeTheme) var theme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let tvId: Int
 
     @State var detail: TVDetail?
@@ -31,7 +32,11 @@ struct TVDetailView: View {
     @State var showEpisodeRatingSheet = false
     @State var episodeRatings: [String: Double] = [:]
     @State private var loadGeneration = 0
-    @State private var scrollToEpisodesToken = 0
+    @State private var seasonLoadGeneration = 0
+    @State private var pane: TVDetailPane = .info
+    @State private var didApplyPreferredPane = false
+    @State private var providersReady = false
+    @State private var paneRevealToken = 0
 
     enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
@@ -140,66 +145,95 @@ struct TVDetailView: View {
     }
 
     private func content(_ detail: TVDetail) -> some View {
-        ScrollViewReader { proxy in
-            ScrollView {
+        ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 DetailHero(path: detail.backdrop_path ?? detail.poster_path)
                 VStack(alignment: .leading, spacing: 22) {
                     header(detail)
 
-                    if !diaryReady {
-                        diarySkeleton
-                    } else {
+                    // Hold diary + pane until we know the preferred tab and providers,
+                    // then reveal once — no Info→Episodes flip, no late Where-to-watch pop.
+                    if diaryReady {
                         trackingBlock(detail)
                         diaryActions(detail)
-                    }
-
-                    WatchProvidersRow(providers: providers, region: providerRegion)
-
-                    if let overview = detail.overview, !overview.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionKicker(text: "Synopsis")
-                            ExpandableText(text: overview)
-                        }
-                    }
-
-                    metaGrid(detail)
-                    crewSection(detail)
-                    castSection(detail)
-                    episodesBlock(detail)
-                        .id("episodes")
-
-                    if let similar = detail.similar?.results, !similar.isEmpty {
-                        NavigationRail(title: "More like this", items: similar, kind: .tv)
-                            .padding(.horizontal, -20)
+                        TVDetailPaneSwitcher(pane: $pane, enabled: true, showsSelection: true)
+                        paneBody(detail)
+                            .id("\(pane.rawValue)-\(paneRevealToken)")
+                            .transition(userPaneTransition)
+                    } else {
+                        TVDetailDiaryChromePlaceholder()
+                        TVDetailPaneSwitcher(pane: $pane, enabled: false, showsSelection: false)
+                        TVDetailPanePlaceholder()
                     }
                 }
                 .padding(20)
                 .padding(.bottom, 72)
+                .animation(reduceMotion ? nil : MarqueeMotion.standard, value: diaryReady)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .ignoresSafeArea(edges: .top)
-            .onChange(of: scrollToEpisodesToken) { _, _ in
-                withAnimation(MarqueeMotion.standard) {
-                    proxy.scrollTo("episodes", anchor: .top)
+        }
+        .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .top) {
+            HStack {
+                GlassBackButton { dismiss() }
+                Spacer()
+                ShareLink(item: shareText(for: detail)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(theme.olive)
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
                 }
             }
-            .overlay(alignment: .top) {
-                HStack {
-                    GlassBackButton { dismiss() }
-                    Spacer()
-                    ShareLink(item: shareText(for: detail)) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(theme.olive)
-                            .frame(width: 40, height: 40)
-                            .background(.ultraThinMaterial, in: Circle())
-                    }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .safeAreaPadding(.top)
+        }
+    }
+
+    /// Only for user tab taps — initial preferred pane is set with zero motion.
+    private var userPaneTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .opacity.combined(with: .offset(y: 6)),
+                removal: .opacity
+            )
+    }
+
+    @ViewBuilder
+    private func paneBody(_ detail: TVDetail) -> some View {
+        switch pane {
+        case .info:
+            infoPane(detail)
+        case .episodes:
+            episodesBlock(detail)
+        }
+    }
+
+    @ViewBuilder
+    private func infoPane(_ detail: TVDetail) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            WatchProvidersRow(
+                providers: providers,
+                region: providerRegion,
+                isLoading: !providersReady
+            )
+
+            if let overview = detail.overview, !overview.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionKicker(text: "Synopsis")
+                    ExpandableText(text: overview)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .safeAreaPadding(.top)
+            }
+
+            metaGrid(detail)
+            crewSection(detail)
+            castSection(detail)
+
+            if let similar = detail.similar?.results, !similar.isEmpty {
+                NavigationRail(title: "More like this", items: similar, kind: .tv)
+                    .padding(.horizontal, -20)
             }
         }
     }
@@ -261,16 +295,6 @@ struct TVDetailView: View {
                 }
             }
             Spacer(minLength: 0)
-        }
-    }
-
-    private var diarySkeleton: some View {
-        VStack(spacing: 12) {
-            SkeletonBlock(height: 120, radius: 18)
-            HStack(spacing: 10) {
-                SkeletonBlock(height: 72, radius: 14)
-                SkeletonBlock(height: 72, radius: 14)
-            }
         }
     }
 
@@ -337,7 +361,9 @@ struct TVDetailView: View {
         } else {
             // Match web: tracking starts when you mark an episode — don't create a 0-ep Watching row.
             Button {
-                scrollToEpisodesToken += 1
+                withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
+                    pane = .episodes
+                }
                 Haptics.light()
             } label: {
                 Label("Mark an episode to start", systemImage: "checklist")
@@ -589,9 +615,12 @@ struct TVDetailView: View {
         let generation = loadGeneration
         phase = .loading
         diaryReady = false
+        providersReady = false
+        didApplyPreferredPane = false
+        pane = .info
         do {
-            // Paint the page as soon as TMDB detail arrives — diary/season trail behind
-            // (movies feel fast because they don't wait on episode lists).
+            // Shell first (hero + title). Diary/providers commit atomically under the fold
+            // so the first pane paint is already the right tab with no CLS pops.
             async let detailTask = TMDBService.tvDetail(id: tvId)
             async let favTask = DiaryService.tvFavorited(id: idString)
             async let listTask = DiaryService.tvWatchlisted(id: idString)
@@ -604,29 +633,25 @@ struct TVDetailView: View {
             detail = loaded
             let firstSeason = loaded.seasons?.first(where: { $0.season_number > 0 })?.season_number ?? 1
             selectedSeason = firstSeason
+            seasonLoading = true
             phase = .ready
 
             async let seasonLoad: Void = loadSeason()
+
+            let resolvedTrack = try? await trackTask
+            let resolvedFav = (try? await favTask) ?? false
+            let resolvedList = (try? await listTask) ?? false
+            let docs = (try? await epsTask) ?? []
             let loadedProviders = await providersTask
             guard generation == loadGeneration else { return }
-            providers = loadedProviders.providers
-            providerRegion = loadedProviders.region
 
-            favorited = (try? await favTask) ?? false
-            watchlisted = (try? await listTask) ?? false
-            // Don't clobber a track the user just started while this load was in flight.
+            favorited = resolvedFav
+            watchlisted = resolvedList
             if tracking == nil {
-                tracking = try? await trackTask
+                tracking = resolvedTrack
             }
             if let r = tracking?.rating { showRating = min(5, r / 2) }
-            if let next = tracking?.nextSeason,
-               loaded.seasons?.contains(where: { $0.season_number == next }) == true,
-               selectedSeason != next {
-                selectedSeason = next
-                await loadSeason()
-            }
-            let docs = (try? await epsTask) ?? []
-            guard generation == loadGeneration else { return }
+
             watchedKeys = Set(docs.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
                 return "\(s)-\(e)"
@@ -635,8 +660,31 @@ struct TVDetailView: View {
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber, let rating = doc.rating else { return nil }
                 return ("\(s)-\(e)", rating)
             })
-            diaryReady = true
-            _ = await seasonLoad
+
+            providers = loadedProviders.providers
+            providerRegion = loadedProviders.region
+
+            // Preferred pane BEFORE first reveal — never Info→Episodes after paint.
+            applyPreferredPaneIfNeeded(animated: false)
+            paneRevealToken += 1
+
+            var transaction = Transaction()
+            transaction.disablesAnimations = reduceMotion
+            withTransaction(transaction) {
+                providersReady = true
+            }
+            withAnimation(reduceMotion ? nil : MarqueeMotion.standard) {
+                diaryReady = true
+            }
+
+            if let next = tracking?.nextSeason,
+               loaded.seasons?.contains(where: { $0.season_number == next }) == true,
+               selectedSeason != next {
+                selectedSeason = next
+                await loadSeason()
+            } else {
+                _ = await seasonLoad
+            }
         } catch {
             if generation == loadGeneration {
                 phase = .failed(error.localizedDescription)
@@ -644,10 +692,32 @@ struct TVDetailView: View {
         }
     }
 
+    private func applyPreferredPaneIfNeeded(animated: Bool) {
+        guard !didApplyPreferredPane else { return }
+        didApplyPreferredPane = true
+        let preferred = TVDetailPane.preferred(for: tracking)
+        guard pane != preferred else { return }
+        if animated, !reduceMotion {
+            withAnimation(MarqueeMotion.micro) { pane = preferred }
+        } else {
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { pane = preferred }
+        }
+    }
+
     func loadSeason() async {
+        seasonLoadGeneration += 1
+        let generation = seasonLoadGeneration
+        let seasonNumber = selectedSeason
         seasonLoading = true
-        defer { seasonLoading = false }
-        if let season = try? await TMDBService.season(tvId: tvId, season: selectedSeason) {
+        defer {
+            if generation == seasonLoadGeneration {
+                seasonLoading = false
+            }
+        }
+        if let season = try? await TMDBService.season(tvId: tvId, season: seasonNumber) {
+            guard generation == seasonLoadGeneration else { return }
             episodes = season.episodes ?? []
         }
     }

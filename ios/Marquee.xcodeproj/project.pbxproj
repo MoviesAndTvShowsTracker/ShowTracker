@@ -18,6 +18,7 @@
 		270FEE28BADE67EB6AA27795 /* MarqueeVisualUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */; };
 		310F91E30C1BE3438F041581 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105A445C33145D47C5E4F219 /* AppDelegate.swift */; };
 		37120BB2B0A4976D4A6B9F0D /* WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD52AE55BFF26EEBD3A9CF3 /* WidgetSnapshotStore.swift */; };
+		403BE1B8D8181DFC4F55982F /* TVDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */; };
 		40CE8C396F9C7F5E147E3678 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D6A7B5C1976974BAD871910 /* APIClient.swift */; };
 		410D29321BECCAAD96294669 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84516D28A281EAA8D5B69914 /* SearchView.swift */; };
 		460D5781FC20B103A86EE496 /* TVLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5580EADE84F261177D26C /* TVLandingView.swift */; };
@@ -116,6 +117,7 @@
 		622CC19E43FBB53E865E6568 /* MarqueeWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MarqueeWidgets.entitlements; sourceTree = "<group>"; };
 		65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsBadges.swift; sourceTree = "<group>"; };
 		6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeApp.swift; sourceTree = "<group>"; };
+		7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDetailPane.swift; sourceTree = "<group>"; };
 		7D6A7B5C1976974BAD871910 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		8295177EE8127903BC7705BA /* PushRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistration.swift; sourceTree = "<group>"; };
 		84516D28A281EAA8D5B69914 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
@@ -221,6 +223,7 @@
 			children = (
 				1EA3A27C094384FAFB77658C /* TVContinueView.swift */,
 				CCE4E9D0393D2DB62D1F893A /* TVDetailEpisodes.swift */,
+				7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */,
 				61AEFEDC3EE99990A8C67B6B /* TVDetailView.swift */,
 				979DF6A39813D39E0A8C244E /* TVDetailViewModel.swift */,
 				BAB5580EADE84F261177D26C /* TVLandingView.swift */,
@@ -566,6 +569,7 @@
 				DBB3E517C4F3BD17E3569C90 /* TMDBService.swift in Sources */,
 				54DE90A44B1319DC37F0DE59 /* TVContinueView.swift in Sources */,
 				0D9BB6606284523B60CA6AC8 /* TVDetailEpisodes.swift in Sources */,
+				403BE1B8D8181DFC4F55982F /* TVDetailPane.swift in Sources */,
 				B0D46860BEDB1205438ECDC7 /* TVDetailView.swift in Sources */,
 				905C69C57186A46DE62D1DB7 /* TVDetailViewModel.swift in Sources */,
 				460D5781FC20B103A86EE496 /* TVLandingView.swift in Sources */,
