@@ -11,6 +11,7 @@ import Profile from './ProfileComponent';
 import ProfileListPage from './profile/ProfileListPage';
 import ProfileStatsPage from './profile/ProfileStatsPage';
 import Settings from './SettingsComponent';
+import LegalPage from './LegalPage';
 import LandingPage from './Movies/LandingComponent';
 import MovieDetail from './Movies/MovieDetail';
 import TvDetail from './TV/TvShowDetail';
@@ -68,6 +69,8 @@ export default function Main() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+          <Route path="/terms" element={<LegalPage kind="terms" />} />
           <Route path="/search" element={<SearchBox />} />
 
           <Route element={<ProtectedRoute />}>

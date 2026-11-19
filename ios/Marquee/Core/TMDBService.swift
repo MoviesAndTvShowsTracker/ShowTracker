@@ -29,6 +29,28 @@ enum TMDBService {
         try await APIClient.shared.get("/api/tmdb/tv/\(tvId)/season/\(season)", auth: false)
     }
 
+    static func discoverMovies(genreIds: [Int], page: Int = 1) async throws -> TMDBPaged<MediaItem> {
+        var query = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+        ]
+        if !genreIds.isEmpty {
+            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
+        }
+        return try await APIClient.shared.get("/api/tmdb/discover/movie", query: query, auth: false)
+    }
+
+    static func discoverTV(genreIds: [Int], page: Int = 1) async throws -> TMDBPaged<MediaItem> {
+        var query = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+        ]
+        if !genreIds.isEmpty {
+            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
+        }
+        return try await APIClient.shared.get("/api/tmdb/discover/tv", query: query, auth: false)
+    }
+
     static func search(query: String, type: SearchType, page: Int = 1) async throws -> TMDBPaged<MediaItem> {
         let path: String
         switch type {

@@ -80,6 +80,7 @@ struct MovieDetailView: View {
                     }
 
                     metaGrid(detail)
+                    crewSection(detail)
                     castSection(detail)
 
                     if let similar = detail.similar?.results, !similar.isEmpty {
@@ -93,12 +94,29 @@ struct MovieDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .topLeading) {
-            GlassBackButton { dismiss() }
-                .padding(.leading, 16)
-                .padding(.top, 10)
-                .safeAreaPadding(.top)
+        .overlay(alignment: .top) {
+            HStack {
+                GlassBackButton { dismiss() }
+                Spacer()
+                ShareLink(item: shareText(for: detail)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(theme.olive)
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .safeAreaPadding(.top)
         }
+    }
+
+    private func shareText(for detail: MovieDetail) -> String {
+        var parts = [detail.displayTitle]
+        if let year = detail.year { parts.append("(\(year))") }
+        parts.append("— logged on Marquee")
+        return parts.joined(separator: " ")
     }
 
     private func mobileHeader(_ detail: MovieDetail) -> some View {
@@ -233,6 +251,25 @@ struct MovieDetailView: View {
             }
             if let genres = detail.genres, !genres.isEmpty {
                 MetaCell(label: "Genres", value: genres.prefix(3).map(\.name).joined(separator: ", "))
+            }
+        }
+    }
+
+    private func crewSection(_ detail: MovieDetail) -> some View {
+        let crew = detail.credits?.crew ?? []
+        let directors = crew.filter { $0.job == "Director" }.compactMap(\.name)
+        let writers = crew.filter { ["Writer", "Screenplay", "Story"].contains($0.job ?? "") }.compactMap(\.name)
+        return Group {
+            if !directors.isEmpty || !writers.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionKicker(text: "Credits")
+                    if !directors.isEmpty {
+                        MetaCell(label: "Director", value: Array(Set(directors)).prefix(3).joined(separator: ", "))
+                    }
+                    if !writers.isEmpty {
+                        MetaCell(label: "Writing", value: Array(Set(writers)).prefix(4).joined(separator: ", "))
+                    }
+                }
             }
         }
     }

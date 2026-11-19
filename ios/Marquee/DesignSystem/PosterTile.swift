@@ -193,24 +193,50 @@ struct StarRatingView: View {
     var size: Font = .title3
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(1...maxStars, id: \.self) { star in
-                let value = Double(star)
-                Button {
-                    guard editable else { return }
-                    rating = value
-                    Haptics.light()
-                } label: {
-                    Image(systemName: rating >= value - 0.25 ? "star.fill" : "star")
+                let full = Double(star)
+                let half = full - 0.5
+                ZStack {
+                    Image(systemName: starSymbol(for: full))
                         .font(size)
                         .foregroundStyle(MarqueeColor.hibiscus)
+                    if editable {
+                        HStack(spacing: 0) {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    rating = half
+                                    Haptics.light()
+                                }
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    rating = full
+                                    Haptics.light()
+                                }
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(!editable)
+                .frame(minWidth: 28, minHeight: 28)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Rating \(Int(rating)) of \(maxStars)")
+        .accessibilityLabel("Rating \(String(format: "%g", rating)) of \(maxStars)")
+        .accessibilityAdjustableAction { direction in
+            guard editable else { return }
+            switch direction {
+            case .increment: rating = min(Double(maxStars), rating + 0.5)
+            case .decrement: rating = max(0, rating - 0.5)
+            @unknown default: break
+            }
+        }
+    }
+
+    private func starSymbol(for full: Double) -> String {
+        if rating >= full - 0.01 { return "star.fill" }
+        if rating >= full - 0.5 { return "star.leadinghalf.filled" }
+        return "star"
     }
 }
 
@@ -247,16 +273,61 @@ struct MediaNavLink<Label: View>: View {
     let id: Int
     let kind: MediaKind
     @ViewBuilder var label: () -> Label
+    @Environment(\.marqueePosterNamespace) private var posterNamespace
+
+    private var transitionID: String { "\(kind == .movie ? "m" : "t")-\(id)" }
 
     var body: some View {
         NavigationLink {
             switch kind {
-            case .movie: MovieDetailView(movieId: id)
-            case .tv: TVDetailView(tvId: id)
+            case .movie:
+                MovieDetailView(movieId: id)
+                    .modifier(PosterZoomTransition(id: transitionID, namespace: posterNamespace))
+            case .tv:
+                TVDetailView(tvId: id)
+                    .modifier(PosterZoomTransition(id: transitionID, namespace: posterNamespace))
             }
         } label: {
             label()
+                .modifier(PosterMatchedSource(id: transitionID, namespace: posterNamespace))
         }
         .buttonStyle(PressablePosterStyle())
+    }
+}
+
+private struct PosterZoomTransition: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.navigationTransition(.zoom(sourceID: id, in: namespace))
+        } else {
+            content
+        }
+    }
+}
+
+private struct PosterMatchedSource: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
+private struct MarqueePosterNamespaceKey: EnvironmentKey {
+    static let defaultValue: Namespace.ID? = nil
+}
+
+extension EnvironmentValues {
+    var marqueePosterNamespace: Namespace.ID? {
+        get { self[MarqueePosterNamespaceKey.self] }
+        set { self[MarqueePosterNamespaceKey.self] = newValue }
     }
 }

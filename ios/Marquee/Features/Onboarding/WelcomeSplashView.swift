@@ -2,71 +2,86 @@ import SwiftUI
 
 struct WelcomeSplashView: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onContinue: () -> Void
 
-    private let steps: [(icon: String, title: String, text: String)] = [
-        ("film", "Browse", "Find films and shows worth tracking."),
-        ("checkmark.circle", "Log it", "Mark watched — films and episodes become your diary."),
-        ("heart", "Save favorites", "Heart titles you love so they stay easy to find."),
+    @State private var page = 0
+
+    private let pages: [(icon: String, title: String, text: String, visual: String)] = [
+        ("film.stack", "Browse the lobby", "Films and shows in quiet rails — posters first, noise last.", "rectangle.stack.fill"),
+        ("checkmark.circle.fill", "Log as you go", "Mark a film or an episode and it becomes your diary.", "list.bullet.rectangle.portrait.fill"),
+        ("heart.fill", "Keep favorites close", "Heart titles you love so they stay one tap away.", "heart.rectangle.fill"),
     ]
 
     var body: some View {
-        ZStack {
-            VStack(alignment: .leading, spacing: 28) {
-                Spacer(minLength: 24)
-
-                BrandMark(size: 72)
-                OliveChip(text: "Marquee")
-                Text("Your watch diary")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(theme.olive)
-                Text("Log what you watch, track TV episode by episode, and keep favorites in one quiet place.")
-                    .font(.body)
-                    .foregroundStyle(theme.inkMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                VStack(spacing: 12) {
-                    ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        HStack(alignment: .top, spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(theme.oliveSoft)
-                                    .frame(width: 44, height: 44)
-                                Text("\(index + 1)")
-                                    .font(.headline.weight(.bold))
-                                    .foregroundStyle(theme.olive)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label(step.title, systemImage: step.icon)
-                                    .font(.headline)
-                                    .foregroundStyle(theme.ink)
-                                    .labelStyle(.titleAndIcon)
-                                Text(step.text)
-                                    .font(.subheadline)
-                                    .foregroundStyle(theme.inkMuted)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(14)
-                        .background(theme.surfaceElevated)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(theme.border, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
+        VStack(spacing: 0) {
+            TabView(selection: $page) {
+                ForEach(Array(pages.enumerated()), id: \.offset) { index, step in
+                    pageView(step)
+                        .tag(index)
+                        .padding(.horizontal, 24)
                 }
-
-                Spacer()
-
-                Button("Start your diary", action: onContinue)
-                    .buttonStyle(PrimaryButtonStyle())
-                Text("You can change nothing here — just browse and mark.")
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
-                    .frame(maxWidth: .infinity)
             }
-            .padding(24)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(reduceMotion ? nil : MarqueeMotion.standard, value: page)
+
+            HStack(spacing: 8) {
+                ForEach(0..<pages.count, id: \.self) { index in
+                    Capsule()
+                        .fill(index == page ? theme.accent : theme.olive.opacity(0.25))
+                        .frame(width: index == page ? 22 : 8, height: 8)
+                        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: page)
+                }
+            }
+            .padding(.bottom, 20)
+
+            Button(page == pages.count - 1 ? "Start your diary" : "Next") {
+                if page < pages.count - 1 {
+                    withAnimation(reduceMotion ? nil : MarqueeMotion.standard) { page += 1 }
+                    Haptics.light()
+                } else {
+                    Haptics.success()
+                    onContinue()
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .padding(.horizontal, 24)
+            .padding(.bottom, 28)
+        }
+        .marqueeCanvas()
+        .onAppear {
+            OnboardingStore.hasSeenWelcome = true
+        }
+    }
+
+    private func pageView(_ step: (icon: String, title: String, text: String, visual: String)) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Spacer(minLength: 20)
+            BrandMark(size: 64, lit: true)
+            OliveChip(text: "Marquee")
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [theme.oliveSoft, theme.surfaceElevated],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(height: 220)
+                Image(systemName: step.visual)
+                    .font(.system(size: 72, weight: .semibold))
+                    .foregroundStyle(theme.olive)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            Text(step.title)
+                .font(.system(size: 32, weight: .bold))
+                .foregroundStyle(theme.olive)
+            Text(step.text)
+                .font(.body)
+                .foregroundStyle(theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
         }
     }
 }

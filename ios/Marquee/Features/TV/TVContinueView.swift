@@ -121,7 +121,9 @@ struct TVContinueView: View {
     private var actions: some View {
         VStack(spacing: 12) {
             if let error {
-                Text(error).font(.footnote).foregroundStyle(theme.accent)
+                InlineErrorBanner(message: error) {
+                    Task { await markNext() }
+                }
             }
 
             Button {

@@ -6,6 +6,9 @@ struct SettingsView: View {
     @Environment(AppPreferences.self) private var preferences
     @Environment(\.marqueeTheme) private var theme
     @State private var confirmSignOut = false
+    @State private var confirmDeleteAccount = false
+    @State private var deletingAccount = false
+    @State private var deleteError: String?
 
     private var displayName: String {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
@@ -80,14 +83,31 @@ struct SettingsView: View {
             }
 
             Section {
+                Link(destination: AppConfig.privacyURL) {
+                    SettingsLabel("Privacy Policy", systemImage: "hand.raised")
+                }
+                Link(destination: AppConfig.termsURL) {
+                    SettingsLabel("Terms of Service", systemImage: "doc.text")
+                }
+                Link(destination: AppConfig.tmdbAttributionURL) {
+                    SettingsLabel("This product uses the TMDB API", systemImage: "film.stack")
+                }
+                Link(destination: AppConfig.feedbackEmail) {
+                    SettingsLabel("Send feedback", systemImage: "envelope")
+                }
+                Link(destination: AppConfig.appStoreURL) {
+                    SettingsLabel("Rate on the App Store", systemImage: "star")
+                }
+                Button {
+                    Task { await ImageCache.shared.clear() }
+                    Haptics.success()
+                } label: {
+                    SettingsLabel("Clear image cache", systemImage: "photo.on.rectangle.angled")
+                }
                 LabeledContent("Signed in as") {
                     Text(auth.session?.email ?? "—")
                         .foregroundStyle(theme.inkMuted)
                         .lineLimit(1)
-                }
-                LabeledContent("API") {
-                    Text(AppConfig.apiBaseURL.host() ?? "Marquee")
-                        .foregroundStyle(theme.inkMuted)
                 }
                 LabeledContent("Version") {
                     Text(appVersion)
@@ -95,21 +115,46 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("About")
+            } footer: {
+                Text("Marquee is not endorsed or certified by TMDB. Artwork and titles come from The Movie Database.")
             }
 
             Section {
                 Button("Sign out", role: .destructive) {
                     confirmSignOut = true
                 }
-                .alert("Sign out of Marquee?", isPresented: $confirmSignOut) {
-                    Button("Sign out", role: .destructive) {
-                        auth.signOut()
+                Button(role: .destructive) {
+                    confirmDeleteAccount = true
+                } label: {
+                    if deletingAccount {
+                        ProgressView()
+                    } else {
+                        Text("Delete account")
                     }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("You’ll stay signed out on this iPhone until you sign in again.")
+                }
+                .disabled(deletingAccount)
+                if let deleteError {
+                    Text(deleteError)
+                        .font(.footnote)
+                        .foregroundStyle(theme.accent)
                 }
             }
+        }
+        .alert("Sign out of Marquee?", isPresented: $confirmSignOut) {
+            Button("Sign out", role: .destructive) {
+                auth.signOut()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You’ll stay signed out on this iPhone until you sign in again.")
+        }
+        .alert("Delete your account?", isPresented: $confirmDeleteAccount) {
+            Button("Delete account", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes your diary, lists, and sign-in. It can’t be undone.")
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -144,6 +189,17 @@ struct SettingsView: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "\(version) (\(build))"
+    }
+
+    private func deleteAccount() async {
+        deletingAccount = true
+        deleteError = nil
+        defer { deletingAccount = false }
+        do {
+            try await auth.deleteAccount()
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 }
 

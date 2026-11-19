@@ -1,19 +1,31 @@
 import UIKit
 
+@MainActor
 enum Haptics {
+    private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private static let notifyGenerator = UINotificationFeedbackGenerator()
+
+    static func prepare() {
+        guard enabled else { return }
+        lightGenerator.prepare()
+        mediumGenerator.prepare()
+        notifyGenerator.prepare()
+    }
+
     static func light() {
         guard enabled else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        lightGenerator.impactOccurred()
     }
 
     static func medium() {
         guard enabled else { return }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        mediumGenerator.impactOccurred()
     }
 
     static func success() {
         guard enabled else { return }
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        notifyGenerator.notificationOccurred(.success)
     }
 
     private static var enabled: Bool {

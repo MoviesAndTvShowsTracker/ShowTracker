@@ -45,6 +45,13 @@ enum AppConfig {
         return "com.googleusercontent.apps.\(trimmed)"
     }
 
+    /// Legal pages are hosted on the API (also mirrored on the web app).
+    static var privacyURL: URL { apiBaseURL.appending(path: "privacy.html") }
+    static var termsURL: URL { apiBaseURL.appending(path: "terms.html") }
+    static var tmdbAttributionURL: URL { URL(string: "https://www.themoviedb.org/")! }
+    static var feedbackEmail: URL { URL(string: "mailto:jprajapati2014@gmail.com?subject=Marquee%20Feedback")! }
+    static var appStoreURL: URL { URL(string: "https://apps.apple.com/app/id0000000000")! }
+
     static let tmdbImageBase = URL(string: "https://image.tmdb.org/t/p/")!
 
     static func posterURL(path: String?, size: String = "w342") -> URL? {

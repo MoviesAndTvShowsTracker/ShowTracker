@@ -166,6 +166,11 @@ final class AuthStore {
         clearSession()
     }
 
+    func deleteAccount() async throws {
+        let _: SuccessMessage = try await APIClient.shared.delete("/users/me")
+        signOut()
+    }
+
     private func persist(_ session: AuthSession) {
         self.session = session
         KeychainStore.set(session.token, forKey: Keys.token)

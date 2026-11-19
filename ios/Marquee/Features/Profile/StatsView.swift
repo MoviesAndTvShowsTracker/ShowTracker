@@ -27,7 +27,7 @@ struct StatsView: View {
                         SkeletonBlock(height: 140, radius: 20)
                     }
                 } else if let error, stats == nil {
-                    EmptyDiaryCard(title: "Couldn’t load stats", message: error, cta: "Try again") {
+                    ErrorStateView(message: error) {
                         Task { await load(refresh: true) }
                     }
                 } else if isEmpty {

@@ -22,15 +22,19 @@ actor APIClient {
         self.onUnauthorized = onUnauthorized
     }
 
-    func get<T: Decodable>(_ path: String, query: [URLQueryItem] = [], auth: Bool = true) async throws -> T {
+    func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], auth: Bool = true) async throws -> T {
         try await request(path, method: "GET", query: query, body: Optional<EmptyBody>.none, auth: auth)
     }
 
-    func post<Body: Encodable, T: Decodable>(_ path: String, body: Body, auth: Bool = true) async throws -> T {
+    func post<Body: Encodable & Sendable, T: Decodable & Sendable>(_ path: String, body: Body, auth: Bool = true) async throws -> T {
         try await request(path, method: "POST", query: [], body: body, auth: auth)
     }
 
-    func upload<T: Decodable>(_ path: String, fileURL: URL, fieldName: String = "file", auth: Bool = true) async throws -> T {
+    func delete<T: Decodable & Sendable>(_ path: String, auth: Bool = true) async throws -> T {
+        try await request(path, method: "DELETE", query: [], body: Optional<EmptyBody>.none, auth: auth)
+    }
+
+    func upload<T: Decodable & Sendable>(_ path: String, fileURL: URL, fieldName: String = "file", auth: Bool = true) async throws -> T {
         let boundary = "Boundary-\(UUID().uuidString)"
         var urlRequest = try makeURLRequest(path: path, method: "POST", query: [], auth: auth)
         urlRequest.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
@@ -47,9 +51,9 @@ actor APIClient {
         return try await perform(urlRequest)
     }
 
-    private struct EmptyBody: Encodable {}
+    private struct EmptyBody: Encodable, Sendable {}
 
-    private func request<Body: Encodable, T: Decodable>(
+    private func request<Body: Encodable & Sendable, T: Decodable & Sendable>(
         _ path: String,
         method: String,
         query: [URLQueryItem],
@@ -78,10 +82,14 @@ actor APIClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.setValue(TimeZone.current.identifier, forHTTPHeaderField: "X-Timezone")
+        request.setValue("ios", forHTTPHeaderField: "X-Client")
+        if let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String {
+            request.setValue(build, forHTTPHeaderField: "X-Client-Build")
+        }
         return request
     }
 
-    private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+    private func perform<T: Decodable & Sendable>(_ request: URLRequest) async throws -> T {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw APIError.empty }
@@ -114,13 +122,13 @@ actor APIClient {
     }
 }
 
-struct APIMessage: Decodable {
+struct APIMessage: Decodable, Sendable {
     let success: Bool?
     let message: String?
     let err: String?
     var bestMessage: String { message ?? err ?? "Something went wrong." }
 }
 
-struct EmptyResponse: Decodable {
+struct EmptyResponse: Decodable, Sendable {
     init() {}
 }

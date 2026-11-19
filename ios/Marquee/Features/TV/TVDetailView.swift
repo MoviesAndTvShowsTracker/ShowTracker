@@ -1,33 +1,37 @@
 import SwiftUI
 
 struct TVDetailView: View {
-    @Environment(\.marqueeTheme) private var theme
+    @Environment(\.marqueeTheme) var theme
     @Environment(\.dismiss) private var dismiss
     let tvId: Int
 
-    @State private var detail: TVDetail?
-    @State private var favorited = false
-    @State private var watchlisted = false
-    @State private var tracking: TrackingRecord?
-    @State private var watchedKeys: Set<String> = []
-    @State private var selectedSeason = 1
-    @State private var episodes: [TVEpisode] = []
-    @State private var seasonLoading = false
-    @State private var diaryReady = false
-    @State private var showRating: Double = 0
-    @State private var providers: [WatchProvider] = []
-    @State private var providerRegion: String?
-    @State private var phase: LoadPhase = .loading
-    @State private var busy = false
-    @State private var episodePendingUnmark: TVEpisode?
-    @State private var showUnmarkConfirm = false
-    @State private var showRatingSheet = false
-    @State private var episodeIndex: [TVEpisode] = []
-    @State private var batching = false
-    @State private var pendingBatch: BatchAction?
-    @State private var showBatchConfirm = false
+    @State var detail: TVDetail?
+    @State var favorited = false
+    @State var watchlisted = false
+    @State var tracking: TrackingRecord?
+    @State var watchedKeys: Set<String> = []
+    @State var selectedSeason = 1
+    @State var episodes: [TVEpisode] = []
+    @State var seasonLoading = false
+    @State var diaryReady = false
+    @State var showRating: Double = 0
+    @State var providers: [WatchProvider] = []
+    @State var providerRegion: String?
+    @State var phase: LoadPhase = .loading
+    @State var busy = false
+    @State var episodePendingUnmark: TVEpisode?
+    @State var showUnmarkConfirm = false
+    @State var showRatingSheet = false
+    @State var episodeIndex: [TVEpisode] = []
+    @State var batching = false
+    @State var pendingBatch: BatchAction?
+    @State var showBatchConfirm = false
+    @State var episodePendingRate: TVEpisode?
+    @State var episodeRating: Double = 0
+    @State var showEpisodeRatingSheet = false
+    @State var episodeRatings: [String: Double] = [:]
 
-    private enum BatchAction {
+    enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
         case unmarkSeason(season: Int, count: Int)
         case markShow(count: Int)
@@ -64,8 +68,8 @@ struct TVDetailView: View {
         }
     }
 
-    private enum LoadPhase { case loading, ready, failed(String) }
-    private var idString: String { String(tvId) }
+    enum LoadPhase { case loading, ready, failed(String) }
+    var idString: String { String(tvId) }
     private var isTracking: Bool {
         guard let status = tracking?.status else { return false }
         return status == "watching" || status == "paused" || status == "completed"
@@ -111,20 +115,24 @@ struct TVDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showEpisodeRatingSheet) {
+            episodeRatingSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .alert(
             pendingBatch?.title ?? "Confirm",
-            isPresented: $showBatchConfirm
-        ) {
-            Button(pendingBatch?.confirmLabel ?? "Confirm", role: pendingBatch?.isDestructive == true ? .destructive : nil) {
-                if let pendingBatch {
-                    Task { await performBatch(pendingBatch) }
-                }
+            isPresented: $showBatchConfirm,
+            presenting: pendingBatch
+        ) { action in
+            Button(action.confirmLabel, role: action.isDestructive ? .destructive : nil) {
+                Task { await performBatch(action) }
             }
             Button("Cancel", role: .cancel) {
                 pendingBatch = nil
             }
-        } message: {
-            Text(pendingBatch?.message ?? "")
+        } message: { action in
+            Text(action.message)
         }
         .task { await load() }
     }
@@ -153,6 +161,7 @@ struct TVDetailView: View {
                     }
 
                     metaGrid(detail)
+                    crewSection(detail)
                     castSection(detail)
                     episodesBlock(detail)
 
@@ -167,11 +176,47 @@ struct TVDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .topLeading) {
-            GlassBackButton { dismiss() }
-                .padding(.leading, 16)
-                .padding(.top, 10)
-                .safeAreaPadding(.top)
+        .overlay(alignment: .top) {
+            HStack {
+                GlassBackButton { dismiss() }
+                Spacer()
+                ShareLink(item: shareText(for: detail)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(theme.olive)
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .safeAreaPadding(.top)
+        }
+    }
+
+    private func shareText(for detail: TVDetail) -> String {
+        var parts = [detail.displayTitle]
+        if let seasons = detail.number_of_seasons { parts.append("· \(seasons) seasons") }
+        parts.append("— tracked on Marquee")
+        return parts.joined(separator: " ")
+    }
+
+    private func crewSection(_ detail: TVDetail) -> some View {
+        let crew = detail.credits?.crew ?? []
+        let creators = crew.filter { ["Creator", "Executive Producer", "Director"].contains($0.job ?? "") }.compactMap(\.name)
+        let writers = crew.filter { ["Writer", "Screenplay", "Story", "Teleplay"].contains($0.job ?? "") }.compactMap(\.name)
+        return Group {
+            if !creators.isEmpty || !writers.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionKicker(text: "Credits")
+                    if !creators.isEmpty {
+                        MetaCell(label: "Creators", value: Array(Set(creators)).prefix(3).joined(separator: ", "))
+                    }
+                    if !writers.isEmpty {
+                        MetaCell(label: "Writing", value: Array(Set(writers)).prefix(4).joined(separator: ", "))
+                    }
+                }
+            }
         }
     }
 
@@ -469,167 +514,6 @@ struct TVDetailView: View {
         }
     }
 
-    private func episodesBlock(_ detail: TVDetail) -> some View {
-        let seasons = (detail.seasons ?? []).filter { $0.season_number > 0 }
-        let airedSeason = episodes.filter(\.hasAired)
-        let watchedAiredSeason = airedSeason.filter { watchedKeys.contains($0.diaryKey) }
-        let unwatchedAiredSeason = airedSeason.filter { !watchedKeys.contains($0.diaryKey) }
-        let seasonComplete = !airedSeason.isEmpty && unwatchedAiredSeason.isEmpty
-        let seasonFraction = airedSeason.isEmpty ? 0 : Double(watchedAiredSeason.count) / Double(airedSeason.count)
-
-        return VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                SectionKicker(text: "Episodes")
-                Text("Mark as you go")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-            }
-
-            if seasons.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(seasons) { season in
-                            Button {
-                                selectedSeason = season.season_number
-                                Task { await loadSeason() }
-                            } label: {
-                                Text(season.name ?? "S\(season.season_number)")
-                                    .font(.subheadline.weight(.semibold))
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 9)
-                                    .foregroundStyle(selectedSeason == season.season_number ? theme.onAccent : theme.olive)
-                                    .background(selectedSeason == season.season_number ? theme.olive : theme.oliveSoft)
-                                    .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(batching)
-                        }
-                    }
-                }
-            }
-
-            if !seasonLoading, !episodes.isEmpty {
-                episodeBatchActions(
-                    seasonComplete: seasonComplete,
-                    unwatchedCount: unwatchedAiredSeason.count,
-                    watchedCount: watchedInSeason.count
-                )
-            }
-
-            GlassCard(padding: 0) {
-                VStack(spacing: 0) {
-                    if !seasonLoading, !episodes.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(selectedSeasonName)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(theme.ink)
-                                Spacer()
-                                Text("\(watchedAiredSeason.count) of \(airedSeason.count) aired")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(theme.inkMuted)
-                                    .monospacedDigit()
-                            }
-                            ProgressTrack(progress: seasonFraction, completed: seasonComplete)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.top, 14)
-                        .padding(.bottom, 8)
-                    }
-
-                    if seasonLoading {
-                        VStack(spacing: 0) {
-                            ForEach(0..<4, id: \.self) { _ in
-                                SkeletonBlock(height: 72, radius: 0)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(episodes) { ep in
-                                episodeRow(ep)
-                                Divider().overlay(theme.border).padding(.leading, 56)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func episodeRow(_ ep: TVEpisode) -> some View {
-        let season = ep.season_number ?? selectedSeason
-        let key = ep.diaryKey
-        let marked = watchedKeys.contains(key)
-        let isNext = showProgress(detail: detail, tracking: tracking).next.map {
-            $0.season == season && $0.episode == ep.episode_number
-        } ?? false
-
-        return Button {
-            if marked {
-                episodePendingUnmark = ep
-                showUnmarkConfirm = true
-            } else {
-                Task { await performMark(ep) }
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: marked ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(marked ? theme.accent : theme.olive.opacity(0.45))
-                    .frame(width: 28, height: 28)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("E\(ep.episode_number) · \(ep.name ?? "Episode")")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(theme.ink)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        if isNext {
-                            Text("Up next")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(theme.accent)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(theme.accent.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        if let air = formatDate(ep.air_date) {
-                            Text(air)
-                                .font(.caption)
-                                .foregroundStyle(theme.inkMuted)
-                        }
-                        if let runtime = ep.runtime, runtime > 0 {
-                            Text("\(runtime) min")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.olive)
-                        }
-                    }
-
-                    if let overview = ep.overview, !overview.isEmpty {
-                        Text(overview)
-                            .font(.caption)
-                            .foregroundStyle(theme.inkMuted)
-                            .lineLimit(2)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(minHeight: 72, alignment: .top)
-            .background(isNext ? theme.accent.opacity(0.06) : Color.clear)
-        }
-        .buttonStyle(.plain)
-        .disabled(batching)
-    }
-
     // MARK: - Progress helpers
 
     private func markBody(for ep: TVEpisode, afterMark: Bool) -> MarkEpisodeBody {
@@ -663,7 +547,7 @@ struct TVDetailView: View {
         )
     }
 
-    private func showProgress(detail: TVDetail?, tracking: TrackingRecord?) -> ShowProgress {
+    func showProgress(detail: TVDetail?, tracking: TrackingRecord?) -> ShowProgress {
         ShowProgress.nextInSeason(
             track: tracking,
             season: selectedSeason,
@@ -673,7 +557,7 @@ struct TVDetailView: View {
         )
     }
 
-    private func formatDate(_ raw: String?) -> String? {
+    func formatDate(_ raw: String?) -> String? {
         guard let raw, raw.count >= 10 else { return nil }
         let parts = raw.split(separator: "-")
         guard parts.count == 3,
@@ -710,10 +594,15 @@ struct TVDetailView: View {
             watchlisted = (try? await listTask) ?? false
             tracking = try? await trackTask
             if let r = tracking?.rating { showRating = min(5, r / 2) }
-            watchedKeys = Set((try? await epsTask)?.compactMap { doc in
+            let docs = (try? await epsTask) ?? []
+            watchedKeys = Set(docs.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
                 return "\(s)-\(e)"
-            } ?? [])
+            })
+            episodeRatings = Dictionary(uniqueKeysWithValues: docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber, let rating = doc.rating else { return nil }
+                return ("\(s)-\(e)", rating)
+            })
 
             let firstSeason = loaded.seasons?.first(where: { $0.season_number > 0 })?.season_number ?? 1
             if let next = tracking?.nextSeason,
@@ -731,7 +620,7 @@ struct TVDetailView: View {
         }
     }
 
-    private func loadSeason() async {
+    func loadSeason() async {
         seasonLoading = true
         defer { seasonLoading = false }
         if let season = try? await TMDBService.season(tvId: tvId, season: selectedSeason) {
@@ -739,7 +628,7 @@ struct TVDetailView: View {
         }
     }
 
-    private func performMark(_ ep: TVEpisode) async {
+    func performMark(_ ep: TVEpisode) async {
         let season = ep.season_number ?? selectedSeason
         let key = "\(season)-\(ep.episode_number)"
         // Optimistic tick — feel instant
@@ -774,22 +663,22 @@ struct TVDetailView: View {
         }
     }
 
-    private var watchedInSeason: [TVEpisode] {
+    var watchedInSeason: [TVEpisode] {
         episodes.filter { watchedKeys.contains($0.diaryKey) }
     }
 
-    private var unwatchedAiredAll: [TVEpisode] {
+    var unwatchedAiredAll: [TVEpisode] {
         let catalog = episodeIndex.isEmpty ? episodes : episodeIndex
         return catalog.filter { $0.hasAired && !watchedKeys.contains($0.diaryKey) }
     }
 
-    private var canMarkWholeShow: Bool {
+    var canMarkWholeShow: Bool {
         if tracking?.status == "completed" { return false }
         if episodeIndex.isEmpty { return true }
         return !unwatchedAiredAll.isEmpty
     }
 
-    private func confirmMarkShow() async {
+    func confirmMarkShow() async {
         guard !batching else { return }
         if episodeIndex.isEmpty, let detail {
             batching = true

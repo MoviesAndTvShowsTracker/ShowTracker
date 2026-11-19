@@ -19,6 +19,10 @@ struct TVLandingView: View {
             LazyVStack(alignment: .leading, spacing: 28) {
                 if loading && trending.isEmpty && watching.isEmpty {
                     LandingSkeleton(showLibrary: true)
+                } else if trending.isEmpty && watching.isEmpty, let error {
+                    ErrorStateView(message: error) {
+                        Task { await load() }
+                    }
                 } else {
                     if !trending.isEmpty {
                         HeroCarousel(items: trending, kind: .tv)
@@ -27,9 +31,11 @@ struct TVLandingView: View {
                     NavigationRail(title: "On the air", items: onTheAir, kind: .tv)
                     NavigationRail(title: "Airing today", items: airingToday, kind: .tv)
                     NavigationRail(title: "Top rated", items: topRated, kind: .tv)
-                }
-                if let error {
-                    Text(error).font(.footnote).foregroundStyle(theme.inkMuted).padding(.horizontal, 20)
+                    if let error {
+                        InlineErrorBanner(message: error) {
+                            Task { await load() }
+                        }
+                    }
                 }
             }
             .padding(.vertical, 16)
@@ -128,6 +134,14 @@ struct TVLandingView: View {
 
     private func load() async {
         error = nil
+        if trending.isEmpty,
+           let cached = ResponseCache.load(TVCatalogCache.self, key: "tv.landing") {
+            trending = cached.trending
+            onTheAir = cached.onTheAir
+            airingToday = cached.airingToday
+            topRated = cached.topRated
+            loading = false
+        }
         do {
             async let t = TMDBService.fetchPaged("trending/tv/week")
             async let o = TMDBService.fetchPaged("tv/on_the_air")
@@ -153,15 +167,30 @@ struct TVLandingView: View {
             paused = hold
             finished = done
             libraryCounts = counts
+            ResponseCache.store(
+                TVCatalogCache(trending: trend, onTheAir: onAir, airingToday: today, topRated: top),
+                key: "tv.landing"
+            )
             if watching.isEmpty {
                 libraryFocus = paused.isEmpty ? .finished : .stopped
             }
             loading = false
         } catch {
-            self.error = error.localizedDescription
+            if trending.isEmpty && watching.isEmpty {
+                self.error = error.localizedDescription
+            } else {
+                self.error = "Couldn’t refresh. Showing last saved TV."
+            }
             loading = false
         }
     }
+}
+
+private struct TVCatalogCache: Codable {
+    var trending: [MediaItem]
+    var onTheAir: [MediaItem]
+    var airingToday: [MediaItem]
+    var topRated: [MediaItem]
 }
 
 private struct WatchingFeatureCard: View {

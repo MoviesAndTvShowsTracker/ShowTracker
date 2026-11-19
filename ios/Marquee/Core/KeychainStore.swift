@@ -2,7 +2,8 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let service = "com.marquee.app"
+    private static let service = "com.jimil.marquee"
+    private static let legacyService = "com.marquee.app"
 
     static func set(_ value: String, forKey key: String) {
         let data = Data(value.utf8)
@@ -18,6 +19,22 @@ enum KeychainStore {
     }
 
     static func string(forKey key: String) -> String? {
+        if let value = read(service: service, key: key) {
+            return value
+        }
+        // One-time migrate from the old service name.
+        guard let legacy = read(service: legacyService, key: key) else { return nil }
+        set(legacy, forKey: key)
+        remove(key, service: legacyService)
+        return legacy
+    }
+
+    static func remove(_ key: String) {
+        remove(key, service: service)
+        remove(key, service: legacyService)
+    }
+
+    private static func read(service: String, key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -31,7 +48,7 @@ enum KeychainStore {
         return String(data: data, encoding: .utf8)
     }
 
-    static func remove(_ key: String) {
+    private static func remove(_ key: String, service: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

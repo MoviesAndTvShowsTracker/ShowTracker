@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @Environment(AuthStore.self) private var auth
@@ -12,6 +13,8 @@ struct ProfileView: View {
     @State private var overview: StatsOverview?
     @State private var ready = false
     @State private var error: String?
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var avatarImage: UIImage? = ProfileAvatarStore.load()
 
     private var displayName: String {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
@@ -30,6 +33,23 @@ struct ProfileView: View {
                     ProfileSkeleton()
                 } else {
                     header
+                    NavigationLink {
+                        DiaryActivityView()
+                    } label: {
+                        HStack {
+                            Label("Diary feed", systemImage: "book")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(theme.olive)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(theme.olive)
+                        }
+                        .padding(12)
+                        .background(theme.oliveSoft)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
                     statsTeaser
                     librarySummary
                     if hasDiary {
@@ -40,7 +60,10 @@ struct ProfileView: View {
                 }
 
                 if let error {
-                    Text(error).font(.footnote).foregroundStyle(theme.inkMuted)
+                    InlineErrorBanner(message: error) {
+                        Task { await load() }
+                    }
+                    .padding(.horizontal, -20)
                 }
             }
             .padding(.vertical, 16)
@@ -64,12 +87,33 @@ struct ProfileView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 14) {
-            Text(String(displayName.prefix(1)).uppercased())
-                .font(.title.weight(.bold))
-                .foregroundStyle(MarqueeColor.saltGrey)
+            PhotosPicker(selection: $avatarItem, matching: .images) {
+                ZStack {
+                    if let avatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Text(String(displayName.prefix(1)).uppercased())
+                            .font(.title.weight(.bold))
+                            .foregroundStyle(MarqueeColor.saltGrey)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(theme.olive)
+                    }
+                }
                 .frame(width: 56, height: 56)
-                .background(theme.olive)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .onChange(of: avatarItem) { _, item in
+                Task {
+                    guard let item,
+                          let data = try? await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else { return }
+                    avatarImage = image
+                    ProfileAvatarStore.save(image)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 SectionKicker(text: "Your diary", accented: true)
@@ -79,9 +123,23 @@ struct ProfileView: View {
                 Text(auth.session?.email ?? "")
                     .font(.subheadline)
                     .foregroundStyle(theme.inkMuted)
+                if let since = memberSince {
+                    Text("Member since \(since)")
+                        .font(.caption)
+                        .foregroundStyle(theme.olive)
+                }
             }
             Spacer()
         }
+    }
+
+    private var memberSince: String? {
+        guard let raw = auth.profile?.createdAt, !raw.isEmpty else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
+        guard let date else { return String(raw.prefix(4)) }
+        return date.formatted(.dateTime.month(.abbreviated).year())
     }
 
     private var statsTeaser: some View {

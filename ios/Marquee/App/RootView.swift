@@ -66,7 +66,7 @@ struct RootView: View {
 
     private var launchSplash: some View {
         VStack(spacing: 16) {
-            BrandMark(size: 128)
+            BrandMark(size: 128, lit: true)
             Text("Marquee")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(theme.olive)

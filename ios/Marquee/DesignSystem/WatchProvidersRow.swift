@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct WatchProvider: Decodable, Identifiable, Hashable {
+struct WatchProvider: Decodable, Identifiable, Hashable, Sendable {
     var id: Int { provider_id }
     let provider_id: Int
     let provider_name: String
     let logo_path: String?
 }
 
-struct WatchProviderRegion: Decodable {
+struct WatchProviderRegion: Decodable, Sendable {
     let flatrate: [WatchProvider]?
     let ads: [WatchProvider]?
     let free: [WatchProvider]?
@@ -24,7 +24,7 @@ struct WatchProviderRegion: Decodable {
     }
 }
 
-struct WatchProviderResponse: Decodable {
+struct WatchProviderResponse: Decodable, Sendable {
     let results: [String: WatchProviderRegion]?
 }
 
@@ -44,6 +44,18 @@ enum WatchProviderService {
             return (Array(first.value.stream.prefix(8)), first.key)
         }
         return ([], nil)
+    }
+}
+
+enum WatchProviderLinks {
+    static func url(for provider: WatchProvider, region: String?) -> URL {
+        let query = provider.provider_name
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "stream"
+        let locale = (region ?? "us").lowercased()
+        if let justWatch = URL(string: "https://www.justwatch.com/\(locale)/provider/\(provider.provider_id)") {
+            return justWatch
+        }
+        return URL(string: "https://www.justwatch.com/search?q=\(query)")!
     }
 }
 
@@ -67,16 +79,19 @@ struct WatchProvidersRow: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(providers) { p in
-                            VStack(spacing: 6) {
-                                CachedAsyncImage(url: AppConfig.posterURL(path: p.logo_path, size: "w92"))
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                                Text(p.provider_name)
-                                    .font(.caption2)
-                                    .foregroundStyle(theme.inkMuted)
-                                    .lineLimit(1)
-                                    .frame(width: 52)
+                            Link(destination: WatchProviderLinks.url(for: p, region: region)) {
+                                VStack(spacing: 6) {
+                                    CachedAsyncImage(url: AppConfig.posterURL(path: p.logo_path, size: "w92"))
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                    Text(p.provider_name)
+                                        .font(.caption2)
+                                        .foregroundStyle(theme.inkMuted)
+                                        .lineLimit(1)
+                                        .frame(width: 52)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }

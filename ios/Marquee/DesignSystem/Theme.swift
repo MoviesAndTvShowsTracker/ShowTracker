@@ -9,9 +9,9 @@ enum MarqueeColor {
     static let oliveLeaf = Color(hex: 0x5C6B4A)
     static let hibiscus = Color(hex: 0xFF4F8B)
     static let surfaceElevatedLight = Color(hex: 0xF3F3EE)
-    /// Warm lobby dark — lifted so captions stay readable
-    static let surfaceDark = Color(hex: 0x2F2D24)
-    static let surfaceElevatedDark = Color(hex: 0x3E3B31)
+    /// Dark canvas — matches DESIGN.md (true near-black olive, not murky brown)
+    static let surfaceDark = Color(hex: 0x1C1B16)
+    static let surfaceElevatedDark = Color(hex: 0x2A281F)
     static let inkDark = Color(hex: 0xF3F2EA)
     static let onAccent = Color.white
 }
@@ -114,6 +114,9 @@ struct PressablePosterStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
             .animation(MarqueeMotion.press, value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { Haptics.prepare() }
+            }
     }
 }
 

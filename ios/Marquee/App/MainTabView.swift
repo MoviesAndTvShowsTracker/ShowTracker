@@ -8,6 +8,8 @@ struct MainTabView: View {
     @Environment(\.marqueeTheme) private var theme
     @State private var tab: AppTab = .home
     @State private var searchFocusToken = 0
+    @State private var showQuickAdd = false
+    @Namespace private var posterNamespace
 
     var body: some View {
         TabView(selection: tabBinding) {
@@ -28,9 +30,35 @@ struct MainTabView: View {
             }
         }
         .tint(theme.accent)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        .background(.clear)
+        .environment(\.marqueePosterNamespace, posterNamespace)
+        .overlay(alignment: .bottomTrailing) {
+            if tab != .search {
+                GlassFAB(systemName: "plus") {
+                    Haptics.light()
+                    showQuickAdd = true
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 88)
+                .accessibilityLabel("Quick add")
+            }
+        }
+        .sheet(isPresented: $showQuickAdd) {
+            NavigationStack {
+                SearchView(focusToken: .constant(1))
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showQuickAdd = false }
+                        }
+                    }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            Haptics.prepare()
+            PushRegistration.requestAndRegister()
+            PushRegistration.syncIfNeeded()
+        }
     }
 
     private var tabBinding: Binding<AppTab> {

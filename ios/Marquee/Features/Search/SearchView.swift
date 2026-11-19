@@ -31,8 +31,12 @@ struct SearchView: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Films and shows"
         )
-        .onChange(of: query) { _, _ in
+        .onChange(of: query) { _, newValue in
             debounceTask?.cancel()
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.count >= 2 {
+                searching = true
+            }
             debounceTask = Task {
                 try? await Task.sleep(nanoseconds: 280_000_000)
                 guard !Task.isCancelled else { return }
@@ -134,10 +138,20 @@ struct SearchView: View {
                     .padding(.bottom, 12)
 
                 if searching && results.isEmpty {
-                    ProgressView()
-                        .tint(theme.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 40)
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .tint(theme.accent)
+                        Text("Searching…")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else if results.isEmpty, let error {
+                    ErrorStateView(message: error) {
+                        Task { await runSearch() }
+                    }
+                    .padding(.top, 12)
                 } else if results.isEmpty {
                     ContentUnavailableView.search(text: query)
                         .padding(.top, 24)
@@ -146,6 +160,12 @@ struct SearchView: View {
                         MediaNavLink(id: item.id, kind: kind(for: item)) {
                             SearchResultRow(item: item)
                         }
+                    }
+                    if let error {
+                        InlineErrorBanner(message: error) {
+                            Task { await runSearch() }
+                        }
+                        .padding(.top, 8)
                     }
                 }
             }

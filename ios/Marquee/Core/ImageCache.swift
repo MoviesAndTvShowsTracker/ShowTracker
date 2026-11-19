@@ -5,7 +5,21 @@ actor ImageCache {
     static let shared = ImageCache()
 
     private let memory = NSCache<NSURL, UIImage>()
-    private let session = URLSession.shared
+    private let session: URLSession
+
+    init() {
+        let cache = URLCache(
+            memoryCapacity: 64 * 1024 * 1024,
+            diskCapacity: 200 * 1024 * 1024,
+            diskPath: "marquee.image-cache"
+        )
+        let config = URLSessionConfiguration.default
+        config.urlCache = cache
+        config.requestCachePolicy = .returnCacheDataElseLoad
+        session = URLSession(configuration: config)
+        memory.countLimit = 300
+        memory.totalCostLimit = 64 * 1024 * 1024
+    }
 
     func image(for url: URL) async -> UIImage? {
         if let cached = memory.object(forKey: url as NSURL) {
@@ -14,11 +28,16 @@ actor ImageCache {
         do {
             let (data, _) = try await session.data(from: url)
             guard let image = UIImage(data: data) else { return nil }
-            memory.setObject(image, forKey: url as NSURL)
+            memory.setObject(image, forKey: url as NSURL, cost: data.count)
             return image
         } catch {
             return nil
         }
+    }
+
+    func clear() {
+        memory.removeAllObjects()
+        session.configuration.urlCache?.removeAllCachedResponses()
     }
 }
 

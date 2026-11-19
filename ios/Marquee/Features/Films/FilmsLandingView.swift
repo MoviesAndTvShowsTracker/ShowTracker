@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct FilmsLandingCache: Codable {
+    var trending: [MediaItem]
+    var nowPlaying: [MediaItem]
+    var upcoming: [MediaItem]
+    var topRated: [MediaItem]
+}
+
 struct FilmsLandingView: View {
     @Environment(\.marqueeTheme) private var theme
     @State private var trending: [MediaItem] = []
@@ -14,6 +21,10 @@ struct FilmsLandingView: View {
             LazyVStack(alignment: .leading, spacing: 28) {
                 if loading && trending.isEmpty {
                     LandingSkeleton()
+                } else if trending.isEmpty, let error {
+                    ErrorStateView(message: error) {
+                        Task { await load() }
+                    }
                 } else {
                     if !trending.isEmpty {
                         HeroCarousel(items: trending, kind: .movie)
@@ -22,9 +33,11 @@ struct FilmsLandingView: View {
                     NavigationRail(title: "Now playing", items: nowPlaying, kind: .movie)
                     NavigationRail(title: "Upcoming", items: upcoming, kind: .movie)
                     NavigationRail(title: "Top rated", items: topRated, kind: .movie)
-                }
-                if let error {
-                    Text(error).font(.footnote).foregroundStyle(theme.inkMuted).padding(.horizontal, 20)
+                    if let error {
+                        InlineErrorBanner(message: error) {
+                            Task { await load() }
+                        }
+                    }
                 }
             }
             .padding(.vertical, 16)
@@ -38,6 +51,14 @@ struct FilmsLandingView: View {
 
     private func load() async {
         error = nil
+        if trending.isEmpty,
+           let cached = ResponseCache.load(FilmsLandingCache.self, key: "films.landing") {
+            trending = cached.trending
+            nowPlaying = cached.nowPlaying
+            upcoming = cached.upcoming
+            topRated = cached.topRated
+            loading = false
+        }
         do {
             async let t = TMDBService.fetchPaged("trending/movie/week")
             async let n = TMDBService.fetchPaged("movie/now_playing")
@@ -51,9 +72,17 @@ struct FilmsLandingView: View {
             nowPlaying = now
             upcoming = soon
             topRated = top
+            ResponseCache.store(
+                FilmsLandingCache(trending: trend, nowPlaying: now, upcoming: soon, topRated: top),
+                key: "films.landing"
+            )
             loading = false
         } catch {
-            self.error = error.localizedDescription
+            if trending.isEmpty {
+                self.error = error.localizedDescription
+            } else {
+                self.error = "Couldn’t refresh. Showing last saved films."
+            }
             loading = false
         }
     }
