@@ -30,25 +30,50 @@ enum TMDBService {
     }
 
     static func discoverMovies(genreIds: [Int], page: Int = 1) async throws -> TMDBPaged<MediaItem> {
-        var query = [
-            URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "sort_by", value: "popularity.desc"),
-        ]
-        if !genreIds.isEmpty {
-            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
-        }
-        return try await APIClient.shared.get("/api/tmdb/discover/movie", query: query, auth: false)
+        try await discover(
+            BrowseQuery(kind: .movie, sort: .popular, genreId: genreIds.first, page: page)
+        )
     }
 
     static func discoverTV(genreIds: [Int], page: Int = 1) async throws -> TMDBPaged<MediaItem> {
+        try await discover(
+            BrowseQuery(kind: .tv, sort: .popular, genreId: genreIds.first, page: page)
+        )
+    }
+
+    static func discover(_ browse: BrowseQuery) async throws -> TMDBPaged<MediaItem> {
+        let path = browse.kind == .movie ? "/api/tmdb/discover/movie" : "/api/tmdb/discover/tv"
         var query = [
-            URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+            URLQueryItem(name: "page", value: String(max(1, browse.page))),
+            URLQueryItem(name: "sort_by", value: browse.sort.tmdbValue(kind: browse.kind)),
+            URLQueryItem(name: "include_adult", value: "false"),
         ]
-        if !genreIds.isEmpty {
-            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
+        if let genreId = browse.genreId {
+            query.append(URLQueryItem(name: "with_genres", value: String(genreId)))
         }
-        return try await APIClient.shared.get("/api/tmdb/discover/tv", query: query, auth: false)
+        if browse.sort == .topRated {
+            // Avoid obscure 10.0 one-vote titles when sorting by rating.
+            query.append(URLQueryItem(name: "vote_count.gte", value: "80"))
+        }
+        if !browse.providerIds.isEmpty {
+            let aliases = browse.providerIds.reduce(into: Set<Int>()) { partial, raw in
+                if let option = StreamingProviderOption(rawValue: raw) {
+                    partial.formUnion(option.aliases)
+                } else {
+                    partial.insert(raw)
+                }
+            }
+            // Pipe = OR across selected services.
+            query.append(
+                URLQueryItem(
+                    name: "with_watch_providers",
+                    value: aliases.map(String.init).sorted().joined(separator: "|")
+                )
+            )
+            query.append(URLQueryItem(name: "watch_region", value: browse.watchRegion))
+            query.append(URLQueryItem(name: "with_watch_monetization_types", value: "flatrate|free|ads"))
+        }
+        return try await APIClient.shared.get(path, query: query, auth: false)
     }
 
     static func search(query: String, type: SearchType, page: Int = 1) async throws -> TMDBPaged<MediaItem> {

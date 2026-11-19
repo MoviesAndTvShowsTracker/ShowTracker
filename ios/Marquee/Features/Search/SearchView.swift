@@ -60,6 +60,9 @@ struct SearchView: View {
                 typeChips
                     .padding(.horizontal, 20)
 
+                browseShortcuts
+                    .padding(.horizontal, 20)
+
                 if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -125,6 +128,56 @@ struct SearchView: View {
             }
             .padding(.vertical, 12)
         }
+    }
+
+    private var browseShortcuts: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Or browse")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(theme.ink)
+            Text("Filter by service and genre when you’re exploring — Search stays for titles you know.")
+                .font(.subheadline)
+                .foregroundStyle(theme.inkMuted)
+
+            HStack(spacing: 10) {
+                NavigationLink {
+                    MediaBrowseView(kind: .movie)
+                } label: {
+                    browseShortcutLabel(title: "Films", systemImage: "film")
+                }
+                .buttonStyle(PressablePosterStyle())
+
+                NavigationLink {
+                    MediaBrowseView(kind: .tv)
+                } label: {
+                    browseShortcutLabel(title: "TV", systemImage: "tv")
+                }
+                .buttonStyle(PressablePosterStyle())
+            }
+        }
+    }
+
+    private func browseShortcutLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 0)
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(theme.accent)
+        }
+        .foregroundStyle(theme.olive)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(theme.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(theme.border, lineWidth: 1)
+        )
     }
 
     private var resultsList: some View {

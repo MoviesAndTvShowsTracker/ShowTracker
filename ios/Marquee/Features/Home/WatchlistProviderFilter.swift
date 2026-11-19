@@ -26,6 +26,8 @@ actor WatchlistProviderFilter {
             }
         }
         let ids = await providerIds(kind: kind, id: id)
+        // Unknown / failed provider lookup — don’t hide the title.
+        if ids.isEmpty { return true }
         return !ids.isDisjoint(with: aliases)
     }
 }

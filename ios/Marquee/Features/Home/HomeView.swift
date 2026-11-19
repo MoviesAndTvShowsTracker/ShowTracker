@@ -23,6 +23,8 @@ struct HomeView: View {
     @State private var providerFilter = WatchlistProviderFilter()
     @State private var streamingMatchedKeys: Set<String>? = nil
     @State private var streamingFilterBusy = false
+    /// Local to Lobby — don’t steal Browse’s “my services” prefs and empty the rail.
+    @State private var watchlistProviderIds: Set<Int> = []
 
     private enum WatchlistFilter: String, CaseIterable, Identifiable {
         case all = "All"
@@ -131,7 +133,7 @@ struct HomeView: View {
             }
             await load()
         }
-        .onChange(of: preferences.preferredProviderIds) { _, _ in
+        .onChange(of: watchlistProviderIds) { _, _ in
             Task { await refreshStreamingFilter() }
         }
     }
@@ -285,11 +287,11 @@ struct HomeView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
 
-            StreamingFilterBar(selected: Bindable(preferences).preferredProviderIds)
+            StreamingFilterBar(selected: $watchlistProviderIds)
 
-            if loading && mergedWatchlist.isEmpty {
+            if loading && filmWatchlist.isEmpty && tvWatchlist.isEmpty {
                 RailSkeleton()
-            } else if streamingFilterBusy && !preferences.preferredProviderIds.isEmpty {
+            } else if streamingFilterBusy && !watchlistProviderIds.isEmpty {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text("Checking what’s on your services…")
@@ -318,7 +320,7 @@ struct HomeView: View {
     }
 
     private var watchlistEmptyCopy: String {
-        if !preferences.preferredProviderIds.isEmpty {
+        if !watchlistProviderIds.isEmpty {
             return "Nothing on those services in your queue — try Any service or add more titles."
         }
         switch watchlistFilter {
@@ -476,7 +478,7 @@ struct HomeView: View {
     }
 
     private func refreshStreamingFilter() async {
-        let preferred = preferences.preferredProviderIds
+        let preferred = watchlistProviderIds
         guard !preferred.isEmpty else {
             streamingMatchedKeys = nil
             streamingFilterBusy = false

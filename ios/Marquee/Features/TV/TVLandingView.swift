@@ -27,6 +27,7 @@ struct TVLandingView: View {
                     if !trending.isEmpty {
                         HeroCarousel(items: trending, kind: .tv)
                     }
+                    browseBanner
                     libraryStudio
                     NavigationRail(title: "On the air", items: onTheAir, kind: .tv)
                     NavigationRail(title: "Airing today", items: airingToday, kind: .tv)
@@ -42,8 +43,52 @@ struct TVLandingView: View {
         }
         .marqueeCanvas()
         .navigationTitle("TV")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    MediaBrowseView(kind: .tv)
+                } label: {
+                    Label("Browse", systemImage: "line.3.horizontal.decrease.circle")
+                }
+            }
+        }
         .task { await load() }
         .refreshable { await load() }
+    }
+
+    private var browseBanner: some View {
+        NavigationLink {
+            MediaBrowseView(kind: .tv)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Browse TV")
+                        .font(.headline)
+                        .foregroundStyle(theme.ink)
+                    Text("Filter by service, genre, and sort.")
+                        .font(.caption)
+                        .foregroundStyle(theme.inkMuted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(theme.olive)
+            }
+            .padding(16)
+            .background(theme.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(theme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressablePosterStyle())
+        .padding(.horizontal, 20)
     }
 
     private var libraryShelves: [(tab: TVLibraryView.LibraryTab, items: [TrackingRecord], count: Int)] {

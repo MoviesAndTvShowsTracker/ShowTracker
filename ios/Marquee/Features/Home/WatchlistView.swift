@@ -31,6 +31,7 @@ struct WatchlistView: View {
     @State private var providerFilter = WatchlistProviderFilter()
     @State private var streamingMatchedKeys: Set<String>? = nil
     @State private var streamingFilterBusy = false
+    @State private var providerIds: Set<Int> = []
 
     init(initialScope: Scope = .all) {
         self.initialScope = initialScope
@@ -84,9 +85,9 @@ struct WatchlistView: View {
                         .pickerStyle(.segmented)
                         .padding(.horizontal, 20)
 
-                        StreamingFilterBar(selected: Bindable(preferences).preferredProviderIds)
+                        StreamingFilterBar(selected: $providerIds)
 
-                        if streamingFilterBusy && !preferences.preferredProviderIds.isEmpty {
+                        if streamingFilterBusy && !providerIds.isEmpty {
                             HStack(spacing: 10) {
                                 ProgressView()
                                 Text("Checking what’s on your services…")
@@ -135,16 +136,13 @@ struct WatchlistView: View {
             }
         }
         .task { await load() }
-        .onChange(of: preferences.preferredProviderIds) { _, _ in
+        .onChange(of: providerIds) { _, _ in
             Task { await refreshStreamingFilter() }
-        }
-        .onChange(of: scope) { _, _ in
-            // Keep selection; no reload needed — data already local.
         }
     }
 
     private var emptyCopy: String {
-        if !preferences.preferredProviderIds.isEmpty {
+        if !providerIds.isEmpty {
             return "Nothing on those services in this filter — try Any service."
         }
         switch scope {
@@ -178,7 +176,7 @@ struct WatchlistView: View {
     }
 
     private func refreshStreamingFilter() async {
-        let preferred = preferences.preferredProviderIds
+        let preferred = providerIds
         guard !preferred.isEmpty else {
             streamingMatchedKeys = nil
             streamingFilterBusy = false

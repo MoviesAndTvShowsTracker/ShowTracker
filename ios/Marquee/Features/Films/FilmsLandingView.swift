@@ -29,6 +29,7 @@ struct FilmsLandingView: View {
                     if !trending.isEmpty {
                         HeroCarousel(items: trending, kind: .movie)
                     }
+                    browseBanner(kind: .movie)
                     NavigationRail(title: "Trending", items: trending, kind: .movie)
                     NavigationRail(title: "Now playing", items: nowPlaying, kind: .movie)
                     NavigationRail(title: "Upcoming", items: upcoming, kind: .movie)
@@ -45,8 +46,52 @@ struct FilmsLandingView: View {
         .marqueeCanvas()
         .navigationTitle("Films")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    MediaBrowseView(kind: .movie)
+                } label: {
+                    Label("Browse", systemImage: "line.3.horizontal.decrease.circle")
+                }
+            }
+        }
         .task { await load() }
         .refreshable { await load() }
+    }
+
+    private func browseBanner(kind: MediaKind) -> some View {
+        NavigationLink {
+            MediaBrowseView(kind: kind)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Browse films")
+                        .font(.headline)
+                        .foregroundStyle(theme.ink)
+                    Text("Filter by service, genre, and sort.")
+                        .font(.caption)
+                        .foregroundStyle(theme.inkMuted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(theme.olive)
+            }
+            .padding(16)
+            .background(theme.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(theme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressablePosterStyle())
+        .padding(.horizontal, 20)
     }
 
     private func load() async {

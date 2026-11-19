@@ -66,7 +66,8 @@ enum StreamingProviderOption: Int, CaseIterable, Identifiable, Hashable {
     /// Alternate TMDB ids that map to the same service brand.
     var aliases: Set<Int> {
         switch self {
-        case .prime: return [9, 119, 10]
+        // TMDB uses several Amazon / Prime ids by region and storefront.
+        case .prime: return [9, 10, 119, 2100, 582]
         case .max: return [1899, 1825, 31]
         default: return [rawValue]
         }
