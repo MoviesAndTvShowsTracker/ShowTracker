@@ -20,38 +20,67 @@ struct DetailPageSkeleton: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SkeletonBlock(height: 260, radius: 0)
-                    .frame(maxWidth: .infinity)
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .top, spacing: 14) {
-                        SkeletonBlock(height: 144, width: 96, radius: 14)
-                            .offset(y: -28)
-                            .padding(.bottom, -28)
-                        VStack(alignment: .leading, spacing: 8) {
-                            SkeletonBlock(height: 22, width: 180)
-                            SkeletonBlock(height: 14, width: 120)
-                            SkeletonBlock(height: 12, width: 80)
-                        }
-                        .padding(.top, 8)
+                ZStack(alignment: .bottomLeading) {
+                    SkeletonBlock(height: 448, radius: 0)
+                        .frame(maxWidth: .infinity)
+                    VStack(alignment: .leading, spacing: 10) {
+                        SkeletonBlock(height: 28, width: 220, radius: 8)
+                        SkeletonBlock(height: 14, width: 160, radius: 6)
+                        SkeletonBlock(height: 12, width: 120, radius: 6)
                     }
-                    HStack(spacing: 10) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            SkeletonBlock(height: 52, radius: 14)
-                        }
-                    }
-                    SkeletonBlock(height: 90, radius: 16)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(0..<4, id: \.self) { _ in
-                            SkeletonBlock(height: 56, radius: 12)
-                        }
-                    }
-                    SkeletonBlock(height: 160, radius: 18)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 56)
                 }
-                .padding(20)
+
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SkeletonBlock(height: 10, width: 88, radius: 4)
+                        HStack(spacing: 10) {
+                            SkeletonBlock(height: 40, width: 108, radius: 20)
+                            SkeletonBlock(height: 40, width: 100, radius: 20)
+                            SkeletonBlock(height: 40, width: 100, radius: 20)
+                        }
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(theme.surfaceElevated)
+                    )
+                    .padding(.top, -40)
+
+                    SkeletonBlock(height: 72, radius: 16)
+                    SkeletonBlock(height: 14, width: 72)
+                    SkeletonBlock(height: 16)
+                    SkeletonBlock(height: 16)
+                    SkeletonBlock(height: 16, width: 180)
+
+                    VStack(spacing: 0) {
+                        ForEach(0..<2, id: \.self) { _ in
+                            HStack {
+                                SkeletonBlock(height: 12, width: 64)
+                                SkeletonBlock(height: 16, width: 140)
+                                Spacer()
+                            }
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            VStack(spacing: 8) {
+                                SkeletonBlock(height: 72, width: 72, radius: 36)
+                                SkeletonBlock(height: 10, width: 56)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 108)
             }
         }
         .scrollDisabled(true)
         .background(theme.surface.ignoresSafeArea())
+        .ignoresSafeArea(edges: .top)
         .accessibilityLabel("Loading")
     }
 }

@@ -114,7 +114,7 @@ struct TVContinueView: View {
     private var metaLine: String {
         var parts: [String] = []
         if let air = formatDate(episode?.air_date) { parts.append(air) }
-        if let runtime = episode?.runtime, runtime > 0 { parts.append("\(runtime) min") }
+        if let runtime = episode?.runtime, runtime > 0 { parts.append(MediaMetaLine.formatRuntime(runtime)) }
         return parts.joined(separator: " · ")
     }
 

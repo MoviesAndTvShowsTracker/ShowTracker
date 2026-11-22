@@ -109,6 +109,7 @@ struct ExpandableText: View {
             Text(text)
                 .font(.body)
                 .foregroundStyle(theme.ink)
+                .lineSpacing(3)
                 .lineLimit(expanded ? nil : lineLimit)
                 .animation(MarqueeMotion.micro, value: expanded)
 

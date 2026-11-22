@@ -51,17 +51,17 @@ struct TonightCard: View {
     }
 
     @ViewBuilder
-    private func destination(@ViewBuilder label: () -> some View) -> some View {
+    private func destination<Label: View>(@ViewBuilder label: @escaping () -> Label) -> some View {
         if let tvId = pick.tvId {
             if let tracking = pick.tracking, tracking.status == "watching" || tracking.status == "paused" {
                 NavigationLink {
                     TVContinueView(tvId: tvId, seed: tracking)
                 } label: { label() }
             } else {
-                NavigationLink { TVDetailView(tvId: tvId) } label: { label() }
+                MediaNavLink(id: tvId, kind: .tv, label: label)
             }
         } else if let movieId = pick.movieId {
-            NavigationLink { MovieDetailView(movieId: movieId) } label: { label() }
+            MediaNavLink(id: movieId, kind: .movie, label: label)
         } else {
             label()
         }

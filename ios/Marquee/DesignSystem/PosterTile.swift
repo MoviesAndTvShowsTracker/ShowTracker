@@ -274,8 +274,13 @@ struct MediaNavLink<Label: View>: View {
     let kind: MediaKind
     @ViewBuilder var label: () -> Label
     @Environment(\.marqueePosterNamespace) private var posterNamespace
+    /// Unique per poster instance so the same title in Trending + Popular
+    /// (or a carousel) zooms from the card you tapped — not a sibling source.
+    @State private var sourceToken = UUID()
 
-    private var transitionID: String { "\(kind == .movie ? "m" : "t")-\(id)" }
+    private var transitionID: String {
+        "\(kind == .movie ? "m" : "t")-\(id)-\(sourceToken.uuidString)"
+    }
 
     var body: some View {
         NavigationLink {

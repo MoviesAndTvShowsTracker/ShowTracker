@@ -60,11 +60,14 @@ final class AuthStore {
             }
         }
         #if DEBUG
-        if session == nil,
-           let email = ProcessInfo.processInfo.environment["MARQUEE_DEBUG_EMAIL"],
-           let password = ProcessInfo.processInfo.environment["MARQUEE_DEBUG_PASSWORD"],
-           !email.isEmpty, !password.isEmpty {
-            try? await signIn(email: email, password: password)
+        if session == nil {
+            let email = ProcessInfo.processInfo.environment["MARQUEE_DEBUG_EMAIL"]
+                ?? Self.launchValue(prefix: "-debugEmail=")
+            let password = ProcessInfo.processInfo.environment["MARQUEE_DEBUG_PASSWORD"]
+                ?? Self.launchValue(prefix: "-debugPassword=")
+            if let email, let password, !email.isEmpty, !password.isEmpty {
+                try? await signIn(email: email, password: password)
+            }
         }
         #endif
         isRestoring = false
@@ -217,4 +220,14 @@ final class AuthStore {
         KeychainStore.remove(Keys.firstName)
         KeychainStore.remove(Keys.username)
     }
+
+    #if DEBUG
+    private static func launchValue(prefix: String) -> String? {
+        guard let raw = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }) else {
+            return nil
+        }
+        let value = String(raw.dropFirst(prefix.count))
+        return value.isEmpty ? nil : value
+    }
+    #endif
 }

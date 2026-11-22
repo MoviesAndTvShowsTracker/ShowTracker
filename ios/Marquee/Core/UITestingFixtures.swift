@@ -6,6 +6,23 @@ enum UITestingFixtures {
             || ProcessInfo.processInfo.environment["MARQUEE_UI_TESTING"] == "1"
     }
 
+    /// `-previewMovieDetail=27205` opens that film detail (requires `-uiTesting`).
+    static var previewMovieId: Int? {
+        intArgument(prefix: "-previewMovieDetail=")
+    }
+
+    /// `-previewTVDetail=1396` opens that show detail (requires `-uiTesting`).
+    static var previewTVId: Int? {
+        intArgument(prefix: "-previewTVDetail=")
+    }
+
+    private static func intArgument(prefix: String) -> Int? {
+        guard let raw = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }) else {
+            return nil
+        }
+        return Int(raw.dropFirst(prefix.count))
+    }
+
     static let continueItems: [TrackingRecord] = [
         TrackingRecord(
             tvId: "1396",

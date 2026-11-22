@@ -48,20 +48,54 @@ struct RootView: View {
     @ViewBuilder
     private var destination: some View {
         if auth.isAuthenticated {
-            if showWelcome || !OnboardingStore.hasSeenWelcome {
-                WelcomeSplashView {
-                    OnboardingStore.hasSeenWelcome = true
-                    withAnimation(MarqueeMotion.standard) {
-                        showWelcome = false
-                    }
-                }
-                .onAppear { showWelcome = !OnboardingStore.hasSeenWelcome }
+            authenticatedDestination
+        } else if UITestingFixtures.isEnabled {
+            #if DEBUG
+            // Fake session path for offline UI tests only.
+            if let movieId = UITestingFixtures.previewMovieId {
+                NavigationStack { MovieDetailView(movieId: movieId) }
+            } else if let tvId = UITestingFixtures.previewTVId {
+                NavigationStack { TVDetailView(tvId: tvId) }
             } else {
-                MainTabView()
+                AuthFlowView()
             }
+            #else
+            AuthFlowView()
+            #endif
         } else {
             AuthFlowView()
         }
+    }
+
+    @ViewBuilder
+    private var authenticatedDestination: some View {
+        #if DEBUG
+        if let movieId = UITestingFixtures.previewMovieId {
+            NavigationStack { MovieDetailView(movieId: movieId) }
+        } else if let tvId = UITestingFixtures.previewTVId {
+            NavigationStack { TVDetailView(tvId: tvId) }
+        } else if showWelcome || !OnboardingStore.hasSeenWelcome {
+            welcomeDestination
+        } else {
+            MainTabView()
+        }
+        #else
+        if showWelcome || !OnboardingStore.hasSeenWelcome {
+            welcomeDestination
+        } else {
+            MainTabView()
+        }
+        #endif
+    }
+
+    private var welcomeDestination: some View {
+        WelcomeSplashView {
+            OnboardingStore.hasSeenWelcome = true
+            withAnimation(MarqueeMotion.standard) {
+                showWelcome = false
+            }
+        }
+        .onAppear { showWelcome = !OnboardingStore.hasSeenWelcome }
     }
 
     private var launchSplash: some View {

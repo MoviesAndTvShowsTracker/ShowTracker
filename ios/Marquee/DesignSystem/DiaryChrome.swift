@@ -9,24 +9,27 @@ struct DiaryChipLabel: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
+                .symbolEffect(.bounce, value: active)
             Text(title)
                 .lineLimit(1)
         }
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(active ? theme.accent : theme.olive)
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(active ? theme.accent.opacity(0.14) : theme.surfaceElevated)
+        .padding(.vertical, 11)
+        .background(active ? theme.accent.opacity(0.16) : theme.surface.opacity(0.88))
         .overlay(
             Capsule()
-                .stroke(active ? theme.accent.opacity(0.4) : theme.border, lineWidth: 1)
+                .stroke(active ? theme.accent.opacity(0.45) : theme.border, lineWidth: 1)
         )
         .clipShape(Capsule())
         .fixedSize()
+        .shadow(color: active ? theme.accent.opacity(0.12) : .clear, radius: 8, y: 2)
     }
 }
 
 struct ActionStripButton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     let systemImage: String
     var subtitle: String? = nil
@@ -40,6 +43,7 @@ struct ActionStripButton: View {
         .buttonStyle(PressablePosterStyle())
         .fixedSize()
         .accessibilityHint(subtitle ?? "")
+        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: active)
     }
 }
 

@@ -191,7 +191,7 @@ extension TVDetailView {
                                 .foregroundStyle(theme.inkMuted)
                         }
                         if let runtime = ep.runtime, runtime > 0 {
-                            Text("\(runtime) min")
+                            Text(MediaMetaLine.formatRuntime(runtime))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(theme.olive)
                         }

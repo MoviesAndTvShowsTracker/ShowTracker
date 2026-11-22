@@ -145,50 +145,55 @@ struct TVDetailView: View {
     }
 
     private func content(_ detail: TVDetail) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                DetailHero(path: detail.backdrop_path ?? detail.poster_path)
-                VStack(alignment: .leading, spacing: 22) {
-                    header(detail)
-
-                    // Hold diary + pane until we know the preferred tab and providers,
-                    // then reveal once — no Info→Episodes flip, no late Where-to-watch pop.
-                    if diaryReady {
+        MediaDetailShell(
+            backdropPath: detail.backdrop_path ?? detail.poster_path,
+            title: detail.displayTitle,
+            metaParts: tvMetaParts(detail),
+            genresLine: detail.genres?.prefix(3).map(\.name).joined(separator: "  ·  "),
+            shareText: shareText(for: detail),
+            onBack: { dismiss() },
+            actions: {
+                if diaryReady {
+                    VStack(alignment: .leading, spacing: 14) {
                         trackingBlock(detail)
-                        diaryActions(detail)
-                        TVDetailPaneSwitcher(pane: $pane, enabled: true, showsSelection: true)
-                        paneBody(detail)
-                            .id("\(pane.rawValue)-\(paneRevealToken)")
-                            .transition(userPaneTransition)
-                    } else {
-                        TVDetailDiaryChromePlaceholder()
-                        TVDetailPaneSwitcher(pane: $pane, enabled: false, showsSelection: false)
-                        TVDetailPanePlaceholder()
+                        DiaryGlassStrip {
+                            diaryActions(detail)
+                        }
                     }
+                    .animation(reduceMotion ? nil : MarqueeMotion.standard, value: diaryReady)
+                } else {
+                    TVDetailDiaryChromePlaceholder()
                 }
-                .padding(20)
-                .padding(.bottom, 72)
-                .animation(reduceMotion ? nil : MarqueeMotion.standard, value: diaryReady)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .ignoresSafeArea(edges: .top)
-        .overlay(alignment: .top) {
-            HStack {
-                GlassBackButton { dismiss() }
-                Spacer()
-                ShareLink(item: shareText(for: detail)) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(theme.olive)
-                        .frame(width: 40, height: 40)
-                        .background(.ultraThinMaterial, in: Circle())
+            },
+            content: {
+                if diaryReady {
+                    TVDetailPaneSwitcher(pane: $pane, enabled: true, showsSelection: true)
+                    paneBody(detail)
+                        .id("\(pane.rawValue)-\(paneRevealToken)")
+                        .transition(userPaneTransition)
+                } else {
+                    TVDetailPaneSwitcher(pane: $pane, enabled: false, showsSelection: false)
+                    TVDetailPanePlaceholder()
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .safeAreaPadding(.top)
+        )
+    }
+
+    private func tvMetaParts(_ detail: TVDetail) -> [String] {
+        var year: String?
+        if let date = detail.first_air_date, date.count >= 4 {
+            year = String(date.prefix(4))
         }
+        var extra: [String] = []
+        if let seasons = detail.number_of_seasons {
+            extra.append("\(seasons) season\(seasons == 1 ? "" : "s")")
+        }
+        return MediaMetaLine.parts(
+            year: year,
+            runtimeMinutes: detail.typicalRuntime,
+            rating: detail.vote_average,
+            extra: extra
+        )
     }
 
     /// Only for user tab taps — initial preferred pane is set with zero motion.
@@ -213,7 +218,7 @@ struct TVDetailView: View {
 
     @ViewBuilder
     private func infoPane(_ detail: TVDetail) -> some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 24) {
             WatchProvidersRow(
                 providers: providers,
                 region: providerRegion,
@@ -227,14 +232,49 @@ struct TVDetailView: View {
                 }
             }
 
-            metaGrid(detail)
-            crewSection(detail)
-            castSection(detail)
+            if !tvFactsLine(detail).isEmpty {
+                Text(tvFactsLine(detail))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(theme.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            CreditsRows(rows: tvCreditRows(detail))
+            MediaCastRail(cast: tvCastItems(detail))
 
             if let similar = detail.similar?.results, !similar.isEmpty {
                 NavigationRail(title: "More like this", items: similar, kind: .tv)
                     .padding(.horizontal, -20)
             }
+        }
+    }
+
+    private func tvFactsLine(_ detail: TVDetail) -> String {
+        var parts: [String] = []
+        if let status = detail.status { parts.append(status) }
+        if let eps = detail.number_of_episodes { parts.append("\(eps) episodes") }
+        if let networks = detail.networkNames { parts.append(networks) }
+        return parts.joined(separator: "  ·  ")
+    }
+
+    private func tvCreditRows(_ detail: TVDetail) -> [CreditRow] {
+        let crew = detail.credits?.crew ?? []
+        let creators = crew.filter { ["Creator", "Executive Producer", "Director"].contains($0.job ?? "") }.compactMap(\.name)
+        let writers = crew.filter { ["Writer", "Screenplay", "Story", "Teleplay"].contains($0.job ?? "") }.compactMap(\.name)
+        var rows: [CreditRow] = []
+        if !creators.isEmpty {
+            rows.append(CreditRow(label: "Creators", value: CreditRow.joinedNames(creators, limit: 3)))
+        }
+        if !writers.isEmpty {
+            rows.append(CreditRow(label: "Writing", value: CreditRow.joinedNames(writers, limit: 4)))
+        }
+        return rows
+    }
+
+    private func tvCastItems(_ detail: TVDetail) -> [(id: Int, name: String, character: String?, profilePath: String?)] {
+        (detail.credits?.cast ?? []).prefix(16).compactMap { member in
+            guard let name = member.name, !name.isEmpty else { return nil }
+            return (id: member.id, name: name, character: member.character, profilePath: member.profile_path)
         }
     }
 
@@ -245,58 +285,6 @@ struct TVDetailView: View {
         return parts.joined(separator: " ")
     }
 
-    private func crewSection(_ detail: TVDetail) -> some View {
-        let crew = detail.credits?.crew ?? []
-        let creators = crew.filter { ["Creator", "Executive Producer", "Director"].contains($0.job ?? "") }.compactMap(\.name)
-        let writers = crew.filter { ["Writer", "Screenplay", "Story", "Teleplay"].contains($0.job ?? "") }.compactMap(\.name)
-        return Group {
-            if !creators.isEmpty || !writers.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionKicker(text: "Credits")
-                    if !creators.isEmpty {
-                        MetaCell(label: "Creators", value: Array(Set(creators)).prefix(3).joined(separator: ", "))
-                    }
-                    if !writers.isEmpty {
-                        MetaCell(label: "Writing", value: Array(Set(writers)).prefix(4).joined(separator: ", "))
-                    }
-                }
-            }
-        }
-    }
-
-    private func header(_ detail: TVDetail) -> some View {
-        HStack(alignment: .bottom, spacing: 14) {
-            CachedAsyncImage(url: AppConfig.posterURL(path: detail.poster_path))
-                .frame(width: 96, height: 144)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: theme.olive.opacity(0.25), radius: 12, y: 6)
-                .offset(y: -28)
-                .padding(.bottom, -28)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(detail.displayTitle)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(theme.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    if let seasons = detail.number_of_seasons {
-                        OliveChip(text: "\(seasons) season\(seasons == 1 ? "" : "s")")
-                    }
-                    if let vote = detail.vote_average {
-                        Label(String(format: "%.1f", vote), systemImage: "star.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(theme.accent)
-                    }
-                }
-                if let air = formatDate(detail.first_air_date) {
-                    Text(air)
-                        .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-    }
 
     @ViewBuilder
     private func trackingBlock(_ detail: TVDetail) -> some View {
@@ -380,7 +368,6 @@ struct TVDetailView: View {
 
     private func diaryActions(_ detail: TVDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionKicker(text: "Your diary", accented: true)
             HStack(spacing: 8) {
                 ActionStripButton(
                     title: favorited ? "Favorited" : "Favorite",
@@ -485,68 +472,6 @@ struct TVDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { showRatingSheet = false }
-                }
-            }
-        }
-    }
-
-    private func metaGrid(_ detail: TVDetail) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            if let air = formatDate(detail.first_air_date) {
-                MetaCell(label: "Premiered", value: air)
-            }
-            if let status = detail.status {
-                MetaCell(label: "Status", value: status)
-            }
-            if let seasons = detail.number_of_seasons {
-                MetaCell(label: "Seasons", value: "\(seasons)")
-            }
-            if let eps = detail.number_of_episodes {
-                MetaCell(label: "Episodes", value: "\(eps)")
-            }
-            if let runtime = detail.typicalRuntime {
-                MetaCell(label: "Runtime", value: "\(runtime) min")
-            }
-            if let networks = detail.networkNames {
-                MetaCell(label: "Network", value: networks)
-            }
-            if let genres = detail.genres, !genres.isEmpty {
-                MetaCell(label: "Genres", value: genres.prefix(3).map(\.name).joined(separator: ", "))
-            }
-            if let vote = detail.vote_average {
-                MetaCell(label: "TMDB", value: String(format: "%.1f / 10", vote))
-            }
-        }
-    }
-
-    private func castSection(_ detail: TVDetail) -> some View {
-        Group {
-            if let cast = detail.credits?.cast, !cast.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Cast")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(theme.ink)
-                        Text("\(min(cast.count, 16))")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(theme.olive)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(theme.oliveSoft)
-                            .clipShape(Capsule())
-                    }
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(alignment: .top, spacing: 12) {
-                            ForEach(Array(cast.prefix(16))) { member in
-                                CastBubble(
-                                    name: member.name ?? "",
-                                    character: member.character,
-                                    profilePath: member.profile_path
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
