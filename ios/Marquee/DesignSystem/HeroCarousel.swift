@@ -24,7 +24,7 @@ struct HeroCarousel: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(maxWidth: .infinity)
-            .frame(height: 240)
+            .frame(height: 280)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             if slides.count > 1 {

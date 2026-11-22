@@ -1,5 +1,10 @@
 import Foundation
 
+enum MediaKind: String, Hashable, Sendable {
+    case movie
+    case tv
+}
+
 struct TMDBPaged<T: Decodable & Sendable>: Decodable, Sendable {
     let page: Int?
     let results: [T]

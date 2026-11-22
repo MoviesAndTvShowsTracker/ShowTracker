@@ -111,6 +111,19 @@ struct SettingsView: View {
             }
 
             Section {
+                StreamingFilterBar(
+                    selected: Bindable(preferences).preferredProviderIds,
+                    showLabels: true
+                )
+                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
+                .listRowBackground(Color.clear)
+            } header: {
+                Text("My streaming services")
+            } footer: {
+                Text("Tap a logo to include it. Films and TV use this for “On your services.” The grid icon clears the filter.")
+            }
+
+            Section {
                 NavigationLink {
                     EditProfileView()
                 } label: {

@@ -692,116 +692,111 @@ struct WeekRecapCard: View {
         return parts.joined(separator: " · ")
     }
 
+    /// Week-scoped copy only — ignore year insights that used to leak in from dashboard cache.
     private var insightLine: String {
-        if let text = recap.insight?.text, !text.isEmpty { return text }
-        if minutes > 0 { return "Your diary this week." }
-        return "Mark something tonight and this fills in."
+        if let kind = recap.insight?.kind,
+           kind == "year" || kind == "genre" || kind == "show" || kind == "total" || kind == "binge" {
+            return weekFallbackInsight
+        }
+        if let text = recap.insight?.text, !text.isEmpty, !text.localizedCaseInsensitiveContains("this year") {
+            return text
+        }
+        return weekFallbackInsight
+    }
+
+    private var weekFallbackInsight: String {
+        if films == 0 && episodes == 0 && minutes == 0 {
+            return "Mark a film or episode and this week fills in."
+        }
+        switch (films > 0, episodes > 0) {
+        case (true, true):
+            return "\(films) film\(films == 1 ? "" : "s") and \(episodes) episode\(episodes == 1 ? "" : "s") this week."
+        case (true, false):
+            return "\(films) film\(films == 1 ? "" : "s") logged this week."
+        case (false, true):
+            return "\(episodes) episode\(episodes == 1 ? "" : "s") this week. No films yet."
+        default:
+            return "Time is on the clock — keep going."
+        }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    SectionKicker(text: "This week", accented: true)
-                    Text(StatsFormat.minutes(minutes))
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(theme.ink)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Text(insightLine)
-                        .font(.subheadline)
-                        .foregroundStyle(theme.inkMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionKicker(text: "This week", accented: true)
                 Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 10) {
-                    ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up")
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(theme.olive)
+                        .frame(width: 30, height: 30)
+                        .background(theme.oliveSoft, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share this week")
+            }
+
+            // One hero number — don’t also put “Time” in a third mini-card.
+            Text(StatsFormat.minutes(minutes))
+                .font(.system(size: 40, weight: .bold, design: .rounded))
+                .foregroundStyle(theme.ink)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+
+            Text(insightLine)
+                .font(.subheadline)
+                .foregroundStyle(theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 0) {
+                weekStat(value: "\(films)", label: films == 1 ? "Film" : "Films")
+                Rectangle()
+                    .fill(theme.border)
+                    .frame(width: 1, height: 28)
+                    .padding(.horizontal, 16)
+                weekStat(value: "\(episodes)", label: episodes == 1 ? "Episode" : "Episodes")
+                Spacer(minLength: 0)
+                if streak > 0 {
+                    HStack(spacing: 5) {
+                        Image(systemName: "flame.fill")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(theme.olive)
-                            .frame(width: 32, height: 32)
-                            .background(theme.oliveSoft, in: Circle())
+                            .foregroundStyle(theme.accent)
+                        Text(streak == 1 ? "1-day" : "\(streak)-day")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(theme.ink)
+                            .monospacedDigit()
                     }
-                    .buttonStyle(.plain)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(theme.olive.opacity(0.7))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(theme.accent.opacity(0.12), in: Capsule(style: .continuous))
+                    .accessibilityLabel(streak == 1 ? "1-day streak" : "\(streak)-day streak")
                 }
             }
-
-            HStack(spacing: 8) {
-                weekMetric(value: "\(films)", label: "Films", tint: theme.accent)
-                weekMetric(value: "\(episodes)", label: "Episodes", tint: theme.olive)
-                weekMetric(value: StatsFormat.minutes(minutes), label: "Time", tint: theme.accent)
-            }
-
-            if streak > 0 {
-                HStack(spacing: 8) {
-                    Image(systemName: "flame.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(theme.accent)
-                        .symbolRenderingMode(.hierarchical)
-                    Text(streak == 1 ? "1-day streak" : "\(streak)-day streak")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(theme.ink)
-                    Spacer(minLength: 0)
-                    Text("Keep it lit")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(theme.inkMuted)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(theme.accent.opacity(0.10))
-                )
-            }
+            .padding(.top, 2)
         }
         .padding(18)
         .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(theme.surfaceElevated)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    theme.olive.opacity(0.10),
-                                    theme.accent.opacity(0.08),
-                                    .clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(theme.border, lineWidth: 1)
                 )
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("This week. \(StatsFormat.minutes(minutes)). \(films) films. \(episodes) episodes.\(streak > 0 ? " \(streak) day streak." : "")")
+        .accessibilityLabel("This week. \(StatsFormat.minutes(minutes)). \(films) films. \(episodes) episodes.\(streak > 0 ? " \(streak) day streak." : "") Opens stats.")
+        .accessibilityHint("Opens your full stats")
     }
 
-    private func weekMetric(value: String, label: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func weekStat(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(value)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(tint)
+                .foregroundStyle(theme.ink)
                 .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
             Text(label)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(theme.inkMuted)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(theme.oliveSoft.opacity(0.65))
-        )
     }
 }

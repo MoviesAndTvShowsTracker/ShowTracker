@@ -137,20 +137,31 @@ struct LandingSkeleton: View {
     var showLibrary: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            SkeletonBlock(height: 210, radius: 22)
+        VStack(alignment: .leading, spacing: 32) {
+            SkeletonBlock(height: 250, radius: 22)
                 .padding(.horizontal, 20)
             if showLibrary {
                 VStack(alignment: .leading, spacing: 12) {
+                    SkeletonBlock(height: 11, width: 72)
                     SkeletonBlock(height: 18, width: 110)
-                    SkeletonBlock(height: 132, radius: 20)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            SkeletonBlock(height: 150, radius: 12)
-                        }
-                    }
+                    SkeletonBlock(height: 120, radius: 18)
                 }
                 .padding(.horizontal, 20)
+            }
+            // Spotlight landscape rail
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonBlock(height: 11, width: 64)
+                    .padding(.horizontal, 20)
+                SkeletonBlock(height: 18, width: 150)
+                    .padding(.horizontal, 20)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            SkeletonBlock(height: 151, width: 268, radius: 16)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
             }
             VStack(alignment: .leading, spacing: 12) {
                 SkeletonBlock(height: 18, width: 140)

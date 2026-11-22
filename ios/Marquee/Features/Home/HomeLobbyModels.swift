@@ -63,12 +63,26 @@ enum StreamingProviderOption: Int, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// TMDB watch-provider logo (stable enough for a curated short list).
+    var logoPath: String {
+        switch self {
+        case .netflix: return "/rK1KljqmbvO9HQa1PBFLILWah72.png"
+        case .prime: return "/gMZdpavHmxFNnLpMHwVxfqeux2g.png"
+        case .disney: return "/5eZ872CghnHFLB1j8grszbrx0dx.png"
+        case .max: return "/skypuy7SXuugIQeYg0IglmzoKaS.png"
+        case .hulu: return "/44uAnmSqvA4yBOdbPWN8YgQHjWm.png"
+        case .appleTV: return "/v9SnyvYt0U3KGgBH3Sbh3z4yODe.png"
+        case .paramount: return "/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png"
+        }
+    }
+
     /// Alternate TMDB ids that map to the same service brand.
     var aliases: Set<Int> {
         switch self {
         // TMDB uses several Amazon / Prime ids by region and storefront.
         case .prime: return [9, 10, 119, 2100, 582]
         case .max: return [1899, 1825, 31]
+        case .paramount: return [531, 2303, 2616, 633]
         default: return [rawValue]
         }
     }

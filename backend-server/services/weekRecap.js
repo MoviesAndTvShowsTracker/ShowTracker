@@ -14,17 +14,29 @@ async function buildWeekRecap(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
   const cached = await getCachedUserStats(userId);
 
-  // Prefer dashboard cache when it was built for the same timezone contract
+  // Prefer dashboard cache when it was built for the same timezone contract.
+  // Never reuse the dashboard year insight here — Lobby’s card is “this week.”
   if (cached?.stats?.activity && cached.stats.timeZone === timeZone) {
-    const { activity, films, week, insight } = cached.stats;
+    const { activity, films, week } = cached.stats;
+    const episodesThisWeek = week?.episodeCount ?? activity.episodesThisWeek ?? 0;
+    const filmsThisWeek = week?.filmCount ?? films?.thisWeek ?? 0;
+    const tvMinsThisWeek = week?.tvMins ?? activity.tvMinsThisWeek ?? 0;
+    const filmMinsThisWeek = week?.filmMins ?? films?.filmMinsThisWeek ?? 0;
+    const totalMinsThisWeek = week?.totalMins ?? activity.totalMinsThisWeek ?? 0;
+    const streak = activity.streak || 0;
     return {
-      episodesThisWeek: week?.episodeCount ?? activity.episodesThisWeek ?? 0,
-      filmsThisWeek: week?.filmCount ?? films?.thisWeek ?? 0,
-      tvMinsThisWeek: week?.tvMins ?? activity.tvMinsThisWeek ?? 0,
-      filmMinsThisWeek: week?.filmMins ?? films?.filmMinsThisWeek ?? 0,
-      totalMinsThisWeek: week?.totalMins ?? activity.totalMinsThisWeek ?? 0,
-      streak: activity.streak || 0,
-      insight: insight || null,
+      episodesThisWeek,
+      filmsThisWeek,
+      tvMinsThisWeek,
+      filmMinsThisWeek,
+      totalMinsThisWeek,
+      streak,
+      insight: buildWeekInsight({
+        filmsThisWeek,
+        episodesThisWeek,
+        totalMinsThisWeek,
+        streak,
+      }),
       weekStart: cached.stats.weekStart || null,
       timeZone,
       cached: true,
@@ -54,19 +66,64 @@ async function buildWeekRecap(userId, options = {}) {
     ...allFilmKeys,
   ]);
 
+  const episodesThisWeek = weekEpisodes.length;
+  const filmsThisWeek = films.length;
+  const tvMinsThisWeek = weekEpisodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
+  const filmMinsThisWeek = films.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
+  const totalMinsThisWeek = tvMinsThisWeek + filmMinsThisWeek;
+  const streak = computeStreakFromDaySet(daySet, bounds.todayKey);
+
   return {
-    episodesThisWeek: weekEpisodes.length,
-    filmsThisWeek: films.length,
-    tvMinsThisWeek: weekEpisodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0),
-    filmMinsThisWeek: films.reduce((s, f) => s + filmRuntimeMinutes(f), 0),
-    totalMinsThisWeek:
-      weekEpisodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0) +
-      films.reduce((s, f) => s + filmRuntimeMinutes(f), 0),
-    streak: computeStreakFromDaySet(daySet, bounds.todayKey),
+    episodesThisWeek,
+    filmsThisWeek,
+    tvMinsThisWeek,
+    filmMinsThisWeek,
+    totalMinsThisWeek,
+    streak,
+    insight: buildWeekInsight({
+      filmsThisWeek,
+      episodesThisWeek,
+      totalMinsThisWeek,
+      streak,
+    }),
     weekStart: bounds.weekStart,
     timeZone,
     cached: false,
   };
 }
 
-module.exports = { buildWeekRecap };
+function buildWeekInsight({ filmsThisWeek, episodesThisWeek, totalMinsThisWeek, streak }) {
+  if (!filmsThisWeek && !episodesThisWeek && !totalMinsThisWeek) {
+    return {
+      kind: 'empty',
+      text: 'Mark a film or episode and this week fills in.',
+    };
+  }
+
+  const bits = [];
+  if (filmsThisWeek > 0) {
+    bits.push(`${filmsThisWeek} film${filmsThisWeek === 1 ? '' : 's'}`);
+  }
+  if (episodesThisWeek > 0) {
+    bits.push(`${episodesThisWeek} episode${episodesThisWeek === 1 ? '' : 's'}`);
+  }
+
+  if (bits.length === 2) {
+    return { kind: 'mix', text: `${bits[0]} and ${bits[1]} this week.` };
+  }
+  if (filmsThisWeek > 0) {
+    return { kind: 'films', text: `${bits[0]} logged this week.` };
+  }
+  if (episodesThisWeek > 0) {
+    return {
+      kind: 'episodes',
+      text:
+        streak > 1
+          ? `${bits[0]} this week — streak still warm.`
+          : `${bits[0]} this week. No films yet.`,
+    };
+  }
+  return { kind: 'time', text: 'Time is on the clock — keep going.' };
+}
+
+module.exports = { buildWeekRecap, buildWeekInsight };
