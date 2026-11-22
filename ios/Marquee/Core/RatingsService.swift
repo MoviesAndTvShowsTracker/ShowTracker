@@ -4,6 +4,30 @@ struct ExternalScore: Decodable, Hashable, Sendable {
     let value: Double
     let scale: Int
     var votes: String? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case value, scale, votes
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        value = try c.decode(Double.self, forKey: .value)
+        scale = try c.decode(Int.self, forKey: .scale)
+        if let s = try? c.decode(String.self, forKey: .votes) {
+            votes = s
+        } else if let n = try? c.decode(Int.self, forKey: .votes) {
+            votes = String(n)
+        } else {
+            votes = nil
+        }
+    }
+}
+
+enum RatingSource: String, Hashable, Sendable {
+    case imdb
+    case rottenTomatoes
+    case metacritic
+    case tmdb
 }
 
 struct MediaRatings: Decodable, Hashable, Sendable {
@@ -15,19 +39,48 @@ struct MediaRatings: Decodable, Hashable, Sendable {
     let rottenTomatoes: ExternalScore?
     let metacritic: ExternalScore?
 
+    /// Order matches Plex / JustWatch: IMDb → Tomatoes → Metascore → TMDB.
     var chips: [RatingsChip] {
         var out: [RatingsChip] = []
-        if let tmdb {
-            out.append(.init(id: "tmdb", label: "TMDB", display: String(format: "%.1f", tmdb.value), detail: "/\(tmdb.scale)"))
-        }
         if let imdb {
-            out.append(.init(id: "imdb", label: "IMDb", display: String(format: "%.1f", imdb.value), detail: "/\(imdb.scale)"))
+            let display = String(format: "%.1f", imdb.value)
+            out.append(.init(
+                id: "imdb",
+                source: .imdb,
+                display: display,
+                numericValue: imdb.value,
+                accessibilityLabel: "IMDb \(display) out of \(imdb.scale)"
+            ))
         }
         if let rottenTomatoes {
-            out.append(.init(id: "rt", label: "Tomatoes", display: "\(Int(rottenTomatoes.value))%", detail: nil))
+            let pct = Int(rottenTomatoes.value)
+            out.append(.init(
+                id: "rt",
+                source: .rottenTomatoes,
+                display: "\(pct)%",
+                numericValue: rottenTomatoes.value,
+                accessibilityLabel: "Rotten Tomatoes \(pct) percent"
+            ))
         }
         if let metacritic {
-            out.append(.init(id: "mc", label: "Metascore", display: "\(Int(metacritic.value))", detail: nil))
+            let score = Int(metacritic.value)
+            out.append(.init(
+                id: "mc",
+                source: .metacritic,
+                display: "\(score)",
+                numericValue: metacritic.value,
+                accessibilityLabel: "Metascore \(score)"
+            ))
+        }
+        if let tmdb {
+            let display = String(format: "%.1f", tmdb.value)
+            out.append(.init(
+                id: "tmdb",
+                source: .tmdb,
+                display: display,
+                numericValue: tmdb.value,
+                accessibilityLabel: "TMDB \(display) out of \(tmdb.scale)"
+            ))
         }
         return out
     }
@@ -35,9 +88,10 @@ struct MediaRatings: Decodable, Hashable, Sendable {
 
 struct RatingsChip: Identifiable, Hashable {
     let id: String
-    let label: String
+    let source: RatingSource
     let display: String
-    let detail: String?
+    let numericValue: Double
+    let accessibilityLabel: String
 }
 
 enum RatingsService {

@@ -87,9 +87,67 @@ async function fetchOmdb(imdbId, apiKey) {
   const url = new URL(OMDB_BASE);
   url.searchParams.set('apikey', apiKey);
   url.searchParams.set('i', imdbId);
+  url.searchParams.set('tomatoes', 'true');
   const res = await fetch(url);
   if (!res.ok) throw new Error(`OMDb ${res.status}`);
   return res.json();
+}
+
+function findTomatometer(node) {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const hit = findTomatometer(item);
+      if (hit != null) return hit;
+    }
+    return null;
+  }
+  if (node.name === 'Tomatometer' && node.ratingValue != null) {
+    const n = Number.parseInt(String(node.ratingValue), 10);
+    if (!Number.isNaN(n)) return n;
+  }
+  if (node.aggregateRating) {
+    const hit = findTomatometer(node.aggregateRating);
+    if (hit != null) return hit;
+  }
+  for (const value of Object.values(node)) {
+    const hit = findTomatometer(value);
+    if (hit != null) return hit;
+  }
+  return null;
+}
+
+function parseTomatoMeterFromHtml(html) {
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = re.exec(html))) {
+    try {
+      const score = findTomatometer(JSON.parse(match[1]));
+      if (score != null) return score;
+    } catch {
+      // ignore malformed JSON-LD blocks
+    }
+  }
+  return null;
+}
+
+/** OMDb often omits RT even when tomatoURL is present — fill from RT JSON-LD. */
+async function fetchRottenTomatoesScore(tomatoUrl) {
+  if (!tomatoUrl || tomatoUrl === 'N/A' || !String(tomatoUrl).includes('rottentomatoes.com')) {
+    return null;
+  }
+  const res = await fetch(tomatoUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; MarqueeBot/1.0)',
+      Accept: 'text/html',
+    },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`RT ${res.status}`);
+  const html = await res.text();
+  const score = parseTomatoMeterFromHtml(html);
+  if (score == null) return null;
+  return { value: score, scale: 100 };
 }
 
 async function buildRatings(kind, id) {
@@ -101,7 +159,8 @@ async function buildRatings(kind, id) {
     throw err;
   }
 
-  const cacheKey = `${kind}:${id}`;
+  // v2: RT JSON-LD fallback — bust prior caches that stored null Tomatometer.
+  const cacheKey = `v2:${kind}:${id}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
@@ -116,13 +175,28 @@ async function buildRatings(kind, id) {
       : null;
 
   let omdb = { imdb: null, rottenTomatoes: null, metacritic: null };
+  let tomatoUrl = null;
   const imdbId = imdbIdFromTmdb(kind, detail);
   if (omdbKey && imdbId) {
     try {
       const body = await fetchOmdb(imdbId, omdbKey);
       omdb = parseOmdbRatings(body);
+      tomatoUrl = body.tomatoURL && body.tomatoURL !== 'N/A' ? body.tomatoURL : null;
+      // Also accept tomatoMeter when OMDb fills it.
+      if (!omdb.rottenTomatoes && body.tomatoMeter && body.tomatoMeter !== 'N/A') {
+        const value = Number.parseInt(String(body.tomatoMeter).replace('%', ''), 10);
+        if (!Number.isNaN(value)) omdb.rottenTomatoes = { value, scale: 100 };
+      }
     } catch (err) {
       console.warn('OMDb fetch failed', err.message);
+    }
+  }
+
+  if (!omdb.rottenTomatoes && tomatoUrl) {
+    try {
+      omdb.rottenTomatoes = await fetchRottenTomatoesScore(tomatoUrl);
+    } catch (err) {
+      console.warn('RT fallback failed', err.message);
     }
   }
 
