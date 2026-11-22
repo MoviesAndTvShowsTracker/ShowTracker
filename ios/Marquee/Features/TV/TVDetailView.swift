@@ -4,6 +4,7 @@ struct TVDetailView: View {
     @Environment(\.marqueeTheme) var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppPreferences.self) private var preferences
     let tvId: Int
 
     @State var detail: TVDetail?
@@ -18,6 +19,8 @@ struct TVDetailView: View {
     @State var showRating: Double = 0
     @State var providers: [WatchProvider] = []
     @State var providerRegion: String?
+    @State var ratings: MediaRatings?
+    @State var ratingsReady = false
     @State var phase: LoadPhase = .loading
     @State var busy = false
     @State var episodePendingUnmark: TVEpisode?
@@ -191,7 +194,6 @@ struct TVDetailView: View {
         return MediaMetaLine.parts(
             year: year,
             runtimeMinutes: detail.typicalRuntime,
-            rating: detail.vote_average,
             extra: extra
         )
     }
@@ -219,6 +221,8 @@ struct TVDetailView: View {
     @ViewBuilder
     private func infoPane(_ detail: TVDetail) -> some View {
         VStack(alignment: .leading, spacing: 24) {
+            RatingsStrip(ratings: ratings, isLoading: !ratingsReady)
+
             WatchProvidersRow(
                 providers: providers,
                 region: providerRegion,
@@ -541,17 +545,20 @@ struct TVDetailView: View {
         phase = .loading
         diaryReady = false
         providersReady = false
+        ratingsReady = false
         didApplyPreferredPane = false
         pane = .info
         do {
             // Shell first (hero + title). Diary/providers commit atomically under the fold
             // so the first pane paint is already the right tab with no CLS pops.
+            let region = preferences.resolvedWatchRegion
             async let detailTask = TMDBService.tvDetail(id: tvId)
             async let favTask = DiaryService.tvFavorited(id: idString)
             async let listTask = DiaryService.tvWatchlisted(id: idString)
             async let trackTask = DiaryService.tracking(for: idString)
             async let epsTask = DiaryService.watchedEpisodes(tvId: idString)
-            async let providersTask = WatchProviderService.load(kind: .tv, id: tvId)
+            async let providersTask = WatchProviderService.load(kind: .tv, id: tvId, preferredRegion: region)
+            async let ratingsTask = RatingsService.load(kind: .tv, id: tvId)
 
             let loaded = try await detailTask
             guard generation == loadGeneration else { return }
@@ -568,6 +575,7 @@ struct TVDetailView: View {
             let resolvedList = (try? await listTask) ?? false
             let docs = (try? await epsTask) ?? []
             let loadedProviders = await providersTask
+            let loadedRatings = await ratingsTask
             guard generation == loadGeneration else { return }
 
             favorited = resolvedFav
@@ -588,6 +596,7 @@ struct TVDetailView: View {
 
             providers = loadedProviders.providers
             providerRegion = loadedProviders.region
+            ratings = loadedRatings
 
             // Preferred pane BEFORE first reveal — never Info→Episodes after paint.
             applyPreferredPaneIfNeeded(animated: false)
@@ -597,6 +606,7 @@ struct TVDetailView: View {
             transaction.disablesAnimations = reduceMotion
             withTransaction(transaction) {
                 providersReady = true
+                ratingsReady = true
             }
             withAnimation(reduceMotion ? nil : MarqueeMotion.standard) {
                 diaryReady = true

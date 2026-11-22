@@ -77,7 +77,7 @@ struct BrowseQuery: Equatable {
     var sort: BrowseSort = .popular
     var genreId: Int? = nil
     var providerIds: Set<Int> = []
-    var watchRegion: String = "US"
+    var watchRegion: String = Locale.current.region?.identifier.uppercased() ?? "US"
     var page: Int = 1
 
     var summary: String {

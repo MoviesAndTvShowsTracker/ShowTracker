@@ -11,8 +11,11 @@ struct MovieDetailView: View {
     @State private var watchlisted = false
     @State private var rating: Double = 0
     @State private var diaryReady = false
+    @Environment(AppPreferences.self) private var preferences
     @State private var providers: [WatchProvider] = []
     @State private var providerRegion: String?
+    @State private var ratings: MediaRatings?
+    @State private var ratingsReady = false
     @State private var phase: LoadPhase = .loading
     @State private var busy = false
     @State private var showUnwatchConfirm = false
@@ -59,8 +62,7 @@ struct MovieDetailView: View {
             title: detail.displayTitle,
             metaParts: MediaMetaLine.parts(
                 year: detail.year,
-                runtimeMinutes: detail.runtime,
-                rating: detail.vote_average
+                runtimeMinutes: detail.runtime
             ),
             genresLine: detail.genres?.prefix(3).map(\.name).joined(separator: "  ·  "),
             shareText: shareText(for: detail),
@@ -82,6 +84,7 @@ struct MovieDetailView: View {
                 }
             },
             content: {
+                RatingsStrip(ratings: ratings, isLoading: !ratingsReady)
                 WatchProvidersRow(providers: providers, region: providerRegion)
 
                 if let overview = detail.overview, !overview.isEmpty {
@@ -239,11 +242,15 @@ struct MovieDetailView: View {
             async let f = DiaryService.movieFavorited(id: idString)
             async let w = DiaryService.movieWatched(id: idString)
             async let l = DiaryService.movieWatchlisted(id: idString)
-            async let providersTask = WatchProviderService.load(kind: .movie, id: movieId)
+            let region = await MainActor.run { preferences.resolvedWatchRegion }
+            async let providersTask = WatchProviderService.load(kind: .movie, id: movieId, preferredRegion: region)
+            async let ratingsTask = RatingsService.load(kind: .movie, id: movieId)
             detail = try await detailTask
             let loadedProviders = await providersTask
             providers = loadedProviders.providers
             providerRegion = loadedProviders.region
+            ratings = await ratingsTask
+            ratingsReady = true
             favorited = (try? await f) ?? false
             if let watchedRes = try? await w {
                 watched = watchedRes.watched ?? false

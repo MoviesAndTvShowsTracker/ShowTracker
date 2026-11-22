@@ -39,6 +39,7 @@ struct MediaBrowseView: View {
             sort: sort,
             genreId: genreId,
             providerIds: providerIds,
+            watchRegion: preferences.resolvedWatchRegion,
             page: page
         )
     }

@@ -29,6 +29,24 @@ struct SettingsView: View {
         )
     }
 
+    private var deviceRegionCode: String {
+        if let region = Locale.current.region?.identifier, region.count == 2 {
+            return region.uppercased()
+        }
+        return "US"
+    }
+
+    private var watchRegionBinding: Binding<String?> {
+        Binding(
+            get: { preferences.watchRegionCode },
+            set: { preferences.watchRegionCode = $0 }
+        )
+    }
+
+    private static let watchRegionOptions = [
+        "US", "CA", "GB", "AU", "IN", "DE", "FR", "BR", "JP", "KR", "MX", "AE"
+    ]
+
     var body: some View {
         List {
             Section {
@@ -73,6 +91,23 @@ struct SettingsView: View {
                 Text("Alerts")
             } footer: {
                 Text("Marquee reminds you at 9am on days your tracked shows drop a new episode. Add the Up Next widget from your Home Screen for a one-tap jump back in.")
+            }
+
+            Section {
+                Picker(selection: watchRegionBinding) {
+                    Text("Device (\(WatchProviderService.regionDisplayName(deviceRegionCode)))")
+                        .tag(String?.none)
+                    ForEach(Self.watchRegionOptions, id: \.self) { code in
+                        Text("\(WatchProviderService.regionDisplayName(code)) (\(code))")
+                            .tag(String?.some(code))
+                    }
+                } label: {
+                    SettingsLabel("Watch region", systemImage: "globe")
+                }
+            } header: {
+                Text("Where to watch")
+            } footer: {
+                Text("Uses your device region by default — no location permission. Change it here if your streaming catalog is for another country.")
             }
 
             Section {

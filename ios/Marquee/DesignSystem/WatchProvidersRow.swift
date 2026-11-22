@@ -29,21 +29,50 @@ struct WatchProviderResponse: Decodable, Sendable {
 }
 
 enum WatchProviderService {
-    static func load(kind: MediaKind, id: Int) async -> (providers: [WatchProvider], region: String?) {
+    /// Prefer the user's region without GPS: Settings override → device Locale → US.
+    @MainActor
+    static func preferredRegion(preferences: AppPreferences? = nil) -> String {
+        if let preferences {
+            return preferences.resolvedWatchRegion
+        }
+        if let region = Locale.current.region?.identifier, region.count == 2 {
+            return region.uppercased()
+        }
+        return "US"
+    }
+
+    static func load(
+        kind: MediaKind,
+        id: Int,
+        preferredRegion: String? = nil
+    ) async -> (providers: [WatchProvider], region: String?) {
         let path = kind == .movie ? "/api/tmdb/movie/\(id)/watch/providers" : "/api/tmdb/tv/\(id)/watch/providers"
         guard let res: WatchProviderResponse = try? await APIClient.shared.get(path, auth: false) else {
             return ([], nil)
         }
         let results = res.results ?? [:]
-        for region in ["US", "CA", "GB"] {
+        let preferred = (preferredRegion ?? "US").uppercased()
+        var order = [preferred, "US", "CA", "GB"]
+        // Keep unique while preserving priority.
+        var seen = Set<String>()
+        order = order.filter { seen.insert($0).inserted }
+
+        for region in order {
             if let list = results[region]?.stream, !list.isEmpty {
                 return (Array(list.prefix(8)), region)
             }
         }
-        if let first = results.first, !first.value.stream.isEmpty {
-            return (Array(first.value.stream.prefix(8)), first.key)
+        // Last resort: first non-empty region (sorted for stability — not random dict order).
+        for region in results.keys.sorted() {
+            if let list = results[region]?.stream, !list.isEmpty {
+                return (Array(list.prefix(8)), region)
+            }
         }
         return ([], nil)
+    }
+
+    static func regionDisplayName(_ code: String) -> String {
+        Locale.current.localizedString(forRegionCode: code) ?? code
     }
 }
 
@@ -91,7 +120,7 @@ struct WatchProvidersRow: View {
                     SectionKicker(text: "Where to watch")
                     Spacer()
                     if let region {
-                        Text(region == "CA" ? "Canada" : region == "US" ? "United States" : region)
+                        Text(WatchProviderService.regionDisplayName(region))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(theme.inkMuted)
                     }

@@ -21,6 +21,7 @@ const tvepisodes = require('./routes/tvepisodes');
 const importRouter = require('./routes/import');
 const statsRouter = require('./routes/stats');
 const tmdbRouter = require('./routes/tmdb');
+const ratingsRouter = require('./routes/ratings');
 const devicesRouter = require('./routes/devices');
 const diaryRouter = require('./routes/diary');
 
@@ -78,6 +79,7 @@ app.use('/api/watchlist', moviewatchlist);
 app.use('/api/import', importRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/tmdb', tmdbRouter);
+app.use('/api/ratings', ratingsRouter);
 app.use('/api/devices', devicesRouter);
 app.use('/api/diary', diaryRouter);
 

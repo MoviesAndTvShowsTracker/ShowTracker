@@ -6,7 +6,14 @@ actor WatchlistProviderFilter {
     func providerIds(kind: MediaKind, id: Int) async -> Set<Int> {
         let key = "\(kind == .movie ? "movie" : "tv"):\(id)"
         if let cached = cache[key] { return cached }
-        let loaded = await WatchProviderService.load(kind: kind, id: id)
+        let region = await MainActor.run { () -> String in
+            // Locale fallback when preferences aren't in scope.
+            if let region = Locale.current.region?.identifier, region.count == 2 {
+                return region.uppercased()
+            }
+            return "US"
+        }
+        let loaded = await WatchProviderService.load(kind: kind, id: id, preferredRegion: region)
         let ids = Set(loaded.providers.map(\.provider_id))
         cache[key] = ids
         return ids

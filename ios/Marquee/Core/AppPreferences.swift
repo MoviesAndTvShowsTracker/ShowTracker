@@ -61,6 +61,28 @@ final class AppPreferences {
         didSet { defaults.set(Array(preferredProviderIds), forKey: Keys.providers) }
     }
 
+    /// ISO region for JustWatch / TMDB watch providers. `nil` = follow device locale (no GPS).
+    var watchRegionCode: String? {
+        didSet {
+            if let watchRegionCode, !watchRegionCode.isEmpty {
+                defaults.set(watchRegionCode.uppercased(), forKey: Keys.watchRegion)
+            } else {
+                defaults.removeObject(forKey: Keys.watchRegion)
+            }
+        }
+    }
+
+    /// Resolved region used for Where to watch + browse discover.
+    var resolvedWatchRegion: String {
+        if let watchRegionCode, !watchRegionCode.isEmpty {
+            return watchRegionCode.uppercased()
+        }
+        if let region = Locale.current.region?.identifier, region.count == 2 {
+            return region.uppercased()
+        }
+        return "US"
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let appearanceRaw = defaults.string(forKey: Keys.appearance) ?? Appearance.system.rawValue
@@ -73,6 +95,11 @@ final class AppPreferences {
         episodeAlertsEnabled = defaults.object(forKey: Keys.episodeAlerts) as? Bool ?? false
         let storedProviders = defaults.array(forKey: Keys.providers) as? [Int] ?? []
         preferredProviderIds = Set(storedProviders)
+        if let storedRegion = defaults.string(forKey: Keys.watchRegion), !storedRegion.isEmpty {
+            watchRegionCode = storedRegion.uppercased()
+        } else {
+            watchRegionCode = nil
+        }
     }
 
     func clearSearchHistory() {
@@ -89,5 +116,6 @@ final class AppPreferences {
         static let grid = "marquee.gridDensity"
         static let episodeAlerts = "marquee.episodeAlerts"
         static let providers = "marquee.preferredProviders"
+        static let watchRegion = "marquee.watchRegion"
     }
 }
