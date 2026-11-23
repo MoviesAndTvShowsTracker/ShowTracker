@@ -369,12 +369,26 @@ export default function TvSeasonEpisodesPanel({
     }
   };
 
-  const formatPlayDatesLine = (dates) => {
-    if (!dates?.length) return '';
-    const latest = formatShortDate(dates[dates.length - 1]);
-    if (!latest || latest === '—') return '';
-    if (dates.length === 1) return ` Watched ${latest}.`;
-    return ` Last watched ${latest}.`;
+  const formatWatchHistoryBody = (episode, plays, dates) => {
+    const name = episode.name ? ` — ${episode.name}` : '';
+    const lines = [`S${selectedSeason} E${episode.episode_number}${name}`];
+    const labels = (dates || []).map(formatShortDate).filter((d) => d && d !== '—');
+    lines.push('');
+    if (labels.length === 1) {
+      lines.push(`Watched ${labels[0]}`);
+    } else if (labels.length > 1) {
+      labels.forEach((label, index) => {
+        const suffix = index === labels.length - 1 ? ' (latest)' : '';
+        lines.push(`${index + 1}. ${label}${suffix}`);
+      });
+    }
+    lines.push('');
+    lines.push(
+      plays > 1
+        ? 'Watch again, or peel off the latest one.'
+        : 'Watch again, or clear this watch.'
+    );
+    return lines.join('\n');
   };
 
   const toggleEpisode = (episode) => {
@@ -382,14 +396,9 @@ export default function TvSeasonEpisodesPanel({
     const isWatched = watchedKeys.has(key);
     const plays = playCounts[key] || (isWatched ? 1 : 0);
     if (isWatched || plays > 0) {
-      const name = episode.name ? ` — ${episode.name}` : '';
-      const dateLine = formatPlayDatesLine(playDates[key]);
       confirm({
         title: plays > 1 ? `Watched ${plays} times` : 'Watched',
-        body:
-          plays > 1
-            ? `S${selectedSeason} E${episode.episode_number}${name} is on ${plays} watches.${dateLine} Watch again, or peel off the latest one.`
-            : `S${selectedSeason} E${episode.episode_number}${name}.${dateLine} Watch again, or clear this watch.`,
+        body: formatWatchHistoryBody(episode, plays, playDates[key]),
         actions: [
           { label: 'Watch again', primary: true, onClick: () => logEpisodeRewatch(episode) },
           {
@@ -775,14 +784,7 @@ export default function TvSeasonEpisodesPanel({
                       )}
                     </p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                      {episode.air_date && <span>Aired {airdate(episode.air_date)}</span>}
-                      {(isWatched || plays > 0) && firstPlay && (
-                        <span className="state-enter font-medium text-accent">
-                          {plays > 1
-                            ? `First ${formatShortDate(firstPlay)}`
-                            : `Watched ${formatShortDate(firstPlay)}`}
-                        </span>
-                      )}
+                      {episode.air_date && <span>{airdate(episode.air_date)}</span>}
                       {episode.runtime > 0 && <span>{episode.runtime} min</span>}
                       {episode.vote_average > 0 && (
                         <span className="inline-flex items-center gap-0.5">
@@ -799,6 +801,11 @@ export default function TvSeasonEpisodesPanel({
                         />
                       )}
                     </div>
+                    {(isWatched || plays > 0) && firstPlay && (
+                      <p className="mt-0.5 truncate text-xs text-muted">
+                        Watched {formatShortDate(firstPlay)}
+                      </p>
+                    )}
                   </div>
                 </article>
               );

@@ -190,6 +190,8 @@ extension TVDetailView {
                             }
                         }
 
+                        // Catalog facts only — personal watch dates sit on their own line
+                        // (TV Time / Trakt keep diary dates out of this chip row).
                         HStack(spacing: 8) {
                             if let air = formatDate(ep.air_date) {
                                 Text(air)
@@ -198,14 +200,16 @@ extension TVDetailView {
                             }
                             if let runtime = ep.runtime, runtime > 0 {
                                 Text(MediaMetaLine.formatRuntime(runtime))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(theme.olive)
+                                    .font(.caption)
+                                    .foregroundStyle(theme.inkMuted)
                             }
-                            if let first = episodePlayDates[key]?.first.flatMap(shortWatchDate) {
-                                Text(plays > 1 ? "First \(first)" : "Watched \(first)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(theme.olive)
-                            }
+                        }
+
+                        if let first = episodePlayDates[key]?.first.flatMap(shortWatchDate) {
+                            Text("Watched \(first)")
+                                .font(.caption)
+                                .foregroundStyle(theme.inkMuted)
+                                .lineLimit(1)
                         }
 
                         if let overview = ep.overview, !overview.isEmpty {

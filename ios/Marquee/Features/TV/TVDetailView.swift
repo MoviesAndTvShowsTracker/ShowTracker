@@ -110,16 +110,28 @@ struct TVDetailView: View {
         let s = ep.season_number ?? selectedSeason
         let name = ep.name.map { " — \($0)" } ?? ""
         let plays = playCount(for: ep)
-        let dates = playDates(for: ep)
-        let dateLine: String = {
-            guard let latest = dates.last.flatMap(shortWatchDate) else { return "" }
-            if dates.count == 1 { return " Watched \(latest)." }
-            return " Last watched \(latest)."
-        }()
-        if plays > 1 {
-            return "S\(s) E\(ep.episode_number)\(name) is on \(plays) watches.\(dateLine) Watch again, or peel off the latest one."
+        let labels = playDates(for: ep).compactMap(shortWatchDate)
+
+        var lines: [String] = ["S\(s) E\(ep.episode_number)\(name)"]
+        if labels.isEmpty {
+            lines.append("")
+        } else if labels.count == 1 {
+            lines.append("")
+            lines.append("Watched \(labels[0])")
+        } else {
+            lines.append("")
+            for (index, label) in labels.enumerated() {
+                let suffix = index == labels.count - 1 ? " (latest)" : ""
+                lines.append("\(index + 1). \(label)\(suffix)")
+            }
         }
-        return "S\(s) E\(ep.episode_number)\(name).\(dateLine) Watch again, or clear this watch."
+        lines.append("")
+        if plays > 1 {
+            lines.append("Watch again, or peel off the latest one.")
+        } else {
+            lines.append("Watch again, or clear this watch.")
+        }
+        return lines.joined(separator: "\n")
     }
 
     private func playCount(for ep: TVEpisode) -> Int {

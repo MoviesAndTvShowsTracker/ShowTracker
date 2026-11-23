@@ -89,7 +89,9 @@ export default function useConfirmDialog() {
         )
       }
     >
-      {shown?.body && <p className="text-sm text-muted">{shown.body}</p>}
+      {shown?.body && (
+        <p className="whitespace-pre-line text-sm leading-relaxed text-muted">{shown.body}</p>
+      )}
     </Dialog>
   );
 
