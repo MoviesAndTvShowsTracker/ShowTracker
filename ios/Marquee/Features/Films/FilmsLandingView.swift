@@ -40,6 +40,8 @@ struct FilmsLandingView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 28) {
+                LandingIdentityTitle(title: "Films")
+
                 if loading && trending.isEmpty {
                     LandingSkeleton()
                 } else if trending.isEmpty, let error {
@@ -139,8 +141,7 @@ struct FilmsLandingView: View {
             .padding(.bottom, 8)
         }
         .marqueeCanvas()
-        .navigationTitle("Films")
-        .navigationBarTitleDisplayMode(.large)
+        .marqueeLandingChrome()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {

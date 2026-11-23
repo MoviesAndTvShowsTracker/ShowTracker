@@ -34,6 +34,8 @@ struct TVLandingView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 28) {
+                LandingIdentityTitle(title: "TV")
+
                 if loading && trending.isEmpty && watching.isEmpty {
                     LandingSkeleton(showLibrary: true)
                 } else if trending.isEmpty && watching.isEmpty, let error {
@@ -134,7 +136,7 @@ struct TVLandingView: View {
             .padding(.bottom, 8)
         }
         .marqueeCanvas()
-        .navigationTitle("TV")
+        .marqueeLandingChrome()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {

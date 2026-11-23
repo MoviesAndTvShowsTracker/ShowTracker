@@ -133,7 +133,10 @@ private struct MarqueeCanvasModifier: ViewModifier {
         content
             .background(theme.surface)
             .containerBackground(theme.surface, for: .navigation)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            // Let the system scroll-edge material do the work — a forced
+            // toolbarBackground reads as a hard slab over posters (esp. iOS 27
+            // hard default). Soft edge = Music / Apple TV style fade.
+            .scrollEdgeEffectStyle(.soft, for: .top)
             .scrollContentBackground(.hidden)
     }
 }
@@ -141,5 +144,64 @@ private struct MarqueeCanvasModifier: ViewModifier {
 extension View {
     func marqueeCanvas() -> some View {
         modifier(MarqueeCanvasModifier())
+    }
+
+    /// Tab-root landings (Films / TV).
+    /// Large identity lives in the scroll (`LandingIdentityTitle`) so it leaves
+    /// with the content — the tab already names the section. Soft system edge
+    /// + a light progressive veil (Music / Apple TV) instead of a hard slab.
+    func marqueeLandingChrome() -> some View {
+        modifier(MarqueeLandingChromeModifier())
+    }
+}
+
+/// In-scroll section name for Films / TV — leaves with the content.
+struct LandingIdentityTitle: View {
+    @Environment(\.marqueeTheme) private var theme
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.largeTitle.weight(.bold))
+            .foregroundStyle(theme.ink)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+private struct MarqueeLandingChromeModifier: ViewModifier {
+    @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var veil: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                max(0, geometry.contentOffset.y + geometry.contentInsets.top)
+            } action: { _, y in
+                let next = min(1, y / 56)
+                if abs(next - veil) > 0.02 { veil = next }
+            }
+            .overlay(alignment: .top) {
+                LinearGradient(
+                    stops: [
+                        .init(color: theme.surface.opacity(0.78 * veil), location: 0),
+                        .init(color: theme.surface.opacity(0.36 * veil), location: 0.55),
+                        .init(color: theme.surface.opacity(0), location: 1),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 96)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .animation(reduceMotion ? nil : MarqueeMotion.micro, value: veil)
+            }
     }
 }
