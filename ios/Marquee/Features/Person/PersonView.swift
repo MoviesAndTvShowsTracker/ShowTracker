@@ -89,6 +89,7 @@ struct PersonView: View {
         .marqueeCanvas()
         .navigationTitle(person?.displayName ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("personView")
         .task { await load() }
     }
 
@@ -112,17 +113,21 @@ struct PersonView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(person.displayName)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // Nav title already carries the name; keep body focus on role + lifespan.
                     if !person.metaLine.isEmpty {
                         Text(person.metaLine)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(theme.ink)
+                    }
+                    if let place = person.place_of_birth, !place.isEmpty {
+                        Text(place)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(theme.inkMuted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 4)
             }
 
             if let bio = person.biography?.trimmingCharacters(in: .whitespacesAndNewlines), !bio.isEmpty {

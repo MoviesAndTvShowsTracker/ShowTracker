@@ -50,10 +50,17 @@ enum PersonCreditsProcessor {
             pool = actingList.isEmpty ? directingList : actingList
         }
 
-        return Array(
-            pool.sorted { ($0.vote_count ?? 0) > ($1.vote_count ?? 0) }
-                .prefix(limit)
-        )
+        // Prefer billed roles with posters; vote_count alone elevates talk-show catalog noise.
+        let ranked = pool.sorted { lhs, rhs in
+            let lp = lhs.poster_path == nil
+            let rp = rhs.poster_path == nil
+            if lp != rp { return !lp }
+            let lv = lhs.vote_count ?? 0
+            let rv = rhs.vote_count ?? 0
+            if lv != rv { return lv > rv }
+            return dateDescending(lhs, rhs)
+        }
+        return Array(ranked.prefix(limit))
     }
 
     static func availableSegments(person: PersonDetail, credits: PersonCombinedCredits?) -> [PersonFilmographySegment] {
@@ -84,12 +91,30 @@ enum PersonCreditsProcessor {
     private static func filterNoise(_ items: [PersonCredit]) -> [PersonCredit] {
         items.filter { credit in
             if credit.isAdult { return false }
-            if credit.kind == .tv, let character = credit.character?.lowercased() {
-                let first = character.split(separator: "/").first.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? character
-                if selfRoles.contains(first) { return false }
-            }
+            if isAppearanceNoise(credit.character) { return false }
             return true
         }
+    }
+
+    /// Talk-show / archival “Self”, “Self - Guest”, “Himself”, etc.
+    private static func isAppearanceNoise(_ character: String?) -> Bool {
+        guard let raw = character?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return false
+        }
+        let lower = raw.lowercased()
+        // Split billing aliases: "Self / Host"
+        let parts = lower
+            .split(whereSeparator: { $0 == "/" || $0 == "|" })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        for part in parts {
+            let head = part.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+                .first
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? part
+            if selfRoles.contains(head) || selfRoles.contains(part) { return true }
+            if part.hasPrefix("self ") || part.hasPrefix("self-") { return true }
+            if part.contains("guest") && (part.contains("self") || part == "guest") { return true }
+        }
+        return false
     }
 
     private static func dedupe(_ items: [PersonCredit]) -> [PersonCredit] {

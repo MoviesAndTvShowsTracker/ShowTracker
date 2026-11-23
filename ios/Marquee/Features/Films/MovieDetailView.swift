@@ -207,7 +207,7 @@ struct MovieDetailView: View {
     private func creditRows(for detail: MovieDetail) -> [CreditRow] {
         let crew = detail.credits?.crew ?? []
         let directors = CreditRow.uniquePeople(crew, jobs: ["Director"], limit: 4)
-        let writers = crew.filter { ["Writer", "Screenplay", "Story"].contains($0.job ?? "") }.compactMap(\.name)
+        let writers = CreditRow.uniquePeople(crew, jobs: ["Writer", "Screenplay", "Story"], limit: 4)
         var rows: [CreditRow] = []
         if !directors.isEmpty {
             rows.append(
@@ -219,7 +219,13 @@ struct MovieDetailView: View {
             )
         }
         if !writers.isEmpty {
-            rows.append(CreditRow(label: "Writing", value: CreditRow.joinedNames(writers, limit: 4)))
+            rows.append(
+                CreditRow(
+                    label: "Writing",
+                    value: writers.map(\.name).joined(separator: ", "),
+                    people: writers
+                )
+            )
         }
         return rows
     }

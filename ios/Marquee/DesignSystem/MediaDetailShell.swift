@@ -205,6 +205,7 @@ private struct FlexiblePersonChipWrap: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(PressablePosterStyle())
+                .accessibilityIdentifier("personChip")
                 .accessibilityLabel("\(person.name), view filmography")
             }
         }
@@ -278,6 +279,7 @@ struct MediaCastRail: View {
                                 )
                             }
                             .buttonStyle(PressablePosterStyle())
+                            .accessibilityIdentifier("castMember")
                             .accessibilityLabel("\(member.name), view filmography")
                         }
                     }

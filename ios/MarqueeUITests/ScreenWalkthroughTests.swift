@@ -25,6 +25,7 @@ final class ScreenWalkthroughTests: XCTestCase {
         app.swipeUp()
         sleep(1)
         shot("05b-film-detail-scrolled")
+        openPersonFilmography(app, prefix: "05c")
         swipeBack(app)
 
         tapTab(app, "TV")
@@ -78,6 +79,46 @@ final class ScreenWalkthroughTests: XCTestCase {
                 return
             }
         }
+    }
+
+    private func openPersonFilmography(_ app: XCUIApplication, prefix: String) {
+        // Prefer cast rail, then director/credit chips.
+        let cast = app.descendants(matching: .any).matching(identifier: "castMember")
+        let chips = app.descendants(matching: .any).matching(identifier: "personChip")
+        let target: XCUIElement?
+        if cast.count > 0, cast.element(boundBy: 0).waitForExistence(timeout: 3) {
+            target = cast.element(boundBy: 0)
+        } else if chips.count > 0, chips.element(boundBy: 0).waitForExistence(timeout: 2) {
+            target = chips.element(boundBy: 0)
+        } else {
+            // Scroll for cast if still offscreen.
+            for _ in 0..<4 {
+                app.swipeUp()
+                sleep(1)
+                if cast.count > 0 {
+                    break
+                }
+            }
+            target = cast.count > 0 ? cast.element(boundBy: 0)
+                : (chips.count > 0 ? chips.element(boundBy: 0) : nil)
+        }
+        guard let person = target, person.waitForExistence(timeout: 4) else { return }
+        person.tap()
+        sleep(3)
+        shot("\(prefix)-person")
+        let personRoot = app.otherElements["personView"]
+        _ = personRoot.waitForExistence(timeout: 6)
+        // Switch segment if segmented control exists.
+        let segmented = app.segmentedControls.firstMatch
+        if segmented.waitForExistence(timeout: 2), segmented.buttons.count > 1 {
+            segmented.buttons.element(boundBy: 1).tap()
+            sleep(1)
+            shot("\(prefix)-person-segment")
+        }
+        app.swipeUp()
+        sleep(1)
+        shot("\(prefix)-person-scrolled")
+        swipeBack(app)
     }
 
     private func tapTab(_ app: XCUIApplication, _ name: String) {

@@ -265,7 +265,11 @@ struct TVDetailView: View {
         let crew = detail.credits?.crew ?? []
         // Prefer Creator / Director for tappable chips; EP alone stays in plain text fallback.
         let leadPeople = CreditRow.uniquePeople(crew, jobs: ["Creator", "Director"], limit: 4)
-        let writers = crew.filter { ["Writer", "Screenplay", "Story", "Teleplay"].contains($0.job ?? "") }.compactMap(\.name)
+        let writers = CreditRow.uniquePeople(
+            crew,
+            jobs: ["Writer", "Screenplay", "Story", "Teleplay"],
+            limit: 4
+        )
         var rows: [CreditRow] = []
         if !leadPeople.isEmpty {
             rows.append(
@@ -288,7 +292,13 @@ struct TVDetailView: View {
             }
         }
         if !writers.isEmpty {
-            rows.append(CreditRow(label: "Writing", value: CreditRow.joinedNames(writers, limit: 4)))
+            rows.append(
+                CreditRow(
+                    label: "Writing",
+                    value: writers.map(\.name).joined(separator: ", "),
+                    people: writers
+                )
+            )
         }
         return rows
     }
