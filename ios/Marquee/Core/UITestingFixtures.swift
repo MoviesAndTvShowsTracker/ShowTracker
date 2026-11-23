@@ -16,6 +16,12 @@ enum UITestingFixtures {
         intArgument(prefix: "-previewTVDetail=")
     }
 
+    /// `-previewViaSearch` wraps the preview detail under a searchable nav stack
+    /// so chrome inherits the same safe-area quirks as Search → movie/TV.
+    static var previewViaSearch: Bool {
+        ProcessInfo.processInfo.arguments.contains("-previewViaSearch")
+    }
+
     private static func intArgument(prefix: String) -> Int? {
         guard let raw = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }) else {
             return nil

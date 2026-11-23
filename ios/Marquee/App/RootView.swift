@@ -53,9 +53,9 @@ struct RootView: View {
             #if DEBUG
             // Fake session path for offline UI tests only.
             if let movieId = UITestingFixtures.previewMovieId {
-                NavigationStack { MovieDetailView(movieId: movieId) }
+                previewDetailStack { MovieDetailView(movieId: movieId) }
             } else if let tvId = UITestingFixtures.previewTVId {
-                NavigationStack { TVDetailView(tvId: tvId) }
+                previewDetailStack { TVDetailView(tvId: tvId) }
             } else {
                 AuthFlowView()
             }
@@ -71,9 +71,9 @@ struct RootView: View {
     private var authenticatedDestination: some View {
         #if DEBUG
         if let movieId = UITestingFixtures.previewMovieId {
-            NavigationStack { MovieDetailView(movieId: movieId) }
+            previewDetailStack { MovieDetailView(movieId: movieId) }
         } else if let tvId = UITestingFixtures.previewTVId {
-            NavigationStack { TVDetailView(tvId: tvId) }
+            previewDetailStack { TVDetailView(tvId: tvId) }
         } else if showWelcome || !OnboardingStore.hasSeenWelcome {
             welcomeDestination
         } else {
@@ -87,6 +87,48 @@ struct RootView: View {
         }
         #endif
     }
+
+    #if DEBUG
+    /// Mirrors Search → detail: searchable is *active* on the parent, then detail
+    /// pushes — same handoff that used to ignore toolbar hide / soft edge.
+    private struct PreviewSearchPushStack<Detail: View>: View {
+        @ViewBuilder var detail: () -> Detail
+        @State private var query = "dune"
+        @State private var searching = true
+        @State private var showDetail = false
+
+        var body: some View {
+            NavigationStack {
+                Color.clear
+                    .navigationTitle("Search")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .searchable(
+                        text: $query,
+                        isPresented: $searching,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "Title, show, or franchise"
+                    )
+                    .searchPresentationToolbarBehavior(.avoidHidingContent)
+                    .navigationDestination(isPresented: $showDetail) {
+                        detail()
+                    }
+                    .onAppear {
+                        // Push while search is still active — the failure mode.
+                        showDetail = true
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func previewDetailStack<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+        if UITestingFixtures.previewViaSearch {
+            PreviewSearchPushStack(detail: content)
+        } else {
+            NavigationStack { content() }
+        }
+    }
+    #endif
 
     private var welcomeDestination: some View {
         WelcomeSplashView {

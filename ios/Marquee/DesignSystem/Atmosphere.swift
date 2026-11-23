@@ -141,9 +141,45 @@ private struct MarqueeCanvasModifier: ViewModifier {
     }
 }
 
+/// Film / TV detail — hero underlaps the status bar.
+/// Same soft top edge as Films/TV landings (`e32c539`); system bar stays hidden
+/// so custom back/share chrome can sit on the blur.
+///
+/// Search handoff (iOS 18+): if the previous screen still has an active
+/// `.searchable` session, a *static* `.toolbar(.hidden)` is ignored and the
+/// soft scroll-edge dies with it — buttons sit too low and the top looks
+/// unblurred. Films/TV never hit this (no searchable). Fix: start visible,
+/// then hide on appear (known SwiftUI workaround).
+private struct MarqueeDetailCanvasModifier: ViewModifier {
+    @Environment(\.marqueeTheme) private var theme
+    @State private var hideBar = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(theme.surface)
+            .containerBackground(.clear, for: .navigation)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarVisibility(hideBar ? .hidden : .automatic, for: .navigationBar)
+            .toolbar(hideBar ? .hidden : .automatic, for: .navigationBar)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .onAppear {
+                // Deferred — a static `.hidden` is ignored after an active search push.
+                hideBar = true
+            }
+    }
+}
+
 extension View {
     func marqueeCanvas() -> some View {
         modifier(MarqueeCanvasModifier())
+    }
+
+    func marqueeDetailCanvas() -> some View {
+        modifier(MarqueeDetailCanvasModifier())
     }
 
     /// Tab-root landings (Films / TV).

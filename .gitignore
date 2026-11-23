@@ -127,6 +127,7 @@ gdpr-data/
 ios/**/xcuserdata/
 ios/**/DerivedData/
 ios/.derivedDataPhone/
+ios/.derivedDataSim/
 ios/**/*.xcuserstate
 *.moved-aside
 *.hmap

@@ -109,10 +109,8 @@ struct TVDetailView: View {
                 if let detail { content(detail) }
             }
         }
-        .marqueeCanvas()
+        .marqueeDetailCanvas()
         .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .navigationBar)
         .background(EnableSwipeBack())
         .alert(
             "Episode watched",

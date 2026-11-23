@@ -332,12 +332,15 @@ struct DiaryGlassStrip<Content: View>: View {
 @Observable
 final class MediaDetailScrollState {
     var y: CGFloat = 0
+    /// Search (large title) can report a bogus positive offset on first layout;
+    /// wait until settled so compact chrome doesn't flash a white slab.
+    var acceptsScroll = false
 
     var collapse: CGFloat {
         min(1, max(0, y / 150))
     }
 
-    var showCompactChrome: Bool { collapse > 0.55 }
+    var showCompactChrome: Bool { acceptsScroll && collapse > 0.55 }
 
     func update(offset: CGFloat) {
         let next = max(0, offset)
@@ -397,18 +400,20 @@ struct MediaDetailShell<Actions: View, Content: View>: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .contentMargins(.top, 0, for: .scrollContent)
             .coordinateSpace(.named("mediaDetailScroll"))
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.contentOffset.y
-            } action: { _, newValue in
+                // Match landing chrome: offset + top inset == 0 at rest.
+                max(0, geometry.contentOffset.y + geometry.contentInsets.top)
+            } action: { _, scrolled in
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    scrollState.update(offset: newValue)
+                    scrollState.update(offset: scrolled)
                 }
             }
             .background(theme.surface.ignoresSafeArea())
-            .ignoresSafeArea(edges: .top)
+            .ignoresSafeArea(.container, edges: .top)
             .overlay(alignment: .top) {
                 MediaDetailTopChrome(
                     title: title,
@@ -423,6 +428,11 @@ struct MediaDetailShell<Actions: View, Content: View>: View {
                     appeared = true
                 } else {
                     withAnimation(MarqueeMotion.reveal) { appeared = true }
+                }
+                // Let NavigationStack handoff settle before trusting offset.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    scrollState.y = 0
+                    scrollState.acceptsScroll = true
                 }
                 if debugScrollTarget == "body" || debugScrollTarget == "cast" {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -578,47 +588,50 @@ private struct MediaDetailTopChrome: View {
     var body: some View {
         let showCompactChrome = scrollState.showCompactChrome
 
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                GlassBackButton(action: onBack)
+        HStack(spacing: 12) {
+            GlassBackButton(action: onBack)
 
-                if showCompactChrome {
-                    Text(title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(theme.ink)
-                        .lineLimit(1)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
-                Spacer(minLength: 0)
-
-                ShareLink(item: shareText) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(theme.olive)
-                        .frame(width: 40, height: 40)
-                }
-                .modifier(GlassCircleShareChrome())
+            if showCompactChrome {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                    .lineLimit(1)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, showCompactChrome ? 10 : 0)
-            .safeAreaPadding(.top)
-            .background {
-                if showCompactChrome {
-                    Rectangle()
-                        .fill(theme.surface.opacity(0.94))
-                        .background(.ultraThinMaterial)
-                        .ignoresSafeArea(edges: .top)
-                        .overlay(alignment: .bottom) {
-                            Rectangle()
-                                .fill(theme.border)
-                                .frame(height: 1)
-                        }
-                }
+
+            Spacer(minLength: 0)
+
+            ShareLink(item: shareText) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                    .frame(width: 40, height: 40)
             }
-            .animation(reduceMotion ? nil : MarqueeMotion.micro, value: showCompactChrome)
+            .modifier(GlassCircleShareChrome())
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, showCompactChrome ? 10 : 0)
+        .safeAreaPadding(.top)
+        .background(alignment: .top) {
+            // Soft edge from marqueeDetailCanvas does the live blur. This is
+            // only a light progressive veil when compact — never an opaque slab.
+            if showCompactChrome {
+                LinearGradient(
+                    stops: [
+                        .init(color: theme.surface.opacity(0.72), location: 0),
+                        .init(color: theme.surface.opacity(0.32), location: 0.55),
+                        .init(color: theme.surface.opacity(0), location: 1),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 96)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+            }
+        }
+        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: showCompactChrome)
     }
 }
 

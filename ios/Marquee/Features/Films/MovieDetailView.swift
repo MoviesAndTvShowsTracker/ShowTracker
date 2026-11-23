@@ -44,10 +44,8 @@ struct MovieDetailView: View {
                 if let detail { content(detail) }
             }
         }
-        .marqueeCanvas()
+        .marqueeDetailCanvas()
         .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .navigationBar)
         .background(EnableSwipeBack())
         // Use `.alert` (centered system dialog), not `.confirmationDialog`.
         // On iOS 26, confirmationDialog presents as a glass popover with a pointer.

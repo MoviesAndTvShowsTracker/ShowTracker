@@ -36,13 +36,17 @@ struct SearchView: View {
         }
         .marqueeCanvas()
         .navigationTitle("Search")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(
             text: $query,
             isPresented: $searchPresented,
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Title, show, or franchise"
         )
+        // Without this, an active search session on push ignores the detail's
+        // `.toolbar(.hidden)` and kills the soft scroll-edge blur (Films/TV
+        // path is fine because it has no searchable). iOS 18+ system bug.
+        .searchPresentationToolbarBehavior(.avoidHidingContent)
         .onChange(of: query) { _, _ in
             scheduleSearch()
         }
