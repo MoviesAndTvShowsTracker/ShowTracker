@@ -151,25 +151,39 @@ function loadGdprData(dataDir) {
   }
 
   const tvEpisodes = new Map();
+  /** All rewatch plays (may include duplicates / multiple runs). */
+  const tvRewatchPlays = [];
   for (const row of trackingV2) {
-    if (!row.key?.startsWith('watch-episode')) continue;
+    const keyName = row.key || '';
+    const isFirstWatch = keyName.startsWith('watch-episode');
+    const isRewatch = keyName.startsWith('rewatch-episode');
+    if (!isFirstWatch && !isRewatch) continue;
+
     const season = parseInt(row.season_number || row.s_no, 10);
     const episode = parseInt(row.episode_number || row.ep_no, 10);
     if (!row.series_name || !Number.isFinite(season) || !Number.isFinite(episode)) continue;
     if (season <= 0) continue;
 
-    const key = `${row.series_name}\0${season}\0${episode}`;
     const watchedAt = row.created_at ? new Date(row.created_at) : new Date();
+    const play = {
+      seriesName: row.series_name,
+      tvdbId: String(row.s_id || '').trim(),
+      seasonNumber: season,
+      episodeNumber: episode,
+      tvtimeEpisodeId: row.episode_id || row.ep_id || '',
+      watchedAt,
+      bulkType: row.bulk_type || '',
+    };
+
+    if (isRewatch) {
+      tvRewatchPlays.push(play);
+      continue;
+    }
+
+    const key = `${row.series_name}\0${season}\0${episode}`;
     const existing = tvEpisodes.get(key);
     if (!existing || watchedAt < existing.watchedAt) {
-      tvEpisodes.set(key, {
-        seriesName: row.series_name,
-        tvdbId: String(row.s_id || '').trim(),
-        seasonNumber: season,
-        episodeNumber: episode,
-        tvtimeEpisodeId: row.episode_id || row.ep_id || '',
-        watchedAt,
-      });
+      tvEpisodes.set(key, play);
     }
   }
 
@@ -297,8 +311,13 @@ function loadGdprData(dataDir) {
     [...tvEpisodes.values()].map((ep) => ep.tvdbId).filter(Boolean)
   );
 
+  // TV Time sometimes merges anthology seasons under one series id.
+  const tvEpisodesSplit = expandAnthologySplits([...tvEpisodes.values()]);
+  const tvRewatchPlaysSplit = expandAnthologySplits(tvRewatchPlays);
+
   return {
-    tvEpisodes: [...tvEpisodes.values()],
+    tvEpisodes: tvEpisodesSplit,
+    tvRewatchPlays: tvRewatchPlaysSplit,
     moviesWatched: [...moviesWatched.values()],
     moviesTowatch: [...moviesTowatch.values()],
     movieFavorites,
@@ -307,6 +326,7 @@ function loadGdprData(dataDir) {
     tvShowMeta,
     stats: {
       tvEpisodeRows: tvEpisodes.size,
+      tvRewatchRows: tvRewatchPlays.length,
       moviesWatched: moviesWatched.size,
       moviesTowatch: moviesTowatch.size,
       movieFavorites: movieFavorites.length,
@@ -314,6 +334,131 @@ function loadGdprData(dataDir) {
       tvWatchlist: tvWatchlist.length,
     },
   };
+}
+
+/**
+ * TV Time stored Hill House + Bly Manor as one show (tvdb 345246) with Bly as season 2.
+ * Split onto the correct TMDB titles and remap Bly → season 1.
+ */
+const ANTHOLOGY_SPLITS = {
+  '345246': [
+    {
+      matchSeason: 1,
+      tvdbId: '345246:hill',
+      tmdbId: '72844',
+      name: 'The Haunting of Hill House',
+      seasonNumber: 1,
+    },
+    {
+      matchSeason: 2,
+      tvdbId: '345246:bly',
+      tmdbId: '109958',
+      name: 'The Haunting of Bly Manor',
+      seasonNumber: 1,
+    },
+  ],
+};
+
+function expandAnthologySplits(plays) {
+  if (!Array.isArray(plays) || !plays.length) return [];
+  const out = [];
+  for (const play of plays) {
+    const rules = ANTHOLOGY_SPLITS[play.tvdbId];
+    if (!rules) {
+      out.push(play);
+      continue;
+    }
+    const rule = rules.find((r) => r.matchSeason === play.seasonNumber);
+    if (!rule) {
+      out.push(play);
+      continue;
+    }
+    out.push({
+      ...play,
+      tvdbId: rule.tvdbId,
+      seasonNumber: rule.seasonNumber,
+      seriesName: rule.name,
+      forcedMapping: {
+        tmdbId: rule.tmdbId,
+        name: rule.name,
+        poster_path: '',
+        backdrop_path: '',
+        source: 'anthology_split',
+      },
+    });
+  }
+  return out;
+}
+
+/**
+ * Collapse identical GDPR duplicate marks, then split into rewatch runs.
+ * A new session starts when the same episode is marked again, or after a long gap.
+ */
+function clusterRewatchSessions(plays, { gapDays = 30 } = {}) {
+  if (!Array.isArray(plays) || !plays.length) return [];
+
+  const sorted = [...plays].sort((a, b) => {
+    const da = new Date(a.watchedAt || 0).getTime();
+    const db = new Date(b.watchedAt || 0).getTime();
+    return da - db || a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber;
+  });
+
+  const deduped = [];
+  const seenExact = new Set();
+  for (const play of sorted) {
+    const at = new Date(play.watchedAt || 0).toISOString();
+    const exact = `${play.seasonNumber}-${play.episodeNumber}\0${at}`;
+    if (seenExact.has(exact)) continue;
+    seenExact.add(exact);
+    deduped.push(play);
+  }
+
+  const gapMs = Math.max(1, gapDays) * 24 * 60 * 60 * 1000;
+  const sessions = [];
+  let current = [];
+  let currentKeys = new Set();
+  let lastAt = null;
+
+  for (const play of deduped) {
+    const key = episodeKey(play.seasonNumber, play.episodeNumber);
+    const at = new Date(play.watchedAt || 0).getTime();
+    const gapBreak = lastAt != null && at - lastAt > gapMs;
+    const episodeRepeat = currentKeys.has(key);
+
+    if (current.length && (episodeRepeat || gapBreak)) {
+      sessions.push(current);
+      current = [];
+      currentKeys = new Set();
+    }
+
+    if (currentKeys.has(key)) continue;
+    current.push(play);
+    currentKeys.add(key);
+    lastAt = at;
+  }
+  if (current.length) sessions.push(current);
+  return sessions;
+}
+
+function buildRewatchEpisodeDocs(userId, tmdbId, sessionId, episodeIndex, sessionPlays) {
+  const indexByKey = new Map(
+    (episodeIndex || []).map((ep) => [episodeKey(ep.seasonNumber, ep.episodeNumber), ep])
+  );
+
+  return sessionPlays.map((w) => {
+    const meta = indexByKey.get(episodeKey(w.seasonNumber, w.episodeNumber));
+    return {
+      userFrom: userId,
+      tvId: tmdbId,
+      sessionId,
+      seasonNumber: w.seasonNumber,
+      episodeNumber: w.episodeNumber,
+      tmdbEpisodeId: meta?.tmdbEpisodeId || '',
+      episodeName: meta?.episodeName || '',
+      runtimeMinutes: meta?.runtimeMinutes || 0,
+      watchedAt: w.watchedAt,
+    };
+  });
 }
 
 class TmdbMapper {
@@ -581,6 +726,8 @@ function buildTrackingDoc(userId, tmdbId, showMeta, episodeIndex, watchedForShow
     totalEpisodes,
     watchedEpisodeCount: count,
     status: completed ? 'completed' : 'watching',
+    timesCompleted: completed ? 1 : 0,
+    activeRewatchSessionId: null,
     nextSeason: completed ? null : next?.seasonNumber ?? null,
     nextEpisode: completed ? null : next?.episodeNumber ?? null,
     nextEpisodeName: completed ? null : next?.episodeName ?? null,
@@ -595,6 +742,11 @@ module.exports = {
   TmdbMapper,
   buildEpisodeDocs,
   buildTrackingDoc,
+  clusterRewatchSessions,
+  buildRewatchEpisodeDocs,
+  expandAnthologySplits,
+  ANTHOLOGY_SPLITS,
+  episodeKey,
   normalizeTitle,
   readCsv,
 };

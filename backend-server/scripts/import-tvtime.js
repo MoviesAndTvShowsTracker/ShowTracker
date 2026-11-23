@@ -39,8 +39,8 @@ Options:
   --dry-run          Map titles and print report without writing to DB
   --user <name>      Marquee username (default: admin)
   --data <dir>       Path to gdpr-data folder (default: ../../gdpr-data)
-  --replace          Clear existing progress for user before import (default)
-  --no-replace       Keep existing data and skip duplicates
+  --replace          DANGER: wipe this user's Marquee diary, then import (default)
+  --no-replace       Keep existing Marquee data; only fill gaps / skip duplicates
   --report <file>    Write JSON report (default: <data>/import-report.json)
 `);
       process.exit(0);
@@ -80,6 +80,8 @@ async function run() {
     fs.writeFileSync(opts.report, JSON.stringify(report, null, 2));
     console.log('\n--- Dry run summary ---');
     console.log(`TV episodes ready: ${report.tv.episodesImported}`);
+    console.log(`TV rewatch rows: ${report.tv.rewatchPlays}`);
+    console.log(`TV rewatch sessions: ${report.tv.rewatchSessions}`);
     console.log(`TV shows mapped: ${report.tv.mapped}`);
     console.log(`Movies watched: ${report.movies.watchedMapped}`);
     console.log(`Report: ${opts.report}`);
@@ -107,6 +109,8 @@ async function run() {
   fs.writeFileSync(opts.report, JSON.stringify(report, null, 2));
   console.log('\n--- Import complete ---');
   console.log(`TV episodes: ${report.tv.episodesImported}`);
+  console.log(`TV rewatch sessions: ${report.tv.rewatchSessions}`);
+  console.log(`TV rewatch episode marks: ${report.tv.rewatchEpisodesImported}`);
   console.log(`TV shows: ${report.tv.shows}`);
   console.log(`Movies watched: ${report.movies.watchedMapped}`);
   console.log(`Report: ${opts.report}`);

@@ -8,7 +8,16 @@ const TvWatchlist = require('../models/tvwatchlist');
 const TvWatch = require('../models/tvwatch');
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
 const TvShowTracking = require('../models/tvShowTracking');
-const { loadGdprData, TmdbMapper, buildEpisodeDocs, buildTrackingDoc } = require('../scripts/tvtime-lib');
+const TvRewatchSession = require('../models/tvRewatchSession');
+const TvRewatchEpisode = require('../models/tvRewatchEpisode');
+const {
+  loadGdprData,
+  TmdbMapper,
+  buildEpisodeDocs,
+  buildTrackingDoc,
+  clusterRewatchSessions,
+  buildRewatchEpisodeDocs,
+} = require('../scripts/tvtime-lib');
 
 const REQUIRED_FILES = [
   'tracking-prod-records-v2.csv',
@@ -27,6 +36,8 @@ function validateGdprFolder(dataDir) {
 
 async function clearUserData(userId) {
   await Promise.all([
+    TvRewatchEpisode.deleteMany({ userFrom: userId }),
+    TvRewatchSession.deleteMany({ userFrom: userId }),
     TvEpisodeWatch.deleteMany({ userFrom: userId }),
     TvShowTracking.deleteMany({ userFrom: userId }),
     Watch.deleteMany({ userFrom: userId }),
@@ -83,7 +94,17 @@ async function runTvTimeImport({
     replace,
     userId: String(userId),
     parsed: gdpr.stats,
-    tv: { mapped: 0, unmapped: [], episodesImported: 0, shows: 0, favorites: 0, watchlist: 0 },
+    tv: {
+      mapped: 0,
+      unmapped: [],
+      episodesImported: 0,
+      shows: 0,
+      favorites: 0,
+      watchlist: 0,
+      rewatchPlays: 0,
+      rewatchSessions: 0,
+      rewatchEpisodesImported: 0,
+    },
     movies: {
       watchedMapped: 0,
       watchedUnmapped: [],
@@ -101,8 +122,16 @@ async function runTvTimeImport({
     episodesByTvdb.get(ep.tvdbId).push(ep);
   }
 
+  const rewatchesByTvdb = new Map();
+  for (const play of gdpr.tvRewatchPlays || []) {
+    if (!play.tvdbId) continue;
+    if (!rewatchesByTvdb.has(play.tvdbId)) rewatchesByTvdb.set(play.tvdbId, []);
+    rewatchesByTvdb.get(play.tvdbId).push(play);
+  }
+
   const uniqueTvdbIds = new Set([
     ...episodesByTvdb.keys(),
+    ...rewatchesByTvdb.keys(),
     ...gdpr.tvFavorites.map((s) => s.tvdbId),
     ...gdpr.tvWatchlist.map((s) => s.tvdbId),
   ]);
@@ -111,14 +140,39 @@ async function runTvTimeImport({
   const tvMapped = new Map();
   let tvDone = 0;
   for (const tvdbId of uniqueTvdbIds) {
+    const sampleEp =
+      episodesByTvdb.get(tvdbId)?.[0] || rewatchesByTvdb.get(tvdbId)?.[0] || null;
+    if (sampleEp?.forcedMapping?.tmdbId) {
+      let mapped = { ...sampleEp.forcedMapping };
+      // Fill art from TMDB when possible.
+      try {
+        const detail = await mapper.fetch(`/tv/${mapped.tmdbId}`);
+        mapped = {
+          ...mapped,
+          name: detail.name || mapped.name,
+          poster_path: detail.poster_path || mapped.poster_path || '',
+          backdrop_path: detail.backdrop_path || mapped.backdrop_path || '',
+        };
+      } catch {
+        /* keep forced mapping */
+      }
+      tvMapped.set(tvdbId, mapped);
+      report.tv.mapped += 1;
+      tvDone += 1;
+      if (tvDone % 20 === 0) onProgress('mapping_tv', { done: tvDone, total: uniqueTvdbIds.size });
+      continue;
+    }
+
     const sample =
       gdpr.tvShowMeta.get(tvdbId)?.name ||
-      episodesByTvdb.get(tvdbId)?.[0]?.seriesName ||
+      sampleEp?.seriesName ||
       gdpr.tvFavorites.find((s) => s.tvdbId === tvdbId)?.name ||
       gdpr.tvWatchlist.find((s) => s.tvdbId === tvdbId)?.name ||
       '';
 
-    const mapped = await mapper.mapTvdbToTmdb(tvdbId, sample);
+    // Anthology parents may still appear on favorites/watchlist under the raw id.
+    const rawId = String(tvdbId).split(':')[0];
+    const mapped = await mapper.mapTvdbToTmdb(rawId === String(tvdbId) ? tvdbId : rawId, sample);
     if (mapped) {
       tvMapped.set(tvdbId, mapped);
       report.tv.mapped += 1;
@@ -159,6 +213,12 @@ async function runTvTimeImport({
   if (dryRun) {
     report.tv.episodesImported = gdpr.tvEpisodes.length;
     report.tv.shows = episodesByTvdb.size;
+    report.tv.rewatchPlays = (gdpr.tvRewatchPlays || []).length;
+    let drySessions = 0;
+    for (const plays of rewatchesByTvdb.values()) {
+      drySessions += clusterRewatchSessions(plays).length;
+    }
+    report.tv.rewatchSessions = drySessions;
     report.tv.favorites = gdpr.tvFavorites.filter((s) => tvMapped.has(s.tvdbId)).length;
     report.tv.watchlist = gdpr.tvWatchlist.filter((s) => tvMapped.has(s.tvdbId)).length;
     return report;
@@ -169,16 +229,20 @@ async function runTvTimeImport({
     await clearUserData(userId);
   }
 
-  onProgress('writing_tv', { total: episodesByTvdb.size });
+  const tvdbIdsToWrite = new Set([...episodesByTvdb.keys(), ...rewatchesByTvdb.keys()]);
+  onProgress('writing_tv', { total: tvdbIdsToWrite.size });
   let showNum = 0;
-  for (const [tvdbId, watchedEps] of episodesByTvdb) {
+  for (const tvdbId of tvdbIdsToWrite) {
     const show = tvMapped.get(tvdbId);
     if (!show) continue;
 
     showNum += 1;
-    if (showNum % 5 === 0) onProgress('writing_tv', { done: showNum, total: episodesByTvdb.size });
+    if (showNum % 5 === 0) onProgress('writing_tv', { done: showNum, total: tvdbIdsToWrite.size });
 
-    const progress = await mapper.resolveShowProgress(show.tmdbId, watchedEps);
+    const watchedEps = episodesByTvdb.get(tvdbId) || [];
+    const rewatchPlays = rewatchesByTvdb.get(tvdbId) || [];
+    const progressSeed = [...watchedEps, ...rewatchPlays];
+    const progress = await mapper.resolveShowProgress(show.tmdbId, progressSeed);
     const docs = buildEpisodeDocs(userId, show.tmdbId, progress.show, progress.episodes, watchedEps);
     if (docs.length) {
       await TvEpisodeWatch.insertMany(docs, { ordered: false }).catch((err) => {
@@ -194,6 +258,84 @@ async function runTvTimeImport({
       watchedEps,
       progress.next
     );
+
+    const sessions = clusterRewatchSessions(rewatchPlays);
+    let fullRewatchCompletions = 0;
+    let latestRewatchAt = null;
+
+    for (let i = 0; i < sessions.length; i += 1) {
+      const sessionPlays = sessions[i];
+      const startedAt = sessionPlays[0]?.watchedAt || new Date();
+      const completedAt =
+        sessionPlays[sessionPlays.length - 1]?.watchedAt || startedAt;
+      const lastPlay = [...sessionPlays].sort(
+        (a, b) =>
+          a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber
+      ).pop();
+      const totalEpisodes =
+        progress.show.number_of_episodes || progress.episodes.length || 0;
+
+      const session = await TvRewatchSession.create({
+        userFrom: userId,
+        tvId: show.tmdbId,
+        sessionNumber: i + 1,
+        status: 'completed',
+        startedAt,
+        completedAt,
+        watchedEpisodeCount: sessionPlays.length,
+        totalEpisodes,
+        airedEpisodeCount: totalEpisodes,
+        nextSeason: null,
+        nextEpisode: null,
+        nextEpisodeName: null,
+        lastSeason: lastPlay?.seasonNumber ?? null,
+        lastEpisode: lastPlay?.episodeNumber ?? null,
+        lastWatchedAt: completedAt,
+      });
+
+      const epDocs = buildRewatchEpisodeDocs(
+        userId,
+        show.tmdbId,
+        session._id,
+        progress.episodes,
+        sessionPlays
+      );
+      if (epDocs.length) {
+        await TvRewatchEpisode.insertMany(epDocs, { ordered: false }).catch((err) => {
+          if (err.code !== 11000) throw err;
+        });
+        report.tv.rewatchEpisodesImported += epDocs.length;
+      }
+
+      report.tv.rewatchSessions += 1;
+      report.tv.rewatchPlays += sessionPlays.length;
+      if (!latestRewatchAt || completedAt > latestRewatchAt) latestRewatchAt = completedAt;
+      if (totalEpisodes > 0 && sessionPlays.length >= totalEpisodes) {
+        fullRewatchCompletions += 1;
+      }
+    }
+
+    // Count first finish + every imported rewatch run so profile history is visible
+    // even when a run was only a partial season.
+    if (sessions.length > 0) {
+      const base = tracking.status === 'completed' ? 1 : 0;
+      tracking.timesCompleted = Math.max(
+        tracking.timesCompleted || 0,
+        base + sessions.length
+      );
+    } else if (fullRewatchCompletions > 0) {
+      tracking.timesCompleted = Math.max(
+        tracking.timesCompleted || 0,
+        (tracking.status === 'completed' ? 1 : 0) + fullRewatchCompletions
+      );
+    }
+    if (
+      latestRewatchAt &&
+      (!tracking.lastWatchedAt || latestRewatchAt > new Date(tracking.lastWatchedAt))
+    ) {
+      tracking.lastWatchedAt = latestRewatchAt;
+    }
+
     await TvShowTracking.findOneAndUpdate({ userFrom: userId, tvId: show.tmdbId }, tracking, {
       upsert: true,
       new: true,
