@@ -49,7 +49,13 @@ final class ScreenWalkthroughTests: XCTestCase {
             search.typeText("severance")
             sleep(2)
             shot("10-search-results")
-            if app.staticTexts["Severance"].waitForExistence(timeout: 6) {
+            let posters = app.descendants(matching: .any).matching(identifier: "posterTile")
+            if posters.element(boundBy: 0).waitForExistence(timeout: 6) {
+                posters.element(boundBy: 0).tap()
+                sleep(3)
+                shot("11-search-show-detail")
+                swipeBack(app)
+            } else if app.staticTexts["Severance"].waitForExistence(timeout: 2) {
                 app.staticTexts["Severance"].firstMatch.tap()
                 sleep(3)
                 shot("11-search-show-detail")

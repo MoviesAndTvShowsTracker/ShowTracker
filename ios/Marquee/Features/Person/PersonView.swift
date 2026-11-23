@@ -159,7 +159,7 @@ struct PersonView: View {
         }
     }
 
-    private func diaryMark(for credit: PersonCredit) -> PersonDiaryMark? {
+    private func diaryMark(for credit: PersonCredit) -> DiaryStatusMark? {
         switch credit.kind {
         case .movie:
             if watchedMovieIds.contains(credit.id) { return .watched }
@@ -219,22 +219,10 @@ struct PersonView: View {
     }
 }
 
-enum PersonDiaryMark {
-    case watched
-    case watchlist
-
-    var systemImage: String {
-        switch self {
-        case .watched: return "eye.fill"
-        case .watchlist: return "bookmark.fill"
-        }
-    }
-}
-
 private struct PersonCreditTile: View {
     @Environment(\.marqueeTheme) private var theme
     let credit: PersonCredit
-    var diary: PersonDiaryMark? = nil
+    var diary: DiaryStatusMark? = nil
     var showRole: Bool = true
 
     var body: some View {
@@ -247,13 +235,8 @@ private struct PersonCreditTile: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if let diary {
-                        Image(systemName: diary.systemImage)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(theme.olive)
+                        DiaryStatusBadge(mark: diary, compact: true)
                             .padding(6)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .padding(6)
-                            .accessibilityLabel(diary == .watched ? "Watched" : "On watchlist")
                     }
                 }
                 .overlay(alignment: .bottomLeading) {

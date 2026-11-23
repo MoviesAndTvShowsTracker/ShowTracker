@@ -2,10 +2,10 @@ import SwiftUI
 
 struct SearchView: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var focusToken: Int
 
     @State private var query = ""
-    @State private var type: TMDBService.SearchType = .multi
     @State private var results: [MediaItem] = []
     @State private var trending: [MediaItem] = []
     @State private var recent: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
@@ -15,6 +15,11 @@ struct SearchView: View {
     @State private var searchPresented = false
     @State private var searchGeneration = 0
     @State private var activeQuery = ""
+
+    @State private var watchedMovieIds: Set<Int> = []
+    @State private var watchlistMovieIds: Set<Int> = []
+    @State private var watchedTVIds: Set<Int> = []
+    @State private var watchlistTVIds: Set<Int> = []
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -35,109 +40,51 @@ struct SearchView: View {
             text: $query,
             isPresented: $searchPresented,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Films and shows"
+            prompt: "Title, show, or franchise"
         )
         .onChange(of: query) { _, _ in
             scheduleSearch()
-        }
-        .onChange(of: type) { _, _ in
-            scheduleSearch(immediate: true)
         }
         .onChange(of: focusToken) { _, _ in
             searchPresented = true
         }
         .task {
-            if trending.isEmpty {
-                trending = (try? await TMDBService.fetchPaged("trending/all/week"))?.results
-                    .filter { isFilmOrShow($0) } ?? []
-            }
+            async let trend: Void = loadTrending()
+            async let diary: Void = loadDiaryMarks()
+            _ = await (trend, diary)
         }
     }
 
+    // MARK: - Idle
+
     private var idleState: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                typeChips
-                    .padding(.horizontal, 20)
-
+            VStack(alignment: .leading, spacing: 26) {
                 browseShortcuts
                     .padding(.horizontal, 20)
 
                 if !recent.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Recent")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(theme.ink)
-                            Spacer()
-                            Button("Clear") {
-                                recent = []
-                                UserDefaults.standard.set(recent, forKey: "recentSearches")
-                            }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(theme.olive)
-                        }
-                        .padding(.horizontal, 20)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(recent, id: \.self) { term in
-                                    Button {
-                                        query = term
-                                        searchPresented = true
-                                        scheduleSearch(immediate: true)
-                                    } label: {
-                                        Label(term, systemImage: "clock")
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(theme.olive)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(theme.oliveSoft)
-                                            .clipShape(Capsule())
-                                    }
-                                    .buttonStyle(PressablePosterStyle())
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
+                    recentSection
                 }
 
                 if !trending.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Popular right now")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(theme.ink)
-                            .padding(.horizontal, 20)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(alignment: .top, spacing: 12) {
-                                ForEach(trending.prefix(12)) { item in
-                                    MediaNavLink(id: item.id, kind: kind(for: item)) {
-                                        PosterTile(
-                                            title: item.displayTitle,
-                                            posterPath: item.poster_path,
-                                            year: item.year
-                                        )
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
+                    trendingSection
                 }
             }
             .padding(.vertical, 12)
+            .padding(.bottom, 28)
         }
     }
 
     private var browseShortcuts: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Or browse")
+            Text("Browse instead")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(theme.ink)
-            Text("Filter by service and genre when you’re exploring — Search stays for titles you know.")
+            Text("Service and genre filters live on Films and TV — Search is for titles you already have in mind.")
                 .font(.subheadline)
                 .foregroundStyle(theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
                 NavigationLink {
@@ -180,13 +127,82 @@ struct SearchView: View {
         )
     }
 
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                Spacer()
+                Button("Clear") {
+                    withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
+                        recent = []
+                    }
+                    UserDefaults.standard.set(recent, forKey: "recentSearches")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(theme.olive)
+            }
+            .padding(.horizontal, 20)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(recent, id: \.self) { term in
+                        Button {
+                            query = term
+                            searchPresented = true
+                            scheduleSearch(immediate: true)
+                        } label: {
+                            Label(term, systemImage: "clock")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(theme.olive)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(theme.oliveSoft, in: Capsule(style: .continuous))
+                        }
+                        .buttonStyle(PressablePosterStyle())
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private var trendingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Popular right now")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(theme.ink)
+                .padding(.horizontal, 20)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(trending.prefix(12)) { item in
+                        MediaNavLink(id: item.id, kind: kind(for: item)) {
+                            PosterTile(
+                                title: item.displayTitle,
+                                posterPath: item.poster_path,
+                                year: item.year,
+                                diary: diaryMark(for: item)
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    // MARK: - Results
+
+    private let resultColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+    ]
+
     private var resultsList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                typeChips
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-
+            LazyVStack(alignment: .leading, spacing: 12) {
                 if searching && results.isEmpty {
                     VStack(spacing: 12) {
                         ProgressView()
@@ -217,41 +233,42 @@ struct SearchView: View {
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
                     }
 
-                    ForEach(results) { item in
-                        MediaNavLink(id: item.id, kind: kind(for: item)) {
-                            SearchResultRow(item: item)
+                    LazyVGrid(columns: resultColumns, spacing: 14) {
+                        ForEach(results) { item in
+                            MediaNavLink(id: item.id, kind: kind(for: item)) {
+                                PosterGridTile(
+                                    title: item.displayTitle,
+                                    posterPath: item.poster_path,
+                                    caption: resultCaption(for: item),
+                                    diary: diaryMark(for: item),
+                                    kindLabel: kind(for: item) == .tv ? "TV" : "Film"
+                                )
+                            }
+                            .buttonStyle(PressablePosterStyle())
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 28)
                 }
             }
             .padding(.vertical, 8)
+            .animation(reduceMotion ? nil : MarqueeMotion.micro, value: results.map(\.id))
         }
         .scrollDismissesKeyboard(.immediately)
     }
 
-    private var typeChips: some View {
-        HStack(spacing: 8) {
-            ForEach(TMDBService.SearchType.allCases) { t in
-                Button {
-                    withAnimation(MarqueeMotion.micro) { type = t }
-                    Haptics.light()
-                } label: {
-                    Text(t.label)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(type == t ? theme.onAccent : theme.olive)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(type == t ? theme.olive : theme.oliveSoft)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer(minLength: 0)
+    private func resultCaption(for item: MediaItem) -> String? {
+        var parts: [String] = []
+        if let year = item.year { parts.append(year) }
+        if let vote = item.vote_average, vote > 0 {
+            parts.append(String(format: "%.1f", vote))
         }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
+
+    // MARK: - Helpers
 
     private func kind(for item: MediaItem) -> MediaKind {
         let t = item.media_type ?? (item.title != nil ? "movie" : "tv")
@@ -261,6 +278,18 @@ struct SearchView: View {
     private func isFilmOrShow(_ item: MediaItem) -> Bool {
         let kind = item.media_type
         return kind == "movie" || kind == "tv" || kind == nil
+    }
+
+    private func diaryMark(for item: MediaItem) -> DiaryStatusMark? {
+        switch kind(for: item) {
+        case .movie:
+            if watchedMovieIds.contains(item.id) { return .watched }
+            if watchlistMovieIds.contains(item.id) { return .watchlist }
+        case .tv:
+            if watchedTVIds.contains(item.id) { return .watched }
+            if watchlistTVIds.contains(item.id) { return .watchlist }
+        }
+        return nil
     }
 
     private func scheduleSearch(immediate: Bool = false) {
@@ -273,7 +302,6 @@ struct SearchView: View {
             activeQuery = ""
             return
         }
-        // Keep current results on screen while typing; only clear the hard error.
         error = nil
         debounceTask = Task {
             if !immediate {
@@ -295,9 +323,11 @@ struct SearchView: View {
         }
 
         do {
-            let page = try await TMDBService.search(query: q, type: type)
+            async let pageTask = TMDBService.search(query: q, type: .multi)
+            async let diaryTask: Void = loadDiaryMarks()
+            let page = try await pageTask
+            _ = await diaryTask
             guard !Task.isCancelled, generation == searchGeneration else { return }
-            // Drop stale responses if the query moved on.
             guard trimmedQuery == q || immediateMatch(q) else { return }
             results = page.results.filter { isFilmOrShow($0) }
             activeQuery = q
@@ -314,10 +344,35 @@ struct SearchView: View {
         } catch {
             guard !Task.isCancelled, generation == searchGeneration else { return }
             if isCancellation(error) { return }
-            // Only surface a hard error when we have nothing useful to show.
             if results.isEmpty {
                 self.error = friendlyMessage(for: error)
             }
+        }
+    }
+
+    private func loadTrending() async {
+        guard trending.isEmpty else { return }
+        trending = (try? await TMDBService.fetchPaged("trending/all/week"))?.results
+            .filter { isFilmOrShow($0) } ?? []
+    }
+
+    private func loadDiaryMarks() async {
+        async let films = DiaryService.watchedMovies()
+        async let filmList = DiaryService.movieWatchlist()
+        async let shows = DiaryService.watchedTV()
+        async let showList = DiaryService.tvWatchlist()
+
+        if let watched = try? await films {
+            watchedMovieIds = Set(watched.compactMap { Int($0.movieId) })
+        }
+        if let list = try? await filmList {
+            watchlistMovieIds = Set(list.compactMap { Int($0.movieId) })
+        }
+        if let watched = try? await shows {
+            watchedTVIds = Set(watched.compactMap { Int($0.tvId) })
+        }
+        if let list = try? await showList {
+            watchlistTVIds = Set(list.compactMap { Int($0.tvId) })
         }
     }
 
@@ -353,61 +408,3 @@ struct SearchView: View {
     }
 }
 
-struct SearchResultRow: View {
-    @Environment(\.marqueeTheme) private var theme
-    let item: MediaItem
-
-    private var kindLabel: String {
-        let t = item.media_type ?? (item.title != nil ? "movie" : "tv")
-        return t == "tv" ? "TV" : "Film"
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            CachedAsyncImage(url: AppConfig.posterURL(path: item.poster_path))
-                .frame(width: 56, height: 84)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.displayTitle)
-                    .font(.headline)
-                    .foregroundStyle(theme.ink)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-
-                HStack(spacing: 8) {
-                    Text(kindLabel)
-                        .font(.caption2.weight(.bold))
-                        .tracking(0.6)
-                        .textCase(.uppercase)
-                        .foregroundStyle(theme.olive)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(theme.oliveSoft)
-                        .clipShape(Capsule())
-                    if let year = item.year {
-                        Text(year)
-                            .font(.caption)
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                    if let vote = item.vote_average, vote > 0 {
-                        Label(String(format: "%.1f", vote), systemImage: "star.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(theme.accent)
-                    }
-                }
-
-                if let overview = item.overview, !overview.isEmpty {
-                    Text(overview)
-                        .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
-                        .lineLimit(2)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
-    }
-}

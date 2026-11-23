@@ -6,6 +6,7 @@ struct PosterTile: View {
     let posterPath: String?
     var width: CGFloat = 110
     var year: String? = nil
+    var diary: DiaryStatusMark? = nil
     /// Fixed caption band so rails don’t bounce when titles wrap unevenly.
     var captionLines: Int = 2
 
@@ -17,6 +18,12 @@ struct PosterTile: View {
             CachedAsyncImage(url: AppConfig.posterURL(path: posterPath))
                 .frame(width: width, height: posterHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    if let diary {
+                        DiaryStatusBadge(mark: diary, compact: true)
+                            .padding(6)
+                    }
+                }
                 .accessibilityLabel(title)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -47,6 +54,9 @@ struct PosterGridTile: View {
     let posterPath: String?
     var caption: String? = nil
     var progress: Double? = nil
+    var diary: DiaryStatusMark? = nil
+    /// Small Film/TV pill on the poster (search mixed results).
+    var kindLabel: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -56,6 +66,23 @@ struct PosterGridTile: View {
                     CachedAsyncImage(url: AppConfig.posterURL(path: posterPath))
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    if let diary {
+                        DiaryStatusBadge(mark: diary, compact: true)
+                            .padding(6)
+                    }
+                }
+                .overlay(alignment: .bottomLeading) {
+                    if let kindLabel {
+                        Text(kindLabel)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(6)
+                    }
+                }
                 .overlay(alignment: .bottom) {
                     if let progress {
                         ProgressTrack(progress: progress)

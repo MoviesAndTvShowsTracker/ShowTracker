@@ -1,5 +1,40 @@
 import SwiftUI
 
+/// Compact diary status used on posters (person credits, search results).
+enum DiaryStatusMark: Equatable {
+    case watched
+    case watchlist
+
+    var systemImage: String {
+        switch self {
+        case .watched: return "eye.fill"
+        case .watchlist: return "bookmark.fill"
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .watched: return "Watched"
+        case .watchlist: return "On watchlist"
+        }
+    }
+}
+
+struct DiaryStatusBadge: View {
+    @Environment(\.marqueeTheme) private var theme
+    let mark: DiaryStatusMark
+    var compact: Bool = false
+
+    var body: some View {
+        Image(systemName: mark.systemImage)
+            .font((compact ? Font.caption2 : Font.caption).weight(.bold))
+            .foregroundStyle(theme.olive)
+            .padding(compact ? 6 : 7)
+            .background(.ultraThinMaterial, in: Circle())
+            .accessibilityLabel(mark.accessibilityLabel)
+    }
+}
+
 struct DiaryChipLabel: View {
     @Environment(\.marqueeTheme) private var theme
     let title: String
