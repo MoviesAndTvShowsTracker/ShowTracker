@@ -56,6 +56,9 @@ export default function SearchResultTile({
     ? Boolean(diary?.tvWatchlist?.has(idKey))
     : Boolean(diary?.movieWatchlist?.has(idKey));
   const filmWatched = !isTv && Boolean(diary?.watchedMovies?.has(idKey));
+  const filmWatchCount = filmWatched
+    ? Math.max(1, Number(diary?.watchedMovieCounts?.get(idKey)) || 1)
+    : 0;
 
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState('');
@@ -187,7 +190,7 @@ export default function SearchResultTile({
       desktopAction = (
         <span className="flex h-9 min-w-[2.25rem] flex-1 items-center justify-center gap-1 rounded-lg bg-accent text-[10px] font-semibold text-on-accent">
           <Check className="h-3.5 w-3.5" />
-          Watched
+          {filmWatchCount > 1 ? `×${filmWatchCount}` : 'Watched'}
         </span>
       );
     } else {
@@ -300,7 +303,9 @@ export default function SearchResultTile({
                     className="flex w-full items-center gap-2.5 px-3 py-3 text-left text-sm font-medium text-ink"
                   >
                     <Check className="h-4 w-4 shrink-0 text-accent" />
-                    <span className="whitespace-nowrap">Watched</span>
+                    <span className="whitespace-nowrap">
+                      {filmWatchCount > 1 ? `Watched ×${filmWatchCount}` : 'Watched'}
+                    </span>
                   </div>
                 ) : (
                   <button

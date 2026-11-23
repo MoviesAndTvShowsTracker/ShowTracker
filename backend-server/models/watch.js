@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+/**
+ * One document = one film play (diary log).
+ * Multiple rows per user+movieId are intentional so rewatches keep distinct dates.
+ */
 var Watch = new Schema({
     userFrom: {
         type: Schema.ObjectId,
@@ -24,6 +28,11 @@ var Watch = new Schema({
     watchedAt: {
         type: Date
     },
+    /** True when this play is not the user's first log of the film. */
+    isRewatch: {
+        type: Boolean,
+        default: false,
+    },
     rating: {
         type: Number,
         min: 1,
@@ -33,5 +42,8 @@ var Watch = new Schema({
 }, {
     timestamps: true
 });
+
+Watch.index({ userFrom: 1, movieId: 1, watchedAt: -1 });
+Watch.index({ userFrom: 1, watchedAt: -1 });
 
 module.exports = mongoose.model('Watch', Watch);

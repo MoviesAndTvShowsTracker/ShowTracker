@@ -55,13 +55,16 @@ export default function useSearchDiaryContext() {
             .filter((id) => id && !tvTracks.has(id))
         );
 
-        const watchedMovies = new Set(
-          (watchedFilms.data?.success ? watchedFilms.data.watch || [] : [])
-            .map((m) => normId(m.movieId))
-            .filter(Boolean)
-        );
+        const watchedMovies = new Set();
+        const watchedMovieCounts = new Map();
+        for (const m of watchedFilms.data?.success ? watchedFilms.data.watch || [] : []) {
+          const id = normId(m.movieId);
+          if (!id) continue;
+          watchedMovies.add(id);
+          watchedMovieCounts.set(id, Math.max(1, Number(m.watchCount) || 1));
+        }
 
-        setContext({ tvTracks, movieWatchlist, tvWatchlist, watchedMovies });
+        setContext({ tvTracks, movieWatchlist, tvWatchlist, watchedMovies, watchedMovieCounts });
         setReady(true);
       })
       .catch(() => {
@@ -71,6 +74,7 @@ export default function useSearchDiaryContext() {
           movieWatchlist: new Set(),
           tvWatchlist: new Set(),
           watchedMovies: new Set(),
+          watchedMovieCounts: new Map(),
         });
         setReady(true);
       });

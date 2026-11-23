@@ -12,6 +12,7 @@ struct PersonView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var watchedMovieIds: Set<Int> = []
+    @State private var watchedMovieCounts: [Int: Int] = [:]
     @State private var watchlistMovieIds: Set<Int> = []
     @State private var watchedTVIds: Set<Int> = []
     @State private var watchlistTVIds: Set<Int> = []
@@ -162,10 +163,12 @@ struct PersonView: View {
     private func diaryMark(for credit: PersonCredit) -> DiaryStatusMark? {
         switch credit.kind {
         case .movie:
-            if watchedMovieIds.contains(credit.id) { return .watched }
+            if watchedMovieIds.contains(credit.id) {
+                return .watched(times: watchedMovieCounts[credit.id] ?? 1)
+            }
             if watchlistMovieIds.contains(credit.id) { return .watchlist }
         case .tv:
-            if watchedTVIds.contains(credit.id) { return .watched }
+            if watchedTVIds.contains(credit.id) { return .watched(times: 1) }
             if watchlistTVIds.contains(credit.id) { return .watchlist }
         }
         return nil
@@ -206,6 +209,10 @@ struct PersonView: View {
 
         if let watched = try? await films {
             watchedMovieIds = Set(watched.compactMap { Int($0.movieId) })
+            watchedMovieCounts = Dictionary(uniqueKeysWithValues: watched.compactMap { doc in
+                guard let id = Int(doc.movieId) else { return nil }
+                return (id, max(1, doc.watchCount ?? 1))
+            })
         }
         if let list = try? await filmList {
             watchlistMovieIds = Set(list.compactMap { Int($0.movieId) })

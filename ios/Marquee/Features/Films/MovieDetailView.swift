@@ -8,6 +8,8 @@ struct MovieDetailView: View {
     @State private var detail: MovieDetail?
     @State private var favorited = false
     @State private var watched = false
+    @State private var watchCount = 0
+    @State private var lastWatchedAt: String?
     @State private var watchlisted = false
     @State private var rating: Double = 0
     @State private var diaryReady = false
@@ -18,11 +20,18 @@ struct MovieDetailView: View {
     @State private var ratingsReady = false
     @State private var phase: LoadPhase = .loading
     @State private var busy = false
-    @State private var showUnwatchConfirm = false
+    @State private var showWatchActions = false
     @State private var showRatingSheet = false
 
     private enum LoadPhase { case loading, ready, failed(String) }
     private var idString: String { String(movieId) }
+
+    private var watchSubtitle: String? {
+        guard watched else { return nil }
+        if watchCount > 1 { return "×\(watchCount)" }
+        if let label = shortWatchDate(lastWatchedAt) { return label }
+        return "Logged"
+    }
 
     var body: some View {
         Group {
@@ -40,13 +49,28 @@ struct MovieDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .background(EnableSwipeBack())
-        .confirmationDialog("Unmark as watched?", isPresented: $showUnwatchConfirm, titleVisibility: .visible) {
-            Button("Remove from watched", role: .destructive) {
-                Task { if let detail { await performUnwatch(detail) } }
+        // Use `.alert` (centered system dialog), not `.confirmationDialog`.
+        // On iOS 26, confirmationDialog presents as a glass popover with a pointer.
+        .alert(
+            watchCount > 1 ? "Watched ×\(watchCount)" : "Watched",
+            isPresented: $showWatchActions
+        ) {
+            Button("Log again") {
+                Task { if let detail { await performWatch(detail, isRewatch: true) } }
+            }
+            if watchCount > 1 {
+                Button("Remove last log") {
+                    Task { if let detail { await performUnwatch(detail, mode: "latest") } }
+                }
+            }
+            Button(watchCount > 1 ? "Clear all watches" : "Remove from watched", role: .destructive) {
+                Task { if let detail { await performUnwatch(detail, mode: "all") } }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Remove \"\(detail?.displayTitle ?? "this film")\" from your watched films?")
+            Text(watchCount > 1
+                ? "Log again keeps older dates. Remove last log only drops the newest entry."
+                : "Log again adds a new dated watch, or remove this film from watched.")
         }
         .sheet(isPresented: $showRatingSheet) {
             ratingSheet
@@ -118,13 +142,13 @@ struct MovieDetailView: View {
             ActionStripButton(
                 title: "Watched",
                 systemImage: watched ? "eye.fill" : "eye",
-                subtitle: watched ? "Logged" : nil,
+                subtitle: watchSubtitle,
                 active: watched
             ) {
                 if watched {
-                    showUnwatchConfirm = true
+                    showWatchActions = true
                 } else {
-                    Task { await performWatch(detail) }
+                    Task { await performWatch(detail, isRewatch: false) }
                 }
             }
 
@@ -246,6 +270,34 @@ struct MovieDetailView: View {
         )
     }
 
+    private func applyWatchedSummary(
+        watched flag: Bool?,
+        count: Int?,
+        watchedAt: String?,
+        ratingValue: Double?
+    ) {
+        let nextCount = max(0, count ?? (flag == true ? 1 : 0))
+        watchCount = nextCount
+        watched = nextCount > 0
+        lastWatchedAt = watchedAt
+        if let r = ratingValue {
+            rating = min(5, r > 5 ? r / 2 : r)
+        } else if nextCount == 0 {
+            rating = 0
+        }
+    }
+
+    private func shortWatchDate(_ iso: String?) -> String? {
+        guard let iso, iso.count >= 10 else { return nil }
+        let day = String(iso.prefix(10))
+        let parts = day.split(separator: "-")
+        guard parts.count == 3,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]),
+              let date = Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+        else { return nil }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
     private func load() async {
         phase = .loading
         diaryReady = false
@@ -265,10 +317,12 @@ struct MovieDetailView: View {
             ratingsReady = true
             favorited = (try? await f) ?? false
             if let watchedRes = try? await w {
-                watched = watchedRes.watched ?? false
-                if let r = watchedRes.rating {
-                    rating = min(5, r > 5 ? r / 2 : r)
-                }
+                applyWatchedSummary(
+                    watched: watchedRes.watched,
+                    count: watchedRes.watchCount,
+                    watchedAt: watchedRes.watchedAt,
+                    ratingValue: watchedRes.rating
+                )
             }
             watchlisted = (try? await l) ?? false
             diaryReady = true
@@ -293,32 +347,68 @@ struct MovieDetailView: View {
         } catch {}
     }
 
-    private func performWatch(_ detail: MovieDetail) async {
+    private func performWatch(_ detail: MovieDetail, isRewatch: Bool) async {
         busy = true
         defer { busy = false }
+        let previousCount = watchCount
+        let previousWatchedAt = lastWatchedAt
         watched = true
-        Haptics.success()
+        watchCount = previousCount + 1
+        lastWatchedAt = ISO8601DateFormatter().string(from: Date())
+        if isRewatch { Haptics.medium() } else { Haptics.success() }
         do {
-            try await DiaryService.addMovieWatched(bodyPayload(detail))
+            let res = try await DiaryService.addMovieWatched(bodyPayload(detail))
+            applyWatchedSummary(
+                watched: true,
+                count: res.watchCount ?? (previousCount + 1),
+                watchedAt: res.watchedAt ?? lastWatchedAt,
+                ratingValue: res.rating ?? (rating > 0 ? rating * 2 : nil)
+            )
             if watchlisted {
                 try? await DiaryService.removeMovieWatchlist(id: idString)
                 watchlisted = false
             }
         } catch {
-            watched = false
+            watchCount = previousCount
+            watched = previousCount > 0
+            lastWatchedAt = previousWatchedAt
         }
     }
 
-    private func performUnwatch(_ detail: MovieDetail) async {
+    private func performUnwatch(_ detail: MovieDetail, mode: String) async {
         busy = true
         defer { busy = false }
-        watched = false
-        rating = 0
+        let previousCount = watchCount
+        let previousWatched = watched
+        let previousWatchedAt = lastWatchedAt
+        let previousRating = rating
+        if mode == "all" {
+            watched = false
+            watchCount = 0
+            lastWatchedAt = nil
+            rating = 0
+        } else {
+            watchCount = max(0, previousCount - 1)
+            watched = watchCount > 0
+            if !watched {
+                lastWatchedAt = nil
+                rating = 0
+            }
+        }
         Haptics.light()
         do {
-            try await DiaryService.removeMovieWatched(id: idString)
+            let res = try await DiaryService.removeMovieWatched(id: idString, mode: mode)
+            applyWatchedSummary(
+                watched: res.watched,
+                count: res.watchCount,
+                watchedAt: res.watchedAt,
+                ratingValue: res.rating
+            )
         } catch {
-            watched = true
+            watchCount = previousCount
+            watched = previousWatched
+            lastWatchedAt = previousWatchedAt
+            rating = previousRating
         }
     }
 

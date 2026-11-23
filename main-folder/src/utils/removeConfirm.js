@@ -22,6 +22,21 @@ export function watchedFilmRemoveConfirm(title) {
   };
 }
 
+/** Multi-action sheet when a film already has one or more dated plays. */
+export function watchedFilmManageConfirm(title, watchCount) {
+  const count = Math.max(1, Number(watchCount) || 1);
+  if (count > 1) {
+    return {
+      title: `Watched ×${count}`,
+      body: `Log again adds a new date and keeps older watches. Remove last log only drops the newest entry for "${title}".`,
+    };
+  }
+  return {
+    title: 'Watched',
+    body: `Log again keeps this watch and adds a new dated entry for "${title}". Or remove it from your watched films.`,
+  };
+}
+
 export function watchedTvRemoveConfirm(title) {
   return {
     title: 'Remove from watched?',

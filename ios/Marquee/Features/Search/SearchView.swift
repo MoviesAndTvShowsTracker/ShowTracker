@@ -17,6 +17,7 @@ struct SearchView: View {
     @State private var activeQuery = ""
 
     @State private var watchedMovieIds: Set<Int> = []
+    @State private var watchedMovieCounts: [Int: Int] = [:]
     @State private var watchlistMovieIds: Set<Int> = []
     @State private var watchedTVIds: Set<Int> = []
     @State private var watchlistTVIds: Set<Int> = []
@@ -283,10 +284,12 @@ struct SearchView: View {
     private func diaryMark(for item: MediaItem) -> DiaryStatusMark? {
         switch kind(for: item) {
         case .movie:
-            if watchedMovieIds.contains(item.id) { return .watched }
+            if watchedMovieIds.contains(item.id) {
+                return .watched(times: watchedMovieCounts[item.id] ?? 1)
+            }
             if watchlistMovieIds.contains(item.id) { return .watchlist }
         case .tv:
-            if watchedTVIds.contains(item.id) { return .watched }
+            if watchedTVIds.contains(item.id) { return .watched(times: 1) }
             if watchlistTVIds.contains(item.id) { return .watchlist }
         }
         return nil
@@ -364,6 +367,10 @@ struct SearchView: View {
 
         if let watched = try? await films {
             watchedMovieIds = Set(watched.compactMap { Int($0.movieId) })
+            watchedMovieCounts = Dictionary(uniqueKeysWithValues: watched.compactMap { doc in
+                guard let id = Int(doc.movieId) else { return nil }
+                return (id, max(1, doc.watchCount ?? 1))
+            })
         }
         if let list = try? await filmList {
             watchlistMovieIds = Set(list.compactMap { Int($0.movieId) })

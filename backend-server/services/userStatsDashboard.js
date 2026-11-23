@@ -281,7 +281,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 5;
+const STATS_SCHEMA_VERSION = 6;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
@@ -295,8 +295,9 @@ async function buildUserStatsDashboard(userId, options = {}) {
     User.findById(userId).lean(),
   ]);
 
+  // Unique titles for library/taste; every play for diary days + watch time.
   const films = dedupeFilms(rawFilms);
-  const filmDuplicatesRemoved = rawFilms.length - films.length;
+  const filmExtraPlays = Math.max(0, rawFilms.length - films.length);
 
   const missingRuntimeIds = films.filter((f) => !filmRuntimeMinutes(f)).map((f) => f.movieId);
   const { map: filmMetaMap, fetchesRemaining: filmMetaPending } = await getMovieMetaBatch(
@@ -305,9 +306,9 @@ async function buildUserStatsDashboard(userId, options = {}) {
   );
   const backfilled = await applyFilmRuntimeBackfill(films, filmMetaMap, 30);
 
-  const dayMap = buildCombinedDayMap(episodes, films, timeZone);
+  const dayMap = buildCombinedDayMap(episodes, rawFilms, timeZone);
   const tvMins = episodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
-  const filmMins = films.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
+  const filmMins = rawFilms.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
   const filmsWithRuntime = films.filter((f) => filmRuntimeMinutes(f) > 0).length;
   const filmsMissingRuntime = films.length - filmsWithRuntime;
   const epsWithRuntime = episodes.filter((ep) => (ep.runtimeMinutes || 0) > 0).length;
@@ -411,6 +412,7 @@ async function buildUserStatsDashboard(userId, options = {}) {
 
   const overview = {
     filmCount: films.length,
+    filmPlayCount: rawFilms.length,
     tvShowCount,
     episodeCount: episodes.length,
     filmMins,
@@ -457,7 +459,8 @@ async function buildUserStatsDashboard(userId, options = {}) {
     episodeRuntimeKnown: epsWithRuntime,
     episodeRuntimeMissing: epsMissingRuntime,
     episodeRuntimeCoverage: pct(epsWithRuntime, episodes.length),
-    filmDuplicatesRemoved,
+    filmDuplicatesRemoved: filmExtraPlays,
+    filmExtraPlays,
     runtimeBackfilled: backfilled,
     estimated: true,
   };

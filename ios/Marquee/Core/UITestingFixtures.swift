@@ -84,7 +84,7 @@ enum UITestingFixtures {
         }
         return [
             DiaryActivityItem(id: "1", kind: "episode", mediaId: "1396", title: "Breaking Bad", posterPath: "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg", subtitle: "S2E3 · Bit by a Dead Bee", watchedAt: day(0), rating: 8),
-            DiaryActivityItem(id: "2", kind: "film", mediaId: "27205", title: "Inception", posterPath: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg", subtitle: nil, watchedAt: day(0), rating: 9),
+            DiaryActivityItem(id: "2", kind: "film", mediaId: "27205", title: "Inception", posterPath: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg", subtitle: "Rewatch", isRewatch: true, watchedAt: day(0), rating: 9),
             DiaryActivityItem(id: "3", kind: "episode", mediaId: "66732", title: "Stranger Things", posterPath: "/49WJfeN0moxb9IPfGn8AIqMGskD.jpg", subtitle: "S4E1 · The Hellfire Club", watchedAt: day(-1), rating: nil),
             DiaryActivityItem(id: "4", kind: "episode", mediaId: "66732", title: "Stranger Things", posterPath: "/49WJfeN0moxb9IPfGn8AIqMGskD.jpg", subtitle: "S4E2 · Vecna's Curse", watchedAt: day(-1), rating: 7),
             DiaryActivityItem(id: "5", kind: "film", mediaId: "157336", title: "Interstellar", posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", subtitle: nil, watchedAt: day(-3), rating: 10),

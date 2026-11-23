@@ -7,8 +7,31 @@ struct DiaryActivityItem: Decodable, Identifiable, Sendable {
     let title: String?
     let posterPath: String?
     let subtitle: String?
+    let isRewatch: Bool?
     let watchedAt: String?
     let rating: Double?
+
+    init(
+        id: String,
+        kind: String,
+        mediaId: String? = nil,
+        title: String? = nil,
+        posterPath: String? = nil,
+        subtitle: String? = nil,
+        isRewatch: Bool? = nil,
+        watchedAt: String? = nil,
+        rating: Double? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.mediaId = mediaId
+        self.title = title
+        self.posterPath = posterPath
+        self.subtitle = subtitle
+        self.isRewatch = isRewatch
+        self.watchedAt = watchedAt
+        self.rating = rating
+    }
 
     var dayKey: String? {
         guard let watchedAt, watchedAt.count >= 10 else { return nil }
@@ -292,11 +315,22 @@ struct DiaryActivityView: View {
                 .frame(width: 40, height: 60)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title ?? "Untitled")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                    .lineLimit(2)
-                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                HStack(spacing: 6) {
+                    Text(item.title ?? "Untitled")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                        .lineLimit(2)
+                    if item.isRewatch == true || item.subtitle == "Rewatch" {
+                        Text("Rewatch")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(theme.olive)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(theme.oliveSoft)
+                            .clipShape(Capsule())
+                    }
+                }
+                if let subtitle = item.subtitle, !subtitle.isEmpty, subtitle != "Rewatch" {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(theme.inkMuted)

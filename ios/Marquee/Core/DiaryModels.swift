@@ -33,7 +33,23 @@ struct FavoritedResponse: Decodable, Sendable{
 struct WatchedResponse: Decodable, Sendable{
     let success: Bool?
     let watched: Bool?
+    let watchCount: Int?
+    let watchedAt: String?
     let rating: Double?
+    let isRewatch: Bool?
+    let latestPlayId: String?
+}
+
+struct FilmWatchMutationResponse: Decodable, Sendable {
+    let success: Bool?
+    let watchedAt: String?
+    let rating: Double?
+    let watchCount: Int?
+    let isRewatch: Bool?
+    let playId: String?
+    let watched: Bool?
+    let mode: String?
+    let deletedCount: Int?
 }
 
 struct WatchlistedResponse: Decodable, Sendable{
@@ -72,6 +88,9 @@ struct WatchMovieDoc: Decodable, Identifiable, Sendable{
     let moviePost: String?
     let moviePosterImage: String?
     let rating: Double?
+    let watchCount: Int?
+    let isRewatch: Bool?
+    let watchedAt: String?
 
     var posterPath: String? { moviePost ?? moviePosterImage }
 }

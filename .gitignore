@@ -126,6 +126,7 @@ gdpr-data/
 # Xcode / iOS
 ios/**/xcuserdata/
 ios/**/DerivedData/
+ios/.derivedDataPhone/
 ios/**/*.xcuserstate
 *.moved-aside
 *.hmap

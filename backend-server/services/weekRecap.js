@@ -57,8 +57,9 @@ async function buildWeekRecap(userId, options = {}) {
     Watch.find({ userFrom: userId }).select('watchedAt movieId').lean(),
   ]);
 
+  // Unique titles for the week card; every play date feeds the streak.
   const films = dedupeFilms(weekFilms);
-  const allFilmKeys = dedupeFilms(allFilms)
+  const allFilmKeys = allFilms
     .filter((f) => f.watchedAt)
     .map((f) => dateKeyInZone(f.watchedAt, timeZone));
   const daySet = new Set([
@@ -69,7 +70,7 @@ async function buildWeekRecap(userId, options = {}) {
   const episodesThisWeek = weekEpisodes.length;
   const filmsThisWeek = films.length;
   const tvMinsThisWeek = weekEpisodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
-  const filmMinsThisWeek = films.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
+  const filmMinsThisWeek = weekFilms.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
   const totalMinsThisWeek = tvMinsThisWeek + filmMinsThisWeek;
   const streak = computeStreakFromDaySet(daySet, bounds.todayKey);
 

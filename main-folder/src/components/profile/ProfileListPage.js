@@ -56,7 +56,7 @@ function removeFromList(listKey, id) {
     case 'favorite-tv':
       return api.post('/api/tv/favorite/removeFromFavorite', { tvId: id });
     case 'watched-films':
-      return api.post('/api/watch/removeFromWatched', { movieId: id });
+      return api.post('/api/watch/removeFromWatched', { movieId: id, mode: 'all' });
     case 'watched-tv':
       return api.post('/api/tv/watch/removeFromWatched', { tvId: id });
     case 'film-watchlist':

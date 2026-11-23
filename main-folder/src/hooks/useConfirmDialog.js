@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import Dialog from '../components/ui/Dialog';
 
 /**
- * Promise-style confirm for removals and bulk actions. Adds stay one-tap.
+ * Promise-style confirm for removals and bulk actions.
+ * Supports either a single confirm CTA or a list of `actions`.
  * @returns {{ confirm: (opts) => void, confirmDialog: JSX.Element }}
  */
 export default function useConfirmDialog() {
@@ -22,16 +23,25 @@ export default function useConfirmDialog() {
     if (!busy) setPending(null);
   }, [busy]);
 
+  const runAction = useCallback(
+    async (fn) => {
+      if (!fn) return;
+      setBusy(true);
+      try {
+        await fn();
+        setPending(null);
+      } finally {
+        setBusy(false);
+      }
+    },
+    []
+  );
+
   const handleConfirm = useCallback(async () => {
-    if (!pending?.onConfirm) return;
-    setBusy(true);
-    try {
-      await pending.onConfirm();
-      setPending(null);
-    } finally {
-      setBusy(false);
-    }
-  }, [pending]);
+    await runAction(pending?.onConfirm);
+  }, [pending, runAction]);
+
+  const multiActions = Array.isArray(shown?.actions) ? shown.actions : null;
 
   const confirmDialog = (
     <Dialog
@@ -39,19 +49,44 @@ export default function useConfirmDialog() {
       onClose={close}
       title={shown?.title ?? ''}
       footer={
-        <>
-          <button type="button" onClick={close} disabled={busy} className="btn-secondary">
-            {shown?.cancelLabel ?? 'Cancel'}
-          </button>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={busy}
-            className="btn-primary disabled:opacity-50"
-          >
-            {busy ? 'Saving…' : shown?.confirmLabel ?? 'Confirm'}
-          </button>
-        </>
+        multiActions ? (
+          <div className="flex w-full flex-col gap-2">
+            {multiActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                disabled={busy}
+                onClick={() => runAction(action.onClick)}
+                className={
+                  action.destructive
+                    ? 'btn-primary bg-danger text-white disabled:opacity-50'
+                    : action.primary
+                      ? 'btn-primary disabled:opacity-50'
+                      : 'btn-secondary disabled:opacity-50'
+                }
+              >
+                {busy ? 'Saving…' : action.label}
+              </button>
+            ))}
+            <button type="button" onClick={close} disabled={busy} className="btn-secondary">
+              {shown?.cancelLabel ?? 'Cancel'}
+            </button>
+          </div>
+        ) : (
+          <>
+            <button type="button" onClick={close} disabled={busy} className="btn-secondary">
+              {shown?.cancelLabel ?? 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={busy}
+              className="btn-primary disabled:opacity-50"
+            >
+              {busy ? 'Saving…' : shown?.confirmLabel ?? 'Confirm'}
+            </button>
+          </>
+        )
       }
     >
       {shown?.body && <p className="text-sm text-muted">{shown.body}</p>}

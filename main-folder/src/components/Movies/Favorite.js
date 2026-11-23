@@ -7,7 +7,7 @@ import { formatShortDate } from '../../utils/statsFormat';
 import {
   favoriteRemoveConfirm,
   watchlistRemoveConfirm,
-  watchedFilmRemoveConfirm,
+  watchedFilmManageConfirm,
 } from '../../utils/removeConfirm';
 import useConfirmDialog from '../../hooks/useConfirmDialog';
 import useAnimatedPresence from '../../hooks/useAnimatedPresence';
@@ -20,6 +20,7 @@ export default function Favorite({ movieId, movieInfo }) {
   const [favoriteNumber, setFavoriteNumber] = useState(0);
   const [favorited, setFavorited] = useState(false);
   const [watched, setWatched] = useState(false);
+  const [watchCount, setWatchCount] = useState(0);
   const [watchedAt, setWatchedAt] = useState(null);
   const [watchlisted, setWatchlisted] = useState(false);
   const [rating, setRating] = useState(0);
@@ -34,8 +35,26 @@ export default function Favorite({ movieId, movieInfo }) {
   };
 
   const movieTitle = movieInfo.title || 'this film';
-  const watchedDateLabel = watchedAt ? formatShortDate(watchedAt) : null;
+  const watchedSubLabel = watched
+    ? watchCount > 1
+      ? `×${watchCount}`
+      : watchedAt
+        ? formatShortDate(watchedAt)
+        : 'Logged'
+    : null;
   const watchlistPresence = useAnimatedPresence(!watched, 140);
+
+  const applyWatchState = (data = {}) => {
+    const count = Math.max(0, Number(data.watchCount) || (data.watched ? 1 : 0));
+    setWatchCount(count);
+    setWatched(count > 0 || Boolean(data.watched));
+    setWatchedAt(data.watchedAt || null);
+    if (data.rating !== undefined) {
+      setRating(ratingToStars(data.rating));
+    } else if (count === 0) {
+      setRating(0);
+    }
+  };
 
   useEffect(() => {
     api.post('/api/favorite/favoriteNumber', { movieId }).then((r) => {
@@ -45,11 +64,7 @@ export default function Favorite({ movieId, movieInfo }) {
       if (fav.data.success) setFavorited(fav.data.favorited);
     });
     api.post('/api/watch/watched', { movieId }).then((watch) => {
-      if (watch.data.success) {
-        setWatched(watch.data.watched);
-        setWatchedAt(watch.data.watchedAt || null);
-        setRating(ratingToStars(watch.data.rating));
-      }
+      if (watch.data.success) applyWatchState(watch.data);
     });
     api.post('/api/watchlist/watchlisted', { movieId }).then((r) => {
       if (r.data.success) setWatchlisted(r.data.watchlisted);
@@ -81,33 +96,57 @@ export default function Favorite({ movieId, movieInfo }) {
     });
   };
 
+  const logWatch = async ({ isRewatch } = {}) => {
+    const r = await api.post('/api/watch/addToWatch', payload);
+    if (r.data.success) {
+      applyWatchState({
+        watched: true,
+        watchCount: r.data.watchCount,
+        watchedAt: r.data.watchedAt || new Date().toISOString(),
+        rating: r.data.rating,
+      });
+      setWatchlisted(false);
+      clearSessionStats();
+      invalidateUserMovieLists();
+      haptic(isRewatch ? 'medium' : 'success');
+    }
+  };
+
+  const removeWatch = async (mode) => {
+    const r = await api.post('/api/watch/removeFromWatched', { ...payload, mode });
+    if (r.data.success) {
+      applyWatchState(r.data);
+      clearSessionStats();
+      invalidateUserMovieLists();
+      haptic('light');
+    }
+  };
+
   const toggleWatched = () => {
     if (watched) {
-      confirm({
-        ...watchedFilmRemoveConfirm(movieTitle),
-        onConfirm: () =>
-          api.post('/api/watch/removeFromWatched', payload).then((r) => {
-            if (r.data.success) {
-              setWatched(false);
-              setWatchedAt(null);
-              setRating(0);
-              clearSessionStats();
-              invalidateUserMovieLists();
-            }
-          }),
+      const sheet = watchedFilmManageConfirm(movieTitle, watchCount);
+      const actions = [
+        {
+          label: 'Log again',
+          primary: true,
+          onClick: () => logWatch({ isRewatch: true }),
+        },
+      ];
+      if (watchCount > 1) {
+        actions.push({
+          label: 'Remove last log',
+          onClick: () => removeWatch('latest'),
+        });
+      }
+      actions.push({
+        label: watchCount > 1 ? 'Clear all watches' : 'Remove from watched',
+        destructive: true,
+        onClick: () => removeWatch('all'),
       });
+      confirm({ ...sheet, actions });
       return;
     }
-    api.post('/api/watch/addToWatch', payload).then((r) => {
-      if (r.data.success) {
-        setWatched(true);
-        setWatchedAt(r.data.watchedAt || new Date().toISOString());
-        setRating(ratingToStars(r.data.rating));
-        clearSessionStats();
-        invalidateUserMovieLists();
-        haptic('success');
-      }
-    });
+    logWatch({ isRewatch: false });
   };
 
   const handleRate = async (stars) => {
@@ -172,7 +211,8 @@ export default function Favorite({ movieId, movieInfo }) {
           icon={Check}
           label="Watched"
           compactLabel="Watched"
-          subLabel={watched ? watchedDateLabel : null}
+          subLabel={watchedSubLabel}
+          badge={watchCount > 1 ? watchCount : null}
         />
         {watchlistPresence.rendered && (
           <ActionButton

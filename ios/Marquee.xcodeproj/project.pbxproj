@@ -732,7 +732,7 @@
 				CODE_SIGN_ENTITLEMENTS = Marquee/MarqueeRelease.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				INFOPLIST_FILE = Marquee/Info.plist;
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES;
@@ -824,7 +824,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = MarqueeWidgets/MarqueeWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MarqueeWidgets/Info.plist;
@@ -866,7 +866,7 @@
 				CODE_SIGN_ENTITLEMENTS = Marquee/Marquee.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				INFOPLIST_FILE = Marquee/Info.plist;
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES;
@@ -986,7 +986,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = MarqueeWidgets/MarqueeWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MarqueeWidgets/Info.plist;

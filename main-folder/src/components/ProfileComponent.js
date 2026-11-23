@@ -192,7 +192,7 @@ export default function Profile() {
     confirm({
       ...watchedFilmRemoveConfirm(m.movieTitle),
       onConfirm: () =>
-        api.post('/api/watch/removeFromWatched', { movieId: m.movieId }).then(() => {
+        api.post('/api/watch/removeFromWatched', { movieId: m.movieId, mode: 'all' }).then(() => {
           invalidateUserMovieLists();
           return refresh();
         }),

@@ -23,7 +23,8 @@ enum DiaryService {
         try await APIClient.shared.post("/api/watch/watched", body: ["movieId": id])
     }
 
-    static func addMovieWatched(_ body: MovieIdBody, rating: Double? = nil) async throws {
+    @discardableResult
+    static func addMovieWatched(_ body: MovieIdBody, rating: Double? = nil) async throws -> FilmWatchMutationResponse {
         struct Body: Encodable {
             let movieId: String
             let movieTitle: String?
@@ -31,7 +32,7 @@ enum DiaryService {
             let movieRuntime: String?
             let rating: Double?
         }
-        let _: SuccessMessage = try await APIClient.shared.post(
+        return try await APIClient.shared.post(
             "/api/watch/addToWatch",
             body: Body(
                 movieId: body.movieId,
@@ -50,8 +51,13 @@ enum DiaryService {
         )
     }
 
-    static func removeMovieWatched(id: String) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/watch/removeFromWatched", body: ["movieId": id])
+    /// `mode`: `"latest"` removes only the newest play; `"all"` clears every play.
+    @discardableResult
+    static func removeMovieWatched(id: String, mode: String = "latest") async throws -> FilmWatchMutationResponse {
+        try await APIClient.shared.post(
+            "/api/watch/removeFromWatched",
+            body: ["movieId": id, "mode": mode]
+        )
     }
 
     static func movieWatchlisted(id: String) async throws -> Bool {

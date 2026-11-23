@@ -2,8 +2,10 @@ import SwiftUI
 
 /// Compact diary status used on posters (person credits, search results).
 enum DiaryStatusMark: Equatable {
-    case watched
+    case watched(times: Int)
     case watchlist
+
+    static var watched: DiaryStatusMark { .watched(times: 1) }
 
     var systemImage: String {
         switch self {
@@ -12,10 +14,21 @@ enum DiaryStatusMark: Equatable {
         }
     }
 
+    var watchTimes: Int {
+        switch self {
+        case .watched(let times): return max(1, times)
+        case .watchlist: return 0
+        }
+    }
+
     var accessibilityLabel: String {
         switch self {
-        case .watched: return "Watched"
-        case .watchlist: return "On watchlist"
+        case .watched(let times) where times > 1:
+            return "Watched \(times) times"
+        case .watched:
+            return "Watched"
+        case .watchlist:
+            return "On watchlist"
         }
     }
 }
@@ -26,12 +39,23 @@ struct DiaryStatusBadge: View {
     var compact: Bool = false
 
     var body: some View {
-        Image(systemName: mark.systemImage)
-            .font((compact ? Font.caption2 : Font.caption).weight(.bold))
-            .foregroundStyle(theme.olive)
-            .padding(compact ? 6 : 7)
-            .background(.ultraThinMaterial, in: Circle())
-            .accessibilityLabel(mark.accessibilityLabel)
+        Group {
+            if case .watched(let times) = mark, times > 1 {
+                Text("×\(times)")
+                    .font((compact ? Font.caption2 : Font.caption).weight(.bold))
+                    .foregroundStyle(theme.olive)
+                    .padding(.horizontal, compact ? 6 : 7)
+                    .padding(.vertical, compact ? 5 : 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+            } else {
+                Image(systemName: mark.systemImage)
+                    .font((compact ? Font.caption2 : Font.caption).weight(.bold))
+                    .foregroundStyle(theme.olive)
+                    .padding(compact ? 6 : 7)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+        }
+        .accessibilityLabel(mark.accessibilityLabel)
     }
 }
 
@@ -39,6 +63,7 @@ struct DiaryChipLabel: View {
     @Environment(\.marqueeTheme) private var theme
     let title: String
     let systemImage: String
+    var subtitle: String? = nil
     var active: Bool = false
 
     var body: some View {
@@ -47,6 +72,12 @@ struct DiaryChipLabel: View {
                 .symbolEffect(.bounce, value: active)
             Text(title)
                 .lineLimit(1)
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(active ? theme.accent.opacity(0.85) : theme.olive.opacity(0.9))
+                    .lineLimit(1)
+            }
         }
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(active ? theme.accent : theme.olive)
@@ -60,6 +91,8 @@ struct DiaryChipLabel: View {
         .clipShape(Capsule())
         .fixedSize()
         .shadow(color: active ? theme.accent.opacity(0.12) : .clear, radius: 8, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(subtitle.map { "\(title), \($0)" } ?? title)
     }
 }
 
@@ -73,12 +106,12 @@ struct ActionStripButton: View {
 
     var body: some View {
         Button(action: action) {
-            DiaryChipLabel(title: title, systemImage: systemImage, active: active)
+            DiaryChipLabel(title: title, systemImage: systemImage, subtitle: subtitle, active: active)
         }
         .buttonStyle(PressablePosterStyle())
         .fixedSize()
-        .accessibilityHint(subtitle ?? "")
         .animation(reduceMotion ? nil : MarqueeMotion.micro, value: active)
+        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: subtitle)
     }
 }
 

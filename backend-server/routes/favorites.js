@@ -78,12 +78,11 @@ router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next)
           userFrom: req.user._id,
           movieId: { $in: movieIds },
         })
-          .select('movieId rating')
+          .select('movieId rating watchedAt updatedAt createdAt')
           .lean()
       : [];
-    const ratingById = new Map(
-      watches.map((w) => [String(w.movieId), w.rating ?? null])
-    );
+    const { ratingByMovieId } = require('../services/filmWatchService');
+    const ratingById = ratingByMovieId(watches);
 
     res.status(200).json({
       success: true,
