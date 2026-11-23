@@ -94,6 +94,32 @@ struct TVDetailView: View {
 
     private var isRewatching: Bool { tracking?.status == "rewatching" }
 
+    private var episodeAlertTitle: String {
+        guard let ep = episodePendingUnmark else { return "Watched" }
+        let plays = playCount(for: ep)
+        return plays > 1 ? "Watched \(plays) times" : "Watched"
+    }
+
+    private func episodeRemoveLabel(for ep: TVEpisode) -> String {
+        playCount(for: ep) > 1 ? "Remove latest watch" : "Mark as unwatched"
+    }
+
+    private func episodeAlertMessage(for ep: TVEpisode) -> String {
+        let s = ep.season_number ?? selectedSeason
+        let name = ep.name.map { " — \($0)" } ?? ""
+        let plays = playCount(for: ep)
+        if plays > 1 {
+            return "S\(s) E\(ep.episode_number)\(name) is on \(plays) watches. Watch again, or peel off the latest one."
+        }
+        return "S\(s) E\(ep.episode_number)\(name). Watch again, or clear this watch."
+    }
+
+    private func playCount(for ep: TVEpisode) -> Int {
+        let s = ep.season_number ?? selectedSeason
+        let key = "\(s)-\(ep.episode_number)"
+        return episodePlayCounts[key] ?? (watchedKeys.contains(key) ? 1 : 0)
+    }
+
     var body: some View {
         Group {
             switch phase {
@@ -113,35 +139,33 @@ struct TVDetailView: View {
         .navigationBarBackButtonHidden(true)
         .background(EnableSwipeBack())
         .alert(
-            "Episode watched",
+            episodeAlertTitle,
             isPresented: $showUnmarkConfirm,
             presenting: episodePendingUnmark
         ) { ep in
-            Button("Log rewatch") {
+            Button("Watch again") {
                 Task { await performLogRewatch(ep) }
             }
-            Button("Unmark", role: .destructive) {
+            Button(episodeRemoveLabel(for: ep), role: .destructive) {
                 Task { await performUnmark(ep) }
             }
             Button("Cancel", role: .cancel) {
                 episodePendingUnmark = nil
             }
         } message: { ep in
-            let s = ep.season_number ?? selectedSeason
-            let plays = episodePlayCounts["\(s)-\(ep.episode_number)"] ?? 1
-            Text("S\(s) E\(ep.episode_number)\(ep.name.map { " — \($0)" } ?? ""). Logged \(plays)×. Log another play or unmark?")
+            Text(episodeAlertMessage(for: ep))
         }
         .alert("Season watched", isPresented: $showSeasonActionConfirm) {
-            Button("Rewatch season") {
+            Button("Watch season again") {
                 Task { await performSeasonRewatch() }
             }
-            Button("Unmark season", role: .destructive) {
+            Button("Remove season watches", role: .destructive) {
                 pendingBatch = .unmarkSeason(season: selectedSeason, count: watchedInSeason.count)
                 showBatchConfirm = true
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Log a rewatch play for every aired episode in this season, or unmark them (latest rewatch first).")
+            Text("Add another watch for every aired episode, or strip watches from this season (latest first).")
         }
         .sheet(isPresented: $showRatingSheet) {
             ratingSheet
@@ -703,8 +727,14 @@ struct TVDetailView: View {
                 tracking = rewatchState?.tracking ?? resolvedTrack
             }
             rewatchSession = rewatchState?.activeSession
-            episodePlayCounts = rewatchState?.playCounts ?? [:]
-            rewatchPlayTotal = rewatchState?.rewatchPlayTotal ?? 0
+            // Apply play counts without animation — bulk LazyVStack updates with
+            // animated symbol/scale previously SIGSEGV'd AttributeGraph.
+            var playTxn = Transaction()
+            playTxn.disablesAnimations = true
+            withTransaction(playTxn) {
+                episodePlayCounts = rewatchState?.playCounts ?? [:]
+                rewatchPlayTotal = rewatchState?.rewatchPlayTotal ?? 0
+            }
             if let track = rewatchState?.tracking {
                 tracking = track
             }

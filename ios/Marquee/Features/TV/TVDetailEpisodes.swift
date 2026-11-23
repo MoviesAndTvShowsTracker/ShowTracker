@@ -138,111 +138,104 @@ extension TVDetailView {
 
         let plays = episodePlayCounts[key] ?? (marked ? 1 : 0)
 
-        return Button {
-            if marked || plays > 0 {
-                episodePendingUnmark = ep
-                showUnmarkConfirm = true
-            } else {
-                Task { await performMark(ep) }
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack(alignment: .bottomTrailing) {
-                    Image(systemName: marked || plays > 0 ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle((marked || plays > 0) ? theme.accent : theme.olive.opacity(0.45))
-                        .frame(width: 28, height: 28)
-                        .symbolEffect(.bounce, value: plays)
-                        .scaleEffect((marked || plays > 0) ? 1.08 : 1)
-                        .animation(MarqueeMotion.standard, value: plays)
-
-                    if plays > 1 {
-                        Text("×\(plays)")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(theme.onAccent)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(theme.accent)
-                            .clipShape(Capsule())
-                            .offset(x: 6, y: 4)
-                    }
+        // Not a single outer Button — nesting Rate inside Button labels crashes
+        // SwiftUI (EXC_BAD_ACCESS) when playCounts refresh the LazyVStack.
+        return HStack(alignment: .top, spacing: 12) {
+            Button {
+                if marked || plays > 0 {
+                    episodePendingUnmark = ep
+                    showUnmarkConfirm = true
+                } else {
+                    Task { await performMark(ep) }
                 }
+            } label: {
+                EpisodePlayMark(plays: marked || plays > 0 ? max(plays, 1) : 0)
+            }
+            .buttonStyle(.plain)
+            .disabled(batching)
 
-                CachedAsyncImage(url: AppConfig.posterURL(path: ep.still_path, size: "w185"))
-                    .frame(width: 96, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(theme.border, lineWidth: 1)
-                    )
-                    .background(theme.oliveSoft)
+            Button {
+                if marked || plays > 0 {
+                    episodePendingUnmark = ep
+                    showUnmarkConfirm = true
+                } else {
+                    Task { await performMark(ep) }
+                }
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    CachedAsyncImage(url: AppConfig.posterURL(path: ep.still_path, size: "w185"))
+                        .frame(width: 96, height: 54)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(theme.border, lineWidth: 1)
+                        )
+                        .background(theme.oliveSoft)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("E\(ep.episode_number) · \(ep.name ?? "Episode")")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(theme.ink)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        if plays > 1 {
-                            Text("×\(plays)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(theme.accent)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("E\(ep.episode_number) · \(ep.name ?? "Episode")")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(theme.ink)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            if isNext {
+                                Text("Up next")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(theme.accent)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(theme.accent.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
                         }
-                        if isNext {
-                            Text("Up next")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(theme.accent)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(theme.accent.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                    }
 
-                    HStack(spacing: 8) {
-                        if let air = formatDate(ep.air_date) {
-                            Text(air)
+                        HStack(spacing: 8) {
+                            if let air = formatDate(ep.air_date) {
+                                Text(air)
+                                    .font(.caption)
+                                    .foregroundStyle(theme.inkMuted)
+                            }
+                            if let runtime = ep.runtime, runtime > 0 {
+                                Text(MediaMetaLine.formatRuntime(runtime))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(theme.olive)
+                            }
+                        }
+
+                        if let overview = ep.overview, !overview.isEmpty {
+                            Text(overview)
                                 .font(.caption)
                                 .foregroundStyle(theme.inkMuted)
+                                .lineLimit(2)
                         }
-                        if let runtime = ep.runtime, runtime > 0 {
-                            Text(MediaMetaLine.formatRuntime(runtime))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.olive)
-                        }
-                    }
-
-                    if let overview = ep.overview, !overview.isEmpty {
-                        Text(overview)
-                            .font(.caption)
-                            .foregroundStyle(theme.inkMuted)
-                            .lineLimit(2)
-                    }
-                    if marked {
-                        HStack(spacing: 8) {
-                            if let rating = episodeRatings[key], rating > 0 {
-                                StarRatingView(rating: .constant(rating / 2), editable: false, size: .caption)
-                            }
-                            Button("Rate") {
-                                episodePendingRate = ep
-                                episodeRating = (episodeRatings[key] ?? 0) / 2
-                                showEpisodeRatingSheet = true
-                            }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(theme.olive)
+                        if marked, let rating = episodeRatings[key], rating > 0 {
+                            StarRatingView(rating: .constant(rating / 2), editable: false, size: .caption)
                         }
                     }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(minHeight: 72, alignment: .top)
-            .background(isNext ? theme.accent.opacity(0.06) : Color.clear)
+            .buttonStyle(.plain)
+            .disabled(batching)
+
+            if marked {
+                Button("Rate") {
+                    episodePendingRate = ep
+                    episodeRating = (episodeRatings[key] ?? 0) / 2
+                    showEpisodeRatingSheet = true
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(theme.olive)
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(batching)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 72, alignment: .top)
+        .background(isNext ? theme.accent.opacity(0.06) : Color.clear)
         .sensoryFeedback(.success, trigger: marked)
     }
 
@@ -295,4 +288,40 @@ extension TVDetailView {
         }
     }
 
+}
+
+/// Empty → check (1st watch) → count in the mark (2×, 3×…) so rewatches aren't a
+/// buried caption in the meta row.
+struct EpisodePlayMark: View {
+    @Environment(\.marqueeTheme) private var theme
+    let plays: Int
+
+    var body: some View {
+        ZStack {
+            if plays <= 0 {
+                Image(systemName: "circle")
+                    .font(.title3)
+                    .foregroundStyle(theme.olive.opacity(0.45))
+            } else if plays == 1 {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(theme.accent)
+            } else {
+                Circle()
+                    .fill(theme.accent)
+                    .frame(width: 28, height: 28)
+                Text("\(plays)×")
+                    .font(.caption2.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.onAccent)
+            }
+        }
+        .frame(width: 28, height: 28)
+        .contentShape(Rectangle())
+        .accessibilityLabel(
+            plays <= 0
+                ? "Not watched"
+                : (plays == 1 ? "Watched once" : "Watched \(plays) times")
+        )
+    }
 }

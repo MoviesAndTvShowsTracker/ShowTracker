@@ -369,14 +369,20 @@ export default function TvSeasonEpisodesPanel({
     const isWatched = watchedKeys.has(key);
     const plays = playCounts[key] || (isWatched ? 1 : 0);
     if (isWatched || plays > 0) {
+      const name = episode.name ? ` — ${episode.name}` : '';
       confirm({
-        title: 'Episode watched',
-        body: `S${selectedSeason} E${episode.episode_number}${
-          episode.name ? ` — ${episode.name}` : ''
-        }. Logged ${plays}×. Log another play or unmark?`,
+        title: plays > 1 ? `Watched ${plays} times` : 'Watched',
+        body:
+          plays > 1
+            ? `S${selectedSeason} E${episode.episode_number}${name} is on ${plays} watches. Watch again, or peel off the latest one.`
+            : `S${selectedSeason} E${episode.episode_number}${name}. Watch again, or clear this watch.`,
         actions: [
-          { label: 'Log rewatch', primary: true, onClick: () => logEpisodeRewatch(episode) },
-          { label: 'Unmark', destructive: true, onClick: () => undoEpisodePlay(episode) },
+          { label: 'Watch again', primary: true, onClick: () => logEpisodeRewatch(episode) },
+          {
+            label: plays > 1 ? 'Remove latest watch' : 'Mark as unwatched',
+            destructive: true,
+            onClick: () => undoEpisodePlay(episode),
+          },
         ],
       });
       return;
@@ -445,10 +451,10 @@ export default function TvSeasonEpisodesPanel({
   const openSeasonCompleteMenu = () => {
     confirm({
       title: 'Season watched',
-      body: 'Log a rewatch play for every aired episode in this season, or unmark them (latest rewatch first).',
+      body: 'Add another watch for every aired episode, or strip watches from this season (latest first).',
       actions: [
-        { label: 'Rewatch season', primary: true, onClick: rewatchSeason },
-        { label: 'Unmark season', destructive: true, onClick: unmarkSeason },
+        { label: 'Watch season again', primary: true, onClick: rewatchSeason },
+        { label: 'Remove season watches', destructive: true, onClick: unmarkSeason },
       ],
     });
   };
@@ -723,22 +729,25 @@ export default function TvSeasonEpisodesPanel({
                         ? 'border-accent bg-accent text-on-accent'
                         : 'border-border bg-surface hover:border-accent/50'
                     }`}
+                    aria-label={
+                      plays > 1
+                        ? `Watched ${plays} times`
+                        : isWatched || plays > 0
+                          ? 'Watched once'
+                          : aired
+                            ? 'Mark watched'
+                            : 'Not released yet'
+                    }
                   >
-                    {(isWatched || plays > 0) && <Check className="check-pop h-5 w-5" strokeWidth={3} />}
-                    {plays > 1 && (
-                      <span className="absolute -bottom-1 -right-1 rounded-full bg-ink px-1 text-[9px] font-bold text-on-accent">
-                        ×{plays}
-                      </span>
+                    {plays > 1 ? (
+                      <span className="text-xs font-bold tabular-nums leading-none">{plays}×</span>
+                    ) : (
+                      (isWatched || plays > 0) && <Check className="check-pop h-5 w-5" strokeWidth={3} />
                     )}
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-snug">
                       <span className="text-accent">{episode.episode_number}.</span> {episode.name}
-                      {plays > 1 && (
-                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent">
-                          ×{plays}
-                        </span>
-                      )}
                       {isNext && (
                         <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent">
                           Up next
