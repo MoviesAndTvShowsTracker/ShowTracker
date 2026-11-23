@@ -1,5 +1,229 @@
 import SwiftUI
 
+// MARK: - Lobby timeline rails (Airing soon / Paused)
+
+struct LobbyTimelineRail: View {
+    @Environment(\.marqueeTheme) private var theme
+    let title: String
+    var subtitle: String? = nil
+    let items: [ThisWeekItem]
+
+    var body: some View {
+        if items.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(items.prefix(14)) { item in
+                            timelineCard(item)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func timelineCard(_ item: ThisWeekItem) -> some View {
+        if let tracking = item.tracking, item.kind == .resume {
+            NavigationLink {
+                TVContinueView(tvId: item.tvId, seed: tracking)
+            } label: {
+                ThisWeekCardChrome(item: item)
+            }
+            .buttonStyle(PressablePosterStyle())
+        } else {
+            NavigationLink {
+                TVDetailView(tvId: item.tvId)
+            } label: {
+                ThisWeekCardChrome(item: item)
+            }
+            .buttonStyle(PressablePosterStyle())
+        }
+    }
+}
+
+private struct ThisWeekCardChrome: View {
+    @Environment(\.marqueeTheme) private var theme
+    let item: ThisWeekItem
+
+    var body: some View {
+        HStack(spacing: 10) {
+            CachedAsyncImage(url: AppConfig.posterURL(path: item.posterPath))
+                .frame(width: 48, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.chip)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(theme.accent)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                    .lineLimit(2)
+                Text(item.detail)
+                    .font(.caption2)
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(2)
+            }
+            .frame(width: 148, alignment: .leading)
+        }
+        .padding(10)
+        .background(theme.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(theme.border, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Lobby empty
+
+struct LobbyEmptyState: View {
+    @Environment(\.marqueeTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Your Lobby is quiet")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(theme.ink)
+            Text("Start a show or bookmark a film — Continue and your queue show up here.")
+                .font(.subheadline)
+                .foregroundStyle(theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                NavigationLink {
+                    MediaBrowseView(kind: .movie)
+                } label: {
+                    shortcut(title: "Films", systemImage: "film")
+                }
+                .buttonStyle(PressablePosterStyle())
+
+                NavigationLink {
+                    MediaBrowseView(kind: .tv)
+                } label: {
+                    shortcut(title: "TV", systemImage: "tv")
+                }
+                .buttonStyle(PressablePosterStyle())
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(theme.border, lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+    }
+
+    private func shortcut(title: String, systemImage: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(theme.olive)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(theme.oliveSoft)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+// MARK: - Week pulse
+
+struct WeekPulseRow: View {
+    @Environment(\.marqueeTheme) private var theme
+    let recap: WeekRecap
+
+    private var minutes: Int { recap.totalMinsThisWeek ?? 0 }
+    private var films: Int { recap.filmsThisWeek ?? 0 }
+    private var episodes: Int { recap.episodesThisWeek ?? 0 }
+    private var streak: Int { recap.streak ?? 0 }
+
+    var body: some View {
+        NavigationLink {
+            StatsView()
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("This week")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(theme.olive)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
+                    Text(StatsFormat.minutes(minutes))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(theme.ink)
+                        .monospacedDigit()
+                    Text(pulseSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(theme.inkMuted)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if streak > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.caption2.weight(.bold))
+                        Text("\(streak)d")
+                            .font(.caption.weight(.bold))
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(theme.accent.opacity(0.12), in: Capsule())
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(theme.olive)
+            }
+            .padding(16)
+            .background(theme.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(theme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressablePosterStyle())
+        .padding(.horizontal, 20)
+        .accessibilityLabel("This week. \(StatsFormat.minutes(minutes)). Opens stats.")
+    }
+
+    private var pulseSubtitle: String {
+        switch (films > 0, episodes > 0) {
+        case (true, true): return "\(films) films · \(episodes) episodes"
+        case (true, false): return "\(films) film\(films == 1 ? "" : "s")"
+        case (false, true): return "\(episodes) episode\(episodes == 1 ? "" : "s")"
+        default: return "Nothing logged yet"
+        }
+    }
+}
+
 // MARK: - Tonight
 
 struct TonightCard: View {

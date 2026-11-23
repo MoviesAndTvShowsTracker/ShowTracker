@@ -88,6 +88,135 @@ enum StreamingProviderOption: Int, CaseIterable, Identifiable, Hashable {
     }
 }
 
+// MARK: - This week timeline (merged schedule + resume)
+
+enum ThisWeekKind: Equatable {
+    case airing
+    case returning
+    case resume
+}
+
+struct ThisWeekItem: Identifiable {
+    let id: String
+    let kind: ThisWeekKind
+    let title: String
+    let detail: String
+    let dayLabel: String
+    let sortKey: String
+    let posterPath: String?
+    let tvId: Int
+    let tracking: TrackingRecord?
+
+    var chip: String {
+        switch kind {
+        case .airing: return dayLabel
+        case .returning: return "Returns"
+        case .resume: return "Resume"
+        }
+    }
+}
+
+enum ThisWeekBuilder {
+    static func build(
+        schedule: [ScheduleEpisode],
+        returning: [ScheduleEpisode],
+        paused: [TrackingRecord],
+        continueIds: Set<Int>
+    ) -> [ThisWeekItem] {
+        var items: [ThisWeekItem] = []
+        var seenShows = Set<Int>()
+
+        for ep in schedule {
+            seenShows.insert(ep.tvId)
+            items.append(
+                ThisWeekItem(
+                    id: "air-\(ep.id)",
+                    kind: .airing,
+                    title: ep.title,
+                    detail: "S\(ep.season)E\(ep.episode)\(ep.episodeName.map { " · \($0)" } ?? "")",
+                    dayLabel: friendlyDay(ep.airDate),
+                    sortKey: ep.airDate,
+                    posterPath: ep.posterPath,
+                    tvId: ep.tvId,
+                    tracking: nil
+                )
+            )
+        }
+
+        for ep in returning where !seenShows.contains(ep.tvId) {
+            seenShows.insert(ep.tvId)
+            items.append(
+                ThisWeekItem(
+                    id: "ret-\(ep.id)",
+                    kind: .returning,
+                    title: ep.title,
+                    detail: "S\(ep.season) premiere\(ep.episodeName.map { " · \($0)" } ?? "")",
+                    dayLabel: friendlyDay(ep.airDate),
+                    sortKey: ep.airDate,
+                    posterPath: ep.posterPath,
+                    tvId: ep.tvId,
+                    tracking: nil
+                )
+            )
+        }
+
+        let today = dayString(Date())
+        for track in paused.prefix(8) {
+            guard let tvId = Int(track.tvId), !continueIds.contains(tvId), !seenShows.contains(tvId) else {
+                continue
+            }
+            seenShows.insert(tvId)
+            let progress = ShowProgress.from(track: track)
+            items.append(
+                ThisWeekItem(
+                    id: "resume-\(track.tvId)",
+                    kind: .resume,
+                    title: track.tvTitle ?? "Show",
+                    detail: progress.episodeLine,
+                    dayLabel: "Paused",
+                    sortKey: "\(today)-z-\(track.tvId)",
+                    posterPath: track.posterPath,
+                    tvId: tvId,
+                    tracking: track
+                )
+            )
+        }
+
+        return items.sorted { lhs, rhs in
+            if lhs.sortKey != rhs.sortKey { return lhs.sortKey < rhs.sortKey }
+            return kindRank(lhs.kind) < kindRank(rhs.kind)
+        }
+    }
+
+    private static func kindRank(_ kind: ThisWeekKind) -> Int {
+        switch kind {
+        case .airing: return 0
+        case .returning: return 1
+        case .resume: return 2
+        }
+    }
+
+    private static func friendlyDay(_ raw: String) -> String {
+        let today = dayString(Date())
+        if raw == today { return "Today" }
+        if let tmr = Calendar.current.date(byAdding: .day, value: 1, to: Date()),
+           raw == dayString(tmr) {
+            return "Tomorrow"
+        }
+        let parts = raw.split(separator: "-")
+        guard parts.count == 3,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]),
+              let date = Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+        else { return raw }
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
+    private static func dayString(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+}
+
 enum TonightPicker {
     /// One job only: a *different* decision than Continue.
     /// - Airing tonight on a show that isn’t already in the Continue hero

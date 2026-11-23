@@ -14,55 +14,42 @@ struct HomeView: View {
     @State private var recap: WeekRecap?
     @State private var loading = true
     @State private var error: String?
-    @State private var watchlistFilter: WatchlistFilter = .all
-    @State private var schedule: [ScheduleEpisode] = []
-    @State private var returning: [ScheduleEpisode] = []
-    @State private var recommendations: [HomeRecommendation] = []
-    @State private var tonight: TonightPick?
+    @State private var airingSoon: [ThisWeekItem] = []
+    @State private var pausedShows: [ThisWeekItem] = []
     @State private var continuePage = 0
-    @State private var providerFilter = WatchlistProviderFilter()
-    @State private var streamingMatchedKeys: Set<String>? = nil
-    @State private var streamingFilterBusy = false
-    /// Local to Lobby — don’t steal Browse’s “my services” prefs and empty the rail.
-    @State private var watchlistProviderIds: Set<Int> = []
-
-    private enum WatchlistFilter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case films = "Films"
-        case tv = "TV"
-        var id: String { rawValue }
-    }
 
     private var greetingName: String {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
         return first.isEmpty ? "there" : first
     }
 
-    private var mergedWatchlist: [(id: Int, title: String, poster: String?, kind: MediaKind)] {
-        let films = filmWatchlist.map {
+    private var filmQueue: [(id: Int, title: String, poster: String?)] {
+        filmWatchlist.map {
             (
                 id: Int($0.movieId) ?? abs($0.movieId.hashValue),
                 title: $0.movieTitle ?? "Film",
-                poster: $0.posterPath,
-                kind: MediaKind.movie
+                poster: $0.posterPath
             )
         }
-        let shows = tvWatchlist.map {
+    }
+
+    private var tvQueue: [(id: Int, title: String, poster: String?)] {
+        tvWatchlist.map {
             (
                 id: Int($0.tvId) ?? abs($0.tvId.hashValue),
                 title: $0.tvTitle ?? "Show",
-                poster: $0.posterPath,
-                kind: MediaKind.tv
+                poster: $0.posterPath
             )
         }
-        let base: [(id: Int, title: String, poster: String?, kind: MediaKind)]
-        switch watchlistFilter {
-        case .all: base = films + shows
-        case .films: base = films
-        case .tv: base = shows
-        }
-        guard let matched = streamingMatchedKeys else { return base }
-        return base.filter { matched.contains(Self.watchlistKey(kind: $0.kind, id: $0.id)) }
+    }
+
+    private var isLobbyEmpty: Bool {
+        !loading
+            && continueItems.isEmpty
+            && airingSoon.isEmpty
+            && pausedShows.isEmpty
+            && filmWatchlist.isEmpty
+            && tvWatchlist.isEmpty
     }
 
     var body: some View {
@@ -70,47 +57,29 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 26) {
                 header
 
-                if let recap {
-                    NavigationLink { StatsView() } label: {
-                        WeekRecapCard(recap: recap)
-                    }
-                    .buttonStyle(PressablePosterStyle())
-                    .padding(.horizontal, 20)
+                if let recap, !isLobbyEmpty {
+                    WeekPulseRow(recap: recap)
                 }
 
-                // Tonight only when it isn’t the same job as Continue
-                // (airs tonight elsewhere, or empty-lobby nudge).
-                if let tonight {
-                    TonightCard(pick: tonight)
-                        .padding(.horizontal, 20)
+                if isLobbyEmpty {
+                    LobbyEmptyState()
+                } else {
+                    continueCarousel
+                    LobbyTimelineRail(
+                        title: "Airing soon",
+                        subtitle: "New episodes and season returns",
+                        items: airingSoon
+                    )
+                    LobbyTimelineRail(
+                        title: "Paused",
+                        subtitle: "Pick up when you’re ready",
+                        items: pausedShows
+                    )
+                    watchlistRails
+                    calendarLink
                 }
 
-                continueCarousel
-
-                HomeShowRail(
-                    title: "Catch up",
-                    subtitle: "Paused where you left off",
-                    items: pausedItems,
-                    destinationTab: .stopped
-                )
-
-                HomeScheduleRail(
-                    title: "Returning soon",
-                    subtitle: "New seasons from your library",
-                    items: returning
-                )
-
-                HomeScheduleRail(
-                    title: "Coming up",
-                    subtitle: "Episodes airing on shows you track",
-                    items: schedule
-                )
-
-                watchlistSection
-                ForYouRail(items: recommendations)
-                calendarLink
-
-                if continueItems.isEmpty, filmWatchlist.isEmpty, tvWatchlist.isEmpty, !loading, let error {
+                if isLobbyEmpty, let error {
                     ErrorStateView(message: error) {
                         Task { await load() }
                     }
@@ -121,9 +90,10 @@ struct HomeView: View {
                 }
             }
             .padding(.vertical, 16)
+            .padding(.bottom, 28)
         }
         .marqueeCanvas()
-        .navigationBarTitleDisplayMode(.inline)
+        .marqueeLandingChrome()
         .refreshable { await load() }
         .task {
             if UITestingFixtures.isEnabled {
@@ -133,32 +103,37 @@ struct HomeView: View {
             }
             await load()
         }
-        .onChange(of: watchlistProviderIds) { _, _ in
-            Task { await refreshStreamingFilter() }
-        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionKicker(text: "Lobby", accented: true)
             Text("Hey, \(greetingName)")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(theme.olive)
             Text(headerSubtitle)
+                .font(.subheadline)
                 .foregroundStyle(theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private var headerSubtitle: String {
-        if tonight?.kind == .airingTonight {
+        if airingSoon.contains(where: { $0.kind == .airing && $0.dayLabel == "Today" }) {
             return "Something you track lands tonight."
         }
         if !continueItems.isEmpty {
-            return "Swipe to switch shows you’re mid-season."
+            return "Pick up where you left off."
         }
-        if !pausedItems.isEmpty {
+        if !airingSoon.isEmpty {
+            return "New episodes are lining up."
+        }
+        if !pausedShows.isEmpty {
             return "A few shows are waiting when you’re ready."
+        }
+        if !filmQueue.isEmpty || !tvQueue.isEmpty {
+            return "Something from your queue is waiting."
         }
         return "Queue something from Films or TV — Lobby fills in."
     }
@@ -262,54 +237,63 @@ struct HomeView: View {
         .accessibilityIdentifier("watch-calendar-link")
     }
 
-    private var watchlistSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Watchlist")
+    @ViewBuilder
+    private var watchlistRails: some View {
+        if loading && filmWatchlist.isEmpty && tvWatchlist.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Film watchlist")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
-                Spacer()
-                if !mergedWatchlist.isEmpty || !filmWatchlist.isEmpty || !tvWatchlist.isEmpty {
+                    .padding(.horizontal, 20)
+                RailSkeleton()
+            }
+        } else {
+            lobbyWatchlistRail(
+                title: "Film watchlist",
+                items: Array(filmQueue.prefix(12)),
+                kind: .movie,
+                scope: .films
+            )
+            lobbyWatchlistRail(
+                title: "TV watchlist",
+                items: Array(tvQueue.prefix(12)),
+                kind: .tv,
+                scope: .tv
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func lobbyWatchlistRail(
+        title: String,
+        items: [(id: Int, title: String, poster: String?)],
+        kind: MediaKind,
+        scope: WatchlistView.Scope
+    ) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                    Spacer()
                     NavigationLink("View all") {
-                        WatchlistView(initialScope: watchlistViewScope)
+                        WatchlistView(initialScope: scope)
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(theme.olive)
                 }
-            }
-            .padding(.horizontal, 20)
-
-            Picker("Watchlist", selection: $watchlistFilter) {
-                ForEach(WatchlistFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-
-            StreamingFilterBar(selected: $watchlistProviderIds)
-
-            if loading && filmWatchlist.isEmpty && tvWatchlist.isEmpty {
-                RailSkeleton()
-            } else if streamingFilterBusy && !watchlistProviderIds.isEmpty {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Checking what’s on your services…")
-                        .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
-                }
                 .padding(.horizontal, 20)
-            } else if mergedWatchlist.isEmpty {
-                Text(watchlistEmptyCopy)
-                    .font(.subheadline)
-                    .foregroundStyle(theme.inkMuted)
-                    .padding(.horizontal, 20)
-            } else {
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 12) {
-                        ForEach(mergedWatchlist, id: \.id) { item in
-                            MediaNavLink(id: item.id, kind: item.kind) {
-                                PosterTile(title: item.title, posterPath: item.poster, year: nil)
+                        ForEach(items, id: \.id) { item in
+                            MediaNavLink(id: item.id, kind: kind) {
+                                PosterTile(
+                                    title: item.title,
+                                    posterPath: item.poster,
+                                    year: nil
+                                )
                             }
                         }
                     }
@@ -317,29 +301,6 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private var watchlistEmptyCopy: String {
-        if !watchlistProviderIds.isEmpty {
-            return "Nothing on those services in your queue — try Any service or add more titles."
-        }
-        switch watchlistFilter {
-        case .all: return "Nothing queued — browse films or TV and bookmark something."
-        case .films: return "Nothing queued — browse films and bookmark something."
-        case .tv: return "Save a show for later from search or TV."
-        }
-    }
-
-    private var watchlistViewScope: WatchlistView.Scope {
-        switch watchlistFilter {
-        case .all: return .all
-        case .films: return .films
-        case .tv: return .tv
-        }
-    }
-
-    private nonisolated static func watchlistKey(kind: MediaKind, id: Int) -> String {
-        "\(kind == .movie ? "m" : "t")-\(id)"
     }
 
     private func load() async {
@@ -389,23 +350,20 @@ struct HomeView: View {
             let scheduleSeed = cont + paused
             async let upcoming = HomeScheduleBuilder.upcoming(from: scheduleSeed)
             async let returningSoon = HomeScheduleBuilder.returningSoon(from: paused + finished)
-            async let recs = loadRecommendations(continueItems: cont)
 
             let upcomingItems = await upcoming
-            let returningItems = await returningSoon
-            schedule = upcomingItems
-            returning = returningItems.filter { item in
+            let returningItems = await returningSoon.filter { item in
                 !upcomingItems.contains(where: { $0.tvId == item.tvId && $0.airDate == item.airDate })
             }
-            recommendations = await recs
-
-            tonight = TonightPicker.pick(
-                continueItems: cont,
-                paused: paused,
+            let continueIds = Set(cont.compactMap { Int($0.tvId) })
+            let timeline = ThisWeekBuilder.build(
                 schedule: upcomingItems,
-                tvWatchlist: shows,
-                filmWatchlist: films
+                returning: returningItems,
+                paused: paused,
+                continueIds: continueIds
             )
+            airingSoon = timeline.filter { $0.kind == .airing || $0.kind == .returning }
+            pausedShows = timeline.filter { $0.kind == .resume }
 
             let next = cont.first
             let progress = next.map { ShowProgress.from(track: $0) }
@@ -423,7 +381,6 @@ struct HomeView: View {
                 schedule: upcomingItems,
                 enabled: preferences.episodeAlertsEnabled
             )
-            await refreshStreamingFilter()
         } catch {
             if continueItems.isEmpty && filmWatchlist.isEmpty && tvWatchlist.isEmpty {
                 self.error = error.localizedDescription
@@ -432,82 +389,6 @@ struct HomeView: View {
             }
             loading = false
         }
-    }
-
-    private func loadRecommendations(continueItems: [TrackingRecord]) async -> [HomeRecommendation] {
-        let stats = try? await DiaryService.dashboardStats()
-        let tasteNames = (stats?.taste?.genres ?? []).prefix(3).compactMap(\.name)
-        let genreIds = tasteNames.compactMap { TMDBGenreMap.id(for: $0) }
-
-        // One quiet section line — never repeated under every poster.
-        let sectionReason: String = {
-            if let title = continueItems.first?.tvTitle, !title.isEmpty {
-                return "Nearby \(title)"
-            }
-            if let genre = tasteNames.first {
-                return "In the mood for \(genre.lowercased())"
-            }
-            return "Fresh picks for your lobby"
-        }()
-
-        async let moviesPage = TMDBService.discoverMovies(genreIds: Array(genreIds))
-        async let showsPage = TMDBService.discoverTV(genreIds: Array(genreIds))
-
-        let movies = Array((try? await moviesPage)?.results ?? []).prefix(8)
-        let shows = Array(((try? await showsPage)?.results ?? []).filter { show in
-            let tracked = Set(continueItems.compactMap { Int($0.tvId) })
-                .union(pausedItems.compactMap { Int($0.tvId) })
-                .union(finishedItems.compactMap { Int($0.tvId) })
-            return !tracked.contains(show.id)
-        }).prefix(8)
-
-        // Interleave so the rail doesn’t read as “all TV, then all films”.
-        var out: [HomeRecommendation] = []
-        let showList = Array(shows)
-        let filmList = Array(movies)
-        let maxCount = max(showList.count, filmList.count)
-        for index in 0..<maxCount {
-            if index < showList.count {
-                out.append(HomeRecommendation(item: showList[index], kind: .tv, reason: sectionReason))
-            }
-            if index < filmList.count {
-                out.append(HomeRecommendation(item: filmList[index], kind: .movie, reason: sectionReason))
-            }
-        }
-        return Array(out.prefix(14))
-    }
-
-    private func refreshStreamingFilter() async {
-        let preferred = watchlistProviderIds
-        guard !preferred.isEmpty else {
-            streamingMatchedKeys = nil
-            streamingFilterBusy = false
-            return
-        }
-        streamingFilterBusy = true
-        defer { streamingFilterBusy = false }
-
-        let candidates: [(kind: MediaKind, id: Int)] =
-            filmWatchlist.compactMap { doc in Int(doc.movieId).map { (.movie, $0) } }
-            + tvWatchlist.compactMap { doc in Int(doc.tvId).map { (.tv, $0) } }
-
-        var matched = Set<String>()
-        await withTaskGroup(of: (String, Bool).self) { group in
-            for candidate in candidates.prefix(40) {
-                group.addTask {
-                    let ok = await providerFilter.matches(
-                        kind: candidate.kind,
-                        id: candidate.id,
-                        preferred: preferred
-                    )
-                    return (Self.watchlistKey(kind: candidate.kind, id: candidate.id), ok)
-                }
-            }
-            for await (key, ok) in group where ok {
-                matched.insert(key)
-            }
-        }
-        streamingMatchedKeys = matched
     }
 
     private func enrichCatalogTotals() async {

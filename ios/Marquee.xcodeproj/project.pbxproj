@@ -66,6 +66,7 @@
 		B90D56A5CE2659D5EC32BCA2 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1DA5BA7C1FBB75A78EFD26 /* Haptics.swift */; };
 		B991FBDA822738CB6B93B13D /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = C21BD1248B6E41C7DE62EFAD /* APIError.swift */; };
 		BF2D84732F5052F7DFFC6994 /* MarqueeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC75B705F5FA6A261AC37938 /* MarqueeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C256B0491D763F5B386536BC /* LobbyShotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 988D34967043B51497143CFF /* LobbyShotTests.swift */; };
 		C287F90101EC8DDB76AF8157 /* AuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFFDD199442624DFA77ECA3 /* AuthModels.swift */; };
 		C35B10E68014E10C2C48B756 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AD95B7E214227F1C398E970 /* Assets.xcassets */; };
 		C3CBDB0CEB0E281253FEFB86 /* HomeLobbyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFE9DA4AAD5B17A9052C2D2B /* HomeLobbyModels.swift */; };
@@ -176,6 +177,7 @@
 		9688F806C6699D0A2237D112 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
 		979DF6A39813D39E0A8C244E /* TVDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDetailViewModel.swift; sourceTree = "<group>"; };
 		97F4F9FC25A4F4E14343F42A /* UITestingFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestingFixtures.swift; sourceTree = "<group>"; };
+		988D34967043B51497143CFF /* LobbyShotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyShotTests.swift; sourceTree = "<group>"; };
 		9C0CA2C6489447764AC72E2A /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
 		9F0C50CB16D38850FC3F612B /* TMDBGenreMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDBGenreMap.swift; sourceTree = "<group>"; };
 		A49C9EC635FC45DC409F8449 /* Marquee.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Marquee.entitlements; sourceTree = "<group>"; };
@@ -249,6 +251,7 @@
 		552CE6F336C1E91C8935FF58 /* MarqueeUITests */ = {
 			isa = PBXGroup;
 			children = (
+				988D34967043B51497143CFF /* LobbyShotTests.swift */,
 				E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */,
 				3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */,
 				039EFB2C8EA16F5DF59E16D1 /* ScreenWalkthroughTests.swift */,
@@ -686,6 +689,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C256B0491D763F5B386536BC /* LobbyShotTests.swift in Sources */,
 				270FEE28BADE67EB6AA27795 /* MarqueeVisualUITests.swift in Sources */,
 				273676622AA62EEBEAF82BA8 /* MovieDetailPolishUITests.swift in Sources */,
 				B23D94C5BB982D32C320BF32 /* ScreenWalkthroughTests.swift in Sources */,
