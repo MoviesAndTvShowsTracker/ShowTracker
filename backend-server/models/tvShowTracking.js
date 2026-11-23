@@ -10,7 +10,7 @@ const TvShowTracking = new Schema(
     tvBackdropImage: String,
     status: {
       type: String,
-      enum: ['watching', 'completed', 'paused', 'dropped'],
+      enum: ['watching', 'completed', 'paused', 'dropped', 'rewatching'],
       default: 'watching',
     },
     totalEpisodes: { type: Number, default: 0 },
@@ -23,6 +23,10 @@ const TvShowTracking = new Schema(
     lastEpisode: Number,
     lastWatchedAt: Date,
     rating: { type: Number, min: 1, max: 10, default: null },
+    /** How many times the user has finished the show (first watch + completed rewatches). */
+    timesCompleted: { type: Number, default: 0, min: 0 },
+    /** Active rewatch session; null when not rewatching. */
+    activeRewatchSessionId: { type: Schema.ObjectId, ref: 'TvRewatchSession', default: null },
   },
   { timestamps: true }
 );

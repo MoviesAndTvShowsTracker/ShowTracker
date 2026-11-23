@@ -52,37 +52,48 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
   const hasUnreleased =
     tracking.totalEpisodes > 0 && progressTotal < tracking.totalEpisodes;
 
-  if (progressTotal > 0 && count >= progressTotal) {
-    if (hasUnreleased && count < tracking.totalEpisodes) {
-      patch.status = 'watching';
-      if (!extra.nextSeason && !('nextSeason' in extra)) {
+  // Never rewrite status while a rewatch session owns Up Next / episode checks.
+  const rewatching = tracking.status === 'rewatching';
+
+  if (!rewatching) {
+    if (progressTotal > 0 && count >= progressTotal) {
+      if (hasUnreleased && count < tracking.totalEpisodes) {
+        patch.status = 'watching';
+        if (!extra.nextSeason && !('nextSeason' in extra)) {
+          patch.nextSeason = null;
+          patch.nextEpisode = null;
+          patch.nextEpisodeName = null;
+        }
+      } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
+        patch.status = 'completed';
         patch.nextSeason = null;
         patch.nextEpisode = null;
         patch.nextEpisodeName = null;
+        if (!tracking.timesCompleted || tracking.timesCompleted < 1) {
+          patch.timesCompleted = 1;
+        }
       }
+    } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
+      patch.status = 'watching';
     } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
       patch.status = 'completed';
       patch.nextSeason = null;
       patch.nextEpisode = null;
       patch.nextEpisodeName = null;
+      if (!tracking.timesCompleted || tracking.timesCompleted < 1) {
+        patch.timesCompleted = 1;
+      }
+    } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
+      patch.status = 'watching';
     }
-  } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
-    patch.status = 'watching';
-  } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
-    patch.status = 'completed';
-    patch.nextSeason = null;
-    patch.nextEpisode = null;
-    patch.nextEpisodeName = null;
-  } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
-    patch.status = 'watching';
+
+    if (tracking.status === 'paused' && count > 0) {
+      patch.status = 'watching';
+    }
   }
 
   if (extra.airedEpisodeCount != null) {
     patch.airedEpisodeCount = extra.airedEpisodeCount;
-  }
-
-  if (tracking.status === 'paused' && count > 0) {
-    patch.status = 'watching';
   }
 
   Object.assign(tracking, patch);
@@ -124,7 +135,7 @@ router.get('/continue', authenticate.verifyUser, async (req, res, next) => {
 
     const tracks = await TvShowTracking.find({
       userFrom: req.user._id,
-      status: 'watching',
+      status: { $in: ['watching', 'rewatching'] },
       watchedEpisodeCount: { $gt: 0 },
     })
       .sort({ lastWatchedAt: -1, updatedAt: -1 })
@@ -154,9 +165,12 @@ router.get('/library/:tab', authenticate.verifyUser, async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid library tab.' });
     }
 
+    const statusFilter =
+      status === 'watching' ? { $in: ['watching', 'rewatching'] } : status;
+
     const tracks = await TvShowTracking.find({
       userFrom: req.user._id,
-      status,
+      status: statusFilter,
     }).sort({ lastWatchedAt: -1, updatedAt: -1 });
 
     const counts = await getLibraryCounts(req.user._id);
@@ -176,15 +190,20 @@ router.get('/library/:tab', authenticate.verifyUser, async (req, res, next) => {
 
 router.post('/resume', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const tracking = await TvShowTracking.findOneAndUpdate(
-      { userFrom: req.user._id, tvId: req.body.tvId },
-      { status: 'watching' },
-      { new: true }
-    );
-    if (!tracking) {
+    const existing = await TvShowTracking.findOne({
+      userFrom: req.user._id,
+      tvId: req.body.tvId,
+    });
+    if (!existing) {
       return res.status(404).json({ success: false, message: 'Show not found in your library.' });
     }
-    res.status(200).json({ success: true, tracking });
+    // Do not clobber an in-progress rewatch session.
+    if (existing.status === 'rewatching') {
+      return res.status(200).json({ success: true, tracking: existing });
+    }
+    existing.status = 'watching';
+    await existing.save();
+    res.status(200).json({ success: true, tracking: existing });
   } catch (err) {
     next(err);
   }

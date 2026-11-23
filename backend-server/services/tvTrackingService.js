@@ -2,7 +2,7 @@ const TvShowTracking = require('../models/tvShowTracking');
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
 const { normTvId } = require('./tvWatchlistService');
 
-const TRACKED_STATUSES = ['watching', 'paused', 'completed'];
+const TRACKED_STATUSES = ['watching', 'paused', 'completed', 'rewatching'];
 
 function findTrackingInList(rows, tvId) {
   const target = normTvId(tvId);

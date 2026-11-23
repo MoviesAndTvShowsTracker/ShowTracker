@@ -23,17 +23,46 @@ const BANNER_STYLES = {
   },
 };
 
-function BannerContent({ track, progress, styles, isComplete, isPaused, caughtUp, pct }) {
+function BannerContent({
+  track,
+  progress,
+  styles,
+  isComplete,
+  isPaused,
+  isRewatching = false,
+  caughtUp,
+  pct,
+}) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <p className={`text-[10px] font-bold uppercase tracking-widest ${styles.label}`}>
-          {isComplete ? 'Completed' : isPaused ? 'Paused' : caughtUp ? 'Caught up' : 'Watching'}
+          {isRewatching
+            ? 'Rewatching'
+            : isComplete
+              ? 'Completed'
+              : isPaused
+                ? 'Paused'
+                : caughtUp
+                  ? 'Caught up'
+                  : 'Watching'}
         </p>
         {isPaused ? (
           <p className="mt-1 text-sm font-medium text-ink-bright">Mark an episode to resume</p>
+        ) : isRewatching ? (
+          <p className="mt-1 text-sm font-medium text-ink-bright">
+            {track.nextSeason
+              ? `Rewatch next · S${track.nextSeason} E${track.nextEpisode}${
+                  track.nextEpisodeName ? ` — ${track.nextEpisodeName}` : ''
+                }`
+              : 'Continue your rewatch'}
+          </p>
         ) : isComplete ? (
-          <p className="mt-1 text-sm font-medium text-ink-bright">All episodes logged</p>
+          <p className="mt-1 text-sm font-medium text-ink-bright">
+            {track.timesCompleted > 1
+              ? `Finished ×${track.timesCompleted} — start a rewatch below`
+              : 'All episodes logged — start a rewatch below'}
+          </p>
         ) : caughtUp && progress.upcomingLabel ? (
           <p className="mt-1 text-sm font-medium text-ink-bright">
             Next episode {progress.upcomingLabel}
@@ -87,7 +116,9 @@ export default function TvTrackingBanner({ tvId, track }) {
 
   const pct = progress?.pct ?? 0;
   const caughtUp = progress?.caughtUpWithAired && progress?.upcomingLabel;
-  const isComplete = progress?.isComplete ?? track.status === 'completed';
+  const isRewatching = track.status === 'rewatching';
+  const isComplete =
+    !isRewatching && (progress?.isComplete ?? track.status === 'completed');
   const isPaused = track.status === 'paused';
 
   const styleKey = isComplete ? 'completed' : isPaused ? 'stopped' : 'default';
@@ -102,6 +133,7 @@ export default function TvTrackingBanner({ tvId, track }) {
           styles={styles}
           isComplete={isComplete}
           isPaused={isPaused}
+          isRewatching={isRewatching}
           caughtUp={caughtUp}
           pct={pct}
         />
@@ -120,6 +152,7 @@ export default function TvTrackingBanner({ tvId, track }) {
         styles={styles}
         isComplete={isComplete}
         isPaused={isPaused}
+        isRewatching={isRewatching}
         caughtUp={caughtUp}
         pct={pct}
       />

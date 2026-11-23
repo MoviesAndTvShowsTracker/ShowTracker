@@ -59,6 +59,8 @@ export default function TvSeasonEpisodesPanel({
   const [batching, setBatching] = useState(false);
   const [seasonDataReady, setSeasonDataReady] = useState(false);
   const [ratingSavingKey, setRatingSavingKey] = useState(null);
+  const [rewatchSession, setRewatchSession] = useState(null);
+  const [rewatchBusy, setRewatchBusy] = useState(false);
   const { confirm, confirmDialog } = useConfirmDialog();
 
   const showMeta = useMemo(
@@ -66,25 +68,41 @@ export default function TvSeasonEpisodesPanel({
     [tvShow, totalEpisodes, tvShowId]
   );
 
+  const isRewatching = track?.status === 'rewatching';
+
+  const applyDiaryState = useCallback((tracking, episodes, session) => {
+    if (tracking !== undefined) setTrack(tracking ?? null);
+    if (session !== undefined) setRewatchSession(session ?? null);
+    if (episodes !== undefined) setWatched(episodes || []);
+  }, []);
+
   const loadWatched = useCallback(() => {
-    api.get(`/api/tv/episodes/${tvShowId}`).then((r) => {
-      if (r.data.success) setWatched(r.data.episodes || []);
+    Promise.all([
+      api.get(`/api/tv/tracking/show/${tvShowId}`),
+      api.get(`/api/tv/episodes/${tvShowId}`),
+      api.get(`/api/tv/rewatch/${tvShowId}`).catch(() => ({ data: {} })),
+    ]).then(([trackRes, epsRes, rewatchRes]) => {
+      const tracking =
+        rewatchRes.data?.tracking ||
+        (trackRes.data.success ? trackRes.data.tracking : null);
+      const session = rewatchRes.data?.activeSession || null;
+      const rewatching = tracking?.status === 'rewatching';
+      const episodes = rewatching
+        ? session?.episodes || []
+        : epsRes.data.success
+          ? epsRes.data.episodes || []
+          : [];
+      applyDiaryState(tracking, episodes, session);
     });
-    api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
-      if (r.data.success) setTrack(r.data.tracking);
-    });
-  }, [tvShowId]);
+  }, [tvShowId, applyDiaryState]);
 
   useEffect(() => {
     setSeasonDataReady(false);
     setSelectedSeason(null);
 
-    const trackingReq = api.get(`/api/tv/tracking/show/${tvShowId}`).then((r) => {
-      if (r.data.success) setTrack(r.data.tracking || null);
-    });
-    const watchedReq = api.get(`/api/tv/episodes/${tvShowId}`).then((r) => {
-      if (r.data.success) setWatched(r.data.episodes || []);
-    });
+    const trackingReq = api.get(`/api/tv/tracking/show/${tvShowId}`);
+    const watchedReq = api.get(`/api/tv/episodes/${tvShowId}`);
+    const rewatchReq = api.get(`/api/tv/rewatch/${tvShowId}`).catch(() => ({ data: {} }));
     const indexReq = fetchShowEpisodeIndex(tvShowId).then(
       ({ episodes, totalEpisodes: total, airedEpisodeCount: aired }) => {
         setEpisodeIndex(episodes);
@@ -93,8 +111,22 @@ export default function TvSeasonEpisodesPanel({
       }
     );
 
-    Promise.all([trackingReq, watchedReq, indexReq]).finally(() => setSeasonDataReady(true));
-  }, [tvShowId]);
+    Promise.all([trackingReq, watchedReq, rewatchReq, indexReq])
+      .then(([trackRes, epsRes, rewatchRes]) => {
+        const tracking =
+          rewatchRes.data?.tracking ||
+          (trackRes.data.success ? trackRes.data.tracking : null);
+        const session = rewatchRes.data?.activeSession || null;
+        const rewatching = tracking?.status === 'rewatching';
+        const episodes = rewatching
+          ? session?.episodes || []
+          : epsRes.data.success
+            ? epsRes.data.episodes || []
+            : [];
+        applyDiaryState(tracking, episodes, session);
+      })
+      .finally(() => setSeasonDataReady(true));
+  }, [tvShowId, applyDiaryState]);
 
   useEffect(() => {
     if (refreshToken == null) return;
@@ -192,13 +224,61 @@ export default function TvSeasonEpisodesPanel({
 
   const applyResponse = (r) => {
     if (r.data.success) {
-      setWatched(r.data.episodes || []);
-      setTrack(r.data.tracking ?? null);
+      const session = r.data.session;
+      const episodes = r.data.episodes || session?.episodes || [];
+      applyDiaryState(r.data.tracking ?? null, episodes, session ?? rewatchSession);
       // Keep Home / Library / Profile / Continue caches honest after any
       // episode mark/unmark/batch — the next visit will be instant *and* fresh.
       invalidateUserTvLists();
       clearSessionStats();
       onProgressChange?.(r.data);
+    }
+  };
+
+  const markBase = isRewatching ? '/api/tv/rewatch' : '/api/tv/episodes';
+
+  const startRewatch = async () => {
+    setRewatchBusy(true);
+    try {
+      const r = await api.post('/api/tv/rewatch/start', {
+        tvId: String(tvShowId),
+        tvTitle: tvShow?.name,
+        tvPosterImage: tvShow?.poster_path,
+        totalEpisodes,
+        airedEpisodeCount,
+        nextSeason: 1,
+        nextEpisode: 1,
+      });
+      if (r.data.success) {
+        applyDiaryState(r.data.tracking, r.data.session?.episodes || [], r.data.session);
+        invalidateUserTvLists();
+        clearSessionStats();
+        haptic('success');
+        onProgressChange?.(r.data);
+      }
+    } finally {
+      setRewatchBusy(false);
+    }
+  };
+
+  const cancelRewatch = async () => {
+    setRewatchBusy(true);
+    try {
+      const r = await api.post('/api/tv/rewatch/cancel', { tvId: String(tvShowId) });
+      if (r.data.success) {
+        const eps = await api.get(`/api/tv/episodes/${tvShowId}`);
+        applyDiaryState(
+          r.data.tracking,
+          eps.data.success ? eps.data.episodes || [] : [],
+          null
+        );
+        invalidateUserTvLists();
+        clearSessionStats();
+        haptic('light');
+        onProgressChange?.(r.data);
+      }
+    } finally {
+      setRewatchBusy(false);
     }
   };
 
@@ -220,9 +300,11 @@ export default function TvSeasonEpisodesPanel({
         watchedKeys,
         !isUnmark
       );
-      const r = await api.post(isUnmark ? '/api/tv/episodes/unmark' : '/api/tv/episodes/mark', payload);
+      const r = await api.post(isUnmark ? `${markBase}/unmark` : `${markBase}/mark`, payload);
       if (r.data?.success && !isUnmark) {
-        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+        haptic(
+          r.data.completed || r.data.tracking?.status === 'completed' ? 'success' : 'light'
+        );
       }
       applyResponse(r);
     } finally {
@@ -248,9 +330,11 @@ export default function TvSeasonEpisodesPanel({
     setBatching(true);
     try {
       const payload = buildBatchPayload(showMeta, unwatchedAiredSeason, episodeIndex, watchedKeys, true);
-      const r = await api.post('/api/tv/episodes/mark-batch', payload);
+      const r = await api.post(`${markBase}/mark-batch`, payload);
       if (r.data?.success) {
-        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'light');
+        haptic(
+          r.data.completed || r.data.tracking?.status === 'completed' ? 'success' : 'light'
+        );
       }
       applyResponse(r);
     } finally {
@@ -266,7 +350,7 @@ export default function TvSeasonEpisodesPanel({
     setBatching(true);
     try {
       const payload = buildBatchPayload(showMeta, watchedInSeason, episodeIndex, watchedKeys, false);
-      const r = await api.post('/api/tv/episodes/unmark-batch', payload);
+      const r = await api.post(`${markBase}/unmark-batch`, payload);
       applyResponse(r);
     } finally {
       setBatching(false);
@@ -318,9 +402,11 @@ export default function TvSeasonEpisodesPanel({
     setBatching(true);
     try {
       const payload = buildBatchPayload(showMeta, unwatchedAiredAll, episodeIndex, watchedKeys, true);
-      const r = await api.post('/api/tv/episodes/mark-batch', payload);
+      const r = await api.post(`${markBase}/mark-batch`, payload);
       if (r.data?.success) {
-        haptic(r.data.tracking?.status === 'completed' ? 'success' : 'medium');
+        haptic(
+          r.data.completed || r.data.tracking?.status === 'completed' ? 'success' : 'medium'
+        );
       }
       applyResponse(r);
     } finally {
@@ -334,7 +420,7 @@ export default function TvSeasonEpisodesPanel({
   if (!orderedSeasons.length) return null;
 
   const markAllButton =
-    unwatchedAiredAll.length > 0 ? (
+    unwatchedAiredAll.length > 0 && track?.status !== 'completed' ? (
       <button
         type="button"
         disabled={batching}
@@ -346,7 +432,42 @@ export default function TvSeasonEpisodesPanel({
         }
         className="pressable shrink-0 text-xs font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
       >
-        Mark whole show
+        {isRewatching ? 'Mark whole rewatch' : 'Mark whole show'}
+      </button>
+    ) : null;
+
+  const rewatchControls =
+    track?.status === 'completed' ? (
+      <button
+        type="button"
+        disabled={rewatchBusy}
+        onClick={() =>
+          confirm({
+            title: 'Start a rewatch?',
+            body: 'Your original watch history stays. Episode checks reset for this rewatch only.',
+            confirmLabel: 'Start rewatch',
+            onConfirm: startRewatch,
+          })
+        }
+        className="pressable shrink-0 text-xs font-semibold text-accent transition-colors hover:text-accent/80 disabled:opacity-50"
+      >
+        {rewatchBusy ? 'Starting…' : 'Start rewatch'}
+      </button>
+    ) : isRewatching ? (
+      <button
+        type="button"
+        disabled={rewatchBusy}
+        onClick={() =>
+          confirm({
+            title: 'Cancel rewatch?',
+            body: 'Rewatch progress for this run will be cleared. Your first watch stays intact.',
+            confirmLabel: 'Cancel rewatch',
+            onConfirm: cancelRewatch,
+          })
+        }
+        className="pressable shrink-0 text-xs font-semibold text-danger transition-colors hover:opacity-80 disabled:opacity-50"
+      >
+        {rewatchBusy ? 'Cancelling…' : `Cancel rewatch${rewatchSession?.sessionNumber ? ` #${rewatchSession.sessionNumber}` : ''}`}
       </button>
     ) : null;
 
@@ -361,21 +482,33 @@ export default function TvSeasonEpisodesPanel({
           <div className="flex flex-wrap items-center gap-3">
             {track && (
               <span className="text-xs text-muted">
-                {track.watchedEpisodeCount || 0}/
-                {showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes}{' '}
-                aired
-                {showProgress.airedTotal < showProgress.totalEpisodes && showProgress.totalEpisodes > 0
-                  ? ` · ${showProgress.totalEpisodes} total`
-                  : ''}
+                {isRewatching ? (
+                  <>
+                    Rewatch {watchedKeys.size}/
+                    {showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes}
+                  </>
+                ) : (
+                  <>
+                    {track.watchedEpisodeCount || 0}/
+                    {showProgress.airedTotal || airedEpisodeCount || track.totalEpisodes || totalEpisodes}{' '}
+                    aired
+                    {showProgress.airedTotal < showProgress.totalEpisodes &&
+                    showProgress.totalEpisodes > 0
+                      ? ` · ${showProgress.totalEpisodes} total`
+                      : ''}
+                  </>
+                )}
               </span>
             )}
+            {rewatchControls}
             {markAllButton}
           </div>
         </div>
       ) : (
-        unwatchedAiredAll.length > 0 && (
-          <div className="mb-3 flex items-center justify-end">{markAllButton}</div>
-        )
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-3">
+          {rewatchControls}
+          {unwatchedAiredAll.length > 0 ? markAllButton : null}
+        </div>
       )}
 
       <div className="glass-card space-y-4 p-4 sm:p-5">

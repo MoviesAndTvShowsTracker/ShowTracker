@@ -43,12 +43,18 @@ struct ShowProgress {
         catalogTotal: Int? = nil,
         watchedCount: Int? = nil
     ) -> ShowProgress {
-        let watched = watchedCount ?? track?.watchedEpisodeCount ?? 0
+        let rewatching = track?.status == "rewatching"
+        // During a rewatch, progress is session marks only — never the canonical total.
+        let watched = watchedCount
+            ?? (rewatching ? 0 : track?.watchedEpisodeCount)
+            ?? 0
         let aired = positive(track?.airedEpisodeCount)
         let listed = positive(track?.totalEpisodes)
         let catalog = positive(catalogTotal)
         let total = aired ?? listed ?? catalog ?? 0
-        let complete = track?.status == "completed" || (total > 0 && watched >= total)
+        let complete = !rewatching && (
+            track?.status == "completed" || (total > 0 && watched >= total)
+        )
 
         let last: EpisodePointer? = {
             if let s = track?.lastSeason, let e = track?.lastEpisode, s > 0, e > 0 {
@@ -88,7 +94,10 @@ struct ShowProgress {
         watchedKeys: Set<String>,
         catalogTotal: Int? = nil
     ) -> ShowProgress {
-        var progress = from(track: track, catalogTotal: catalogTotal, watchedCount: max(track?.watchedEpisodeCount ?? 0, watchedKeys.count))
+        let count = track?.status == "rewatching"
+            ? watchedKeys.count
+            : max(track?.watchedEpisodeCount ?? 0, watchedKeys.count)
+        var progress = from(track: track, catalogTotal: catalogTotal, watchedCount: count)
         if let existing = progress.next,
            let match = episodes.first(where: { ($0.season_number ?? season) == existing.season && $0.episode_number == existing.episode }) {
             progress.next?.name = match.name

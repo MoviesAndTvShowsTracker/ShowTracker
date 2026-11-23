@@ -40,6 +40,9 @@ struct TVDetailView: View {
     @State private var didApplyPreferredPane = false
     @State private var providersReady = false
     @State private var paneRevealToken = 0
+    @State var rewatchSession: RewatchSessionDoc?
+    @State var showStartRewatchConfirm = false
+    @State var showCancelRewatchConfirm = false
 
     enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
@@ -82,8 +85,10 @@ struct TVDetailView: View {
     var idString: String { String(tvId) }
     private var isTracking: Bool {
         guard let status = tracking?.status else { return false }
-        return status == "watching" || status == "paused" || status == "completed"
+        return status == "watching" || status == "paused" || status == "completed" || status == "rewatching"
     }
+
+    private var isRewatching: Bool { tracking?.status == "rewatching" }
 
     var body: some View {
         Group {
@@ -143,6 +148,22 @@ struct TVDetailView: View {
             }
         } message: { action in
             Text(action.message)
+        }
+        .alert("Start a rewatch?", isPresented: $showStartRewatchConfirm) {
+            Button("Start rewatch") {
+                Task { await performStartRewatch() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your original watch history stays. Episode checks reset for this rewatch only.")
+        }
+        .alert("Cancel rewatch?", isPresented: $showCancelRewatchConfirm) {
+            Button("Cancel rewatch", role: .destructive) {
+                Task { await performCancelRewatch() }
+            }
+            Button("Keep going", role: .cancel) {}
+        } message: {
+            Text("Rewatch progress for this run will be cleared. Your first watch stays intact.")
         }
         .task { await load() }
     }
@@ -324,7 +345,7 @@ struct TVDetailView: View {
             GlassCard {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        OliveChip(text: tracking.status?.capitalized ?? "Tracking")
+                        OliveChip(text: trackingChipLabel(tracking))
                         Spacer()
                         if tracking.status == "watching" {
                             Button("Pause") { Task { await pause() } }
@@ -334,6 +355,14 @@ struct TVDetailView: View {
                             Button("Resume") { Task { await resume() } }
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(theme.accent)
+                        } else if tracking.status == "rewatching" {
+                            Button("Cancel rewatch") { showCancelRewatchConfirm = true }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.red.opacity(0.9))
+                        } else if tracking.status == "completed" {
+                            Button("Start rewatch") { showStartRewatchConfirm = true }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(theme.accent)
                         }
                     }
 
@@ -341,14 +370,18 @@ struct TVDetailView: View {
                     Text(progress.episodeLine)
                         .font(.headline)
                         .foregroundStyle(theme.ink)
-                    Text(progress.next?.name ?? tracking.nextEpisodeName ?? "Up next")
+                    Text(
+                        isRewatching
+                            ? (progress.next?.name ?? tracking.nextEpisodeName ?? "Next episode to rewatch")
+                            : (progress.next?.name ?? tracking.nextEpisodeName ?? "Up next")
+                    )
                         .font(.subheadline)
                         .foregroundStyle(theme.inkMuted)
 
                     HStack {
                         ProgressTrack(
                             progress: progress.fraction,
-                            completed: progress.isComplete
+                            completed: progress.isComplete && !isRewatching
                         )
                         if progress.total > 0 {
                             Text("\(progress.percent)%")
@@ -358,15 +391,15 @@ struct TVDetailView: View {
                         }
                     }
 
-                    Text(progress.caption)
+                    Text(rewatchCaption(progress: progress, tracking: tracking))
                         .font(.caption)
                         .foregroundStyle(theme.inkMuted)
 
-                    if tracking.status == "watching" {
+                    if tracking.status == "watching" || tracking.status == "rewatching" {
                         NavigationLink {
                             TVContinueView(tvId: tvId, seed: tracking)
                         } label: {
-                            Text("Continue watching")
+                            Text(tracking.status == "rewatching" ? "Continue rewatch" : "Continue watching")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(theme.onAccent)
                                 .frame(maxWidth: .infinity)
@@ -455,18 +488,53 @@ struct TVDetailView: View {
     private func statusChip(_ status: String) -> some View {
         let label: String
         let icon: String
+        let subtitle: String?
         switch status {
-        case "completed": label = "Completed"; icon = "checkmark.circle.fill"
-        case "paused": label = "Paused"; icon = "pause.circle.fill"
-        default: label = "Watching"; icon = "play.circle.fill"
+        case "completed":
+            label = "Completed"
+            icon = "checkmark.circle.fill"
+            let times = tracking?.timesCompleted ?? 1
+            subtitle = times > 1 ? "×\(times)" : nil
+        case "paused":
+            label = "Paused"; icon = "pause.circle.fill"; subtitle = nil
+        case "rewatching":
+            let n = rewatchSession?.sessionNumber ?? 1
+            label = "Rewatch"
+            icon = "arrow.clockwise"
+            subtitle = "#\(n)"
+        default:
+            label = "Watching"; icon = "play.circle.fill"; subtitle = nil
         }
         return NavigationLink {
             TVContinueView(tvId: tvId, seed: tracking)
         } label: {
-            DiaryChipLabel(title: label, systemImage: icon, active: true)
+            DiaryChipLabel(title: label, systemImage: icon, subtitle: subtitle, active: true)
         }
         .buttonStyle(PressablePosterStyle())
         .fixedSize()
+    }
+
+    private func trackingChipLabel(_ tracking: TrackingRecord) -> String {
+        switch tracking.status {
+        case "rewatching":
+            let n = rewatchSession?.sessionNumber ?? 1
+            return "Rewatch #\(n)"
+        case "completed":
+            let times = tracking.timesCompleted ?? 1
+            return times > 1 ? "Completed ×\(times)" : "Completed"
+        default:
+            return tracking.status?.capitalized ?? "Tracking"
+        }
+    }
+
+    private func rewatchCaption(progress: ShowProgress, tracking: TrackingRecord) -> String {
+        if tracking.status == "rewatching" {
+            if progress.total > 0 {
+                return "Rewatch \(progress.watched) of \(progress.total) — original history kept"
+            }
+            return "Rewatch in progress — original history kept"
+        }
+        return progress.caption
     }
 
     private var ratingSheet: some View {
@@ -585,6 +653,7 @@ struct TVDetailView: View {
             async let listTask = DiaryService.tvWatchlisted(id: idString)
             async let trackTask = DiaryService.tracking(for: idString)
             async let epsTask = DiaryService.watchedEpisodes(tvId: idString)
+            async let rewatchTask = DiaryService.rewatchState(tvId: idString)
             async let providersTask = WatchProviderService.load(kind: .tv, id: tvId, preferredRegion: region)
             async let ratingsTask = RatingsService.load(kind: .tv, id: tvId)
 
@@ -602,6 +671,7 @@ struct TVDetailView: View {
             let resolvedFav = (try? await favTask) ?? false
             let resolvedList = (try? await listTask) ?? false
             let docs = (try? await epsTask) ?? []
+            let rewatchState = try? await rewatchTask
             let loadedProviders = await providersTask
             let loadedRatings = await ratingsTask
             guard generation == loadGeneration else { return }
@@ -609,11 +679,14 @@ struct TVDetailView: View {
             favorited = resolvedFav
             watchlisted = resolvedList
             if tracking == nil {
-                tracking = resolvedTrack
+                tracking = rewatchState?.tracking ?? resolvedTrack
             }
+            rewatchSession = rewatchState?.activeSession
             if let r = tracking?.rating { showRating = min(5, r / 2) }
 
-            watchedKeys = Set(docs.compactMap { doc in
+            let activeRewatchDocs = rewatchState?.activeSession?.episodes ?? []
+            let keysSource = tracking?.status == "rewatching" ? activeRewatchDocs : docs
+            watchedKeys = Set(keysSource.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
                 return "\(s)-\(e)"
             })
@@ -693,13 +766,18 @@ struct TVDetailView: View {
         Haptics.medium()
         let body = markBody(for: ep, afterMark: true)
         do {
-            try await DiaryService.markEpisode(body)
-            if tracking == nil, let detail {
-                try? await DiaryService.startTracking(
-                    TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
-                )
+            if isRewatching {
+                let res = try await DiaryService.markRewatchEpisode(body)
+                applyRewatchMutation(res)
+            } else {
+                try await DiaryService.markEpisode(body)
+                if tracking == nil, let detail {
+                    try? await DiaryService.startTracking(
+                        TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
+                    )
+                }
+                tracking = try? await DiaryService.tracking(for: idString)
             }
-            tracking = try? await DiaryService.tracking(for: idString)
         } catch {
             watchedKeys.remove(key)
         }
@@ -713,8 +791,13 @@ struct TVDetailView: View {
         episodePendingUnmark = nil
         let body = markBody(for: ep, afterMark: false)
         do {
-            try await DiaryService.unmarkEpisode(body)
-            tracking = try? await DiaryService.tracking(for: idString)
+            if isRewatching {
+                let res = try await DiaryService.unmarkRewatchEpisode(body)
+                applyRewatchMutation(res)
+            } else {
+                try await DiaryService.unmarkEpisode(body)
+                tracking = try? await DiaryService.tracking(for: idString)
+            }
         } catch {
             watchedKeys.insert(key)
         }
@@ -733,6 +816,57 @@ struct TVDetailView: View {
         if tracking?.status == "completed" { return false }
         if episodeIndex.isEmpty { return true }
         return !unwatchedAiredAll.isEmpty
+    }
+
+    private func applyRewatchMutation(_ res: RewatchMutationResponse) {
+        if let track = res.tracking { tracking = track }
+        rewatchSession = res.session
+        if let docs = res.episodes ?? res.session?.episodes {
+            watchedKeys = Set(docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
+                return "\(s)-\(e)"
+            })
+        }
+        if res.completed == true {
+            Haptics.success()
+        }
+    }
+
+    private func performStartRewatch() async {
+        guard let detail, !busy else { return }
+        busy = true
+        defer { busy = false }
+        do {
+            let res = try await DiaryService.startRewatch(
+                TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path),
+                totalEpisodes: detail.number_of_episodes,
+                airedEpisodeCount: detail.number_of_episodes
+            )
+            applyRewatchMutation(res)
+            watchedKeys = []
+            Haptics.success()
+            withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
+                pane = .episodes
+            }
+        } catch {}
+    }
+
+    private func performCancelRewatch() async {
+        guard !busy else { return }
+        busy = true
+        defer { busy = false }
+        do {
+            let res = try await DiaryService.cancelRewatch(tvId: idString)
+            applyRewatchMutation(res)
+            // Restore canonical checkmarks after cancel.
+            if let docs = try? await DiaryService.watchedEpisodes(tvId: idString) {
+                watchedKeys = Set(docs.compactMap { doc in
+                    guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
+                    return "\(s)-\(e)"
+                })
+            }
+            Haptics.light()
+        } catch {}
     }
 
     func confirmMarkShow() async {
@@ -779,12 +913,19 @@ struct TVDetailView: View {
 
         do {
             let body = batchBody(targets, keys: keys, catalog: catalog, detail: detail)
-            let response = marking
-                ? try await DiaryService.markBatch(body)
-                : try await DiaryService.unmarkBatch(body)
-            applyBatch(response)
-            if marking, tracking?.status == "completed" {
-                Haptics.success()
+            if isRewatching {
+                let response = marking
+                    ? try await DiaryService.markRewatchBatch(body)
+                    : try await DiaryService.unmarkRewatchBatch(body)
+                applyRewatchMutation(response)
+            } else {
+                let response = marking
+                    ? try await DiaryService.markBatch(body)
+                    : try await DiaryService.unmarkBatch(body)
+                applyBatch(response)
+                if marking, tracking?.status == "completed" {
+                    Haptics.success()
+                }
             }
         } catch {
             if marking {

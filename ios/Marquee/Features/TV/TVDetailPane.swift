@@ -17,7 +17,7 @@ enum TVDetailPane: String, CaseIterable, Identifiable {
     static func preferred(for tracking: TrackingRecord?) -> TVDetailPane {
         guard let status = tracking?.status else { return .info }
         switch status {
-        case "watching", "paused", "completed":
+        case "watching", "paused", "completed", "rewatching":
             return .episodes
         default:
             return .info

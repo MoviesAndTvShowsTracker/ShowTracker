@@ -125,15 +125,17 @@ export function deriveProgressFromTrack(track) {
   const pct = progressPercent(watchedCount, progressTotal);
   const caughtUpWithAired =
     airedTotal > 0 && watchedCount >= airedTotal && totalEpisodes > airedTotal;
+  const rewatching = track.status === 'rewatching';
   const isComplete =
-    track.status === 'completed' ||
-    (totalEpisodes > 0 && watchedCount >= totalEpisodes);
+    !rewatching &&
+    (track.status === 'completed' ||
+      (totalEpisodes > 0 && watchedCount >= totalEpisodes));
 
   return {
     airedTotal,
     totalEpisodes,
-    pct,
-    caughtUpWithAired,
+    pct: rewatching ? 0 : pct,
+    caughtUpWithAired: rewatching ? false : caughtUpWithAired,
     fullyComplete: isComplete,
     nextAired: null,
     nextUnaired: null,
@@ -144,16 +146,16 @@ export function deriveProgressFromTrack(track) {
 
 /** Progress vs aired episodes only; handles catch-up and upcoming releases. */
 export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now = new Date()) {
-  const watchedCount = watchedKeys?.size ?? track?.watchedEpisodeCount ?? 0;
+  const rewatching = track?.status === 'rewatching';
+  // Session checkmarks during rewatch; never fall back to canonical totals.
+  const watchedCount = watchedKeys?.size ?? (rewatching ? 0 : track?.watchedEpisodeCount ?? 0);
   const airedTotal = countAiredEpisodes(episodeIndex, now);
   const totalEpisodes = episodeIndex.length || track?.totalEpisodes || 0;
   const progressTotal = airedTotal || track?.airedEpisodeCount || track?.totalEpisodes || 0;
   const pct = progressPercent(watchedCount, progressTotal);
   const keys =
     watchedKeys ||
-    (track?.watchedEpisodeCount
-      ? null
-      : new Set());
+    (track?.watchedEpisodeCount && !rewatching ? null : new Set());
 
   const nextAired = keys ? findNextEpisode(episodeIndex, keys, now) : null;
   const caughtUpWithAired = airedTotal > 0 && watchedCount >= airedTotal;
@@ -161,7 +163,10 @@ export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now 
   const upcomingLabel =
     caughtUpWithAired && nextUnaired ? formatEpisodeReleaseLabel(nextUnaired.airDate, now) : null;
   const fullyComplete =
-    totalEpisodes > 0 && watchedCount >= totalEpisodes && watchedCount >= airedTotal;
+    !rewatching &&
+    totalEpisodes > 0 &&
+    watchedCount >= totalEpisodes &&
+    watchedCount >= airedTotal;
 
   return {
     airedTotal,
@@ -172,7 +177,9 @@ export function deriveShowProgress(track, episodeIndex, watchedKeys = null, now 
     nextAired,
     nextUnaired,
     upcomingLabel,
-    isComplete: fullyComplete || (caughtUpWithAired && !nextUnaired),
+    isComplete: rewatching
+      ? false
+      : fullyComplete || (caughtUpWithAired && !nextUnaired),
   };
 }
 

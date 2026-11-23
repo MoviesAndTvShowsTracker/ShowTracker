@@ -3,6 +3,7 @@ const authenticate = require('../authenticate');
 const Watch = require('../models/watch');
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
 const TvShowTracking = require('../models/tvShowTracking');
+const { recentRewatchActivity } = require('../services/tvRewatchService');
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get('/activity', authenticate.verifyUser, async (req, res, next) => {
     const limit = Math.min(Number(req.query.limit) || 60, 120);
     const userId = req.user._id;
 
-    const [films, episodes] = await Promise.all([
+    const [films, episodes, rewatchEpisodes] = await Promise.all([
       Watch.find({ userFrom: userId })
         .sort({ watchedAt: -1, updatedAt: -1 })
         .limit(limit)
@@ -20,9 +21,14 @@ router.get('/activity', authenticate.verifyUser, async (req, res, next) => {
         .sort({ watchedAt: -1, updatedAt: -1 })
         .limit(limit)
         .lean(),
+      recentRewatchActivity(userId, limit),
     ]);
 
-    const tvIds = [...new Set(episodes.map((e) => e.tvId).filter(Boolean))];
+    const tvIds = [
+      ...new Set(
+        [...episodes, ...rewatchEpisodes].map((e) => e.tvId).filter(Boolean)
+      ),
+    ];
     const tracks = tvIds.length
       ? await TvShowTracking.find({ userFrom: userId, tvId: { $in: tvIds } }).lean()
       : [];
@@ -52,6 +58,20 @@ router.get('/activity', authenticate.verifyUser, async (req, res, next) => {
         title: titleByTv[String(e.tvId)] || 'Show',
         posterPath: posterByTv[String(e.tvId)] || null,
         subtitle: `S${e.seasonNumber}E${e.episodeNumber}${e.episodeName ? ` · ${e.episodeName}` : ''}`,
+        isRewatch: false,
+        watchedAt: e.watchedAt || e.updatedAt || e.createdAt,
+        rating: e.rating ?? null,
+      })),
+      ...rewatchEpisodes.map((e) => ({
+        kind: 'episode',
+        id: `rewatch-${String(e._id)}`,
+        mediaId: e.tvId,
+        title: titleByTv[String(e.tvId)] || 'Show',
+        posterPath: posterByTv[String(e.tvId)] || null,
+        subtitle: `Rewatch · S${e.seasonNumber}E${e.episodeNumber}${
+          e.episodeName ? ` · ${e.episodeName}` : ''
+        }`,
+        isRewatch: true,
         watchedAt: e.watchedAt || e.updatedAt || e.createdAt,
         rating: e.rating ?? null,
       })),

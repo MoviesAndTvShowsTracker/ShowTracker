@@ -73,6 +73,7 @@ app.use('/api/tv/watchlist', tvwatchlist);
 app.use('/api/tv/watch', tvwatch);
 app.use('/api/tv/tracking', tvtracking);
 app.use('/api/tv/episodes', tvepisodes);
+app.use('/api/tv/rewatch', require('./routes/tvrewatch'));
 app.use('/api/favorite', favorite);
 app.use('/api/watch', watch);
 app.use('/api/watchlist', moviewatchlist);

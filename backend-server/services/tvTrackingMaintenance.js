@@ -12,10 +12,14 @@ function isCaughtUpWaiting(track) {
 
 function isFullyFinished(track) {
   const total = track.totalEpisodes || 0;
-  return track.status === 'completed' || (total > 0 && track.watchedEpisodeCount >= total);
+  return (
+    track.status === 'completed' ||
+    track.status === 'rewatching' ||
+    (total > 0 && track.watchedEpisodeCount >= total)
+  );
 }
 
-/** Move inactive shows to paused (stopped) unless caught up or finished. */
+/** Move inactive shows to paused (stopped) unless caught up, finished, or mid-rewatch. */
 async function autoPauseStaleTracks(userId) {
   const cutoff = new Date(Date.now() - STALE_MS);
   const stale = await TvShowTracking.find({
@@ -38,12 +42,13 @@ async function autoPauseStaleTracks(userId) {
 }
 
 async function getLibraryCounts(userId) {
-  const [watching, paused, completed] = await Promise.all([
+  const [watching, rewatching, paused, completed] = await Promise.all([
     TvShowTracking.countDocuments({ userFrom: userId, status: 'watching' }),
+    TvShowTracking.countDocuments({ userFrom: userId, status: 'rewatching' }),
     TvShowTracking.countDocuments({ userFrom: userId, status: 'paused' }),
     TvShowTracking.countDocuments({ userFrom: userId, status: 'completed' }),
   ]);
-  return { watching, paused, completed };
+  return { watching: watching + rewatching, paused, completed, rewatching };
 }
 
 function mapTabToStatus(tab) {

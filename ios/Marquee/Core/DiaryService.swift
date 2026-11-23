@@ -211,6 +211,62 @@ enum DiaryService {
         )
     }
 
+    // MARK: Rewatch sessions
+
+    static func rewatchState(tvId: String) async throws -> RewatchStateResponse {
+        try await APIClient.shared.get("/api/tv/rewatch/\(tvId)")
+    }
+
+    @discardableResult
+    static func startRewatch(_ body: TrackingStartBody, totalEpisodes: Int? = nil, airedEpisodeCount: Int? = nil) async throws -> RewatchMutationResponse {
+        struct Body: Encodable {
+            let tvId: String
+            let tvTitle: String?
+            let tvPosterImage: String?
+            let totalEpisodes: Int?
+            let airedEpisodeCount: Int?
+            let nextSeason: Int?
+            let nextEpisode: Int?
+        }
+        return try await APIClient.shared.post(
+            "/api/tv/rewatch/start",
+            body: Body(
+                tvId: body.tvId,
+                tvTitle: body.tvTitle,
+                tvPosterImage: body.tvPosterImage,
+                totalEpisodes: totalEpisodes,
+                airedEpisodeCount: airedEpisodeCount,
+                nextSeason: 1,
+                nextEpisode: 1
+            )
+        )
+    }
+
+    @discardableResult
+    static func cancelRewatch(tvId: String) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/cancel", body: ["tvId": tvId])
+    }
+
+    @discardableResult
+    static func markRewatchEpisode(_ body: MarkEpisodeBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/mark", body: body)
+    }
+
+    @discardableResult
+    static func unmarkRewatchEpisode(_ body: MarkEpisodeBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/unmark", body: body)
+    }
+
+    @discardableResult
+    static func markRewatchBatch(_ body: BatchEpisodesBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/mark-batch", body: body)
+    }
+
+    @discardableResult
+    static func unmarkRewatchBatch(_ body: BatchEpisodesBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/unmark-batch", body: body)
+    }
+
     // MARK: Stats / import
 
     static func weekRecap() async throws -> WeekRecap {

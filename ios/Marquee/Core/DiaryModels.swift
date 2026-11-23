@@ -225,13 +225,87 @@ struct TrackingRecord: Codable, Identifiable, Sendable{
     let watchedEpisodeCount: Int?
     let totalEpisodes: Int?
     let airedEpisodeCount: Int?
+    let timesCompleted: Int?
+    let activeRewatchSessionId: String?
+
+    init(
+        tvId: String,
+        status: String? = nil,
+        tvTitle: String? = nil,
+        tvPosterImage: String? = nil,
+        tvPost: String? = nil,
+        rating: Double? = nil,
+        nextSeason: Int? = nil,
+        nextEpisode: Int? = nil,
+        nextEpisodeName: String? = nil,
+        lastSeason: Int? = nil,
+        lastEpisode: Int? = nil,
+        watchedEpisodeCount: Int? = nil,
+        totalEpisodes: Int? = nil,
+        airedEpisodeCount: Int? = nil,
+        timesCompleted: Int? = nil,
+        activeRewatchSessionId: String? = nil
+    ) {
+        self.tvId = tvId
+        self.status = status
+        self.tvTitle = tvTitle
+        self.tvPosterImage = tvPosterImage
+        self.tvPost = tvPost
+        self.rating = rating
+        self.nextSeason = nextSeason
+        self.nextEpisode = nextEpisode
+        self.nextEpisodeName = nextEpisodeName
+        self.lastSeason = lastSeason
+        self.lastEpisode = lastEpisode
+        self.watchedEpisodeCount = watchedEpisodeCount
+        self.totalEpisodes = totalEpisodes
+        self.airedEpisodeCount = airedEpisodeCount
+        self.timesCompleted = timesCompleted
+        self.activeRewatchSessionId = activeRewatchSessionId
+    }
 
     var posterPath: String? { tvPosterImage ?? tvPost }
+
+    var isRewatching: Bool { status == "rewatching" }
 
     var showProgress: ShowProgress { ShowProgress.from(track: self) }
 
     var progressFraction: Double { showProgress.fraction }
     var progressPercent: Int { showProgress.percent }
+}
+
+struct RewatchSessionDoc: Decodable, Identifiable, Sendable {
+    var id: String { _id ?? fallbackId }
+    let _id: String?
+    let tvId: String?
+    let sessionNumber: Int?
+    let status: String?
+    let watchedEpisodeCount: Int?
+    let totalEpisodes: Int?
+    let airedEpisodeCount: Int?
+    let nextSeason: Int?
+    let nextEpisode: Int?
+    let nextEpisodeName: String?
+    let episodes: [WatchedEpisodeDoc]?
+
+    private var fallbackId: String { "session-\(sessionNumber ?? 0)" }
+}
+
+struct RewatchStateResponse: Decodable, Sendable {
+    let success: Bool?
+    let tracking: TrackingRecord?
+    let activeSession: RewatchSessionDoc?
+    let timesCompleted: Int?
+    let completedRewatches: Int?
+}
+
+struct RewatchMutationResponse: Decodable, Sendable {
+    let success: Bool?
+    let tracking: TrackingRecord?
+    let session: RewatchSessionDoc?
+    let episodes: [WatchedEpisodeDoc]?
+    let completed: Bool?
+    let resumed: Bool?
 }
 
 struct ContinueResponse: Decodable, Sendable{

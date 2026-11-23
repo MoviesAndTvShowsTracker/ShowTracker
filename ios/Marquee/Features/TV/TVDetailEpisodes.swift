@@ -141,6 +141,11 @@ extension TVDetailView {
         } ?? false
 
         return Button {
+            // Completed shows keep canonical checks; start a rewatch before marking again.
+            if tracking?.status == "completed" {
+                showStartRewatchConfirm = true
+                return
+            }
             if marked {
                 episodePendingUnmark = ep
                 showUnmarkConfirm = true
