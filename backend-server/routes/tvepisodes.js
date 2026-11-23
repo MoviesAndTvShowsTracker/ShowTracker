@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 var router = express.Router();
 var TvShowTracking = require('../models/tvShowTracking');
 var TvEpisodeWatch = require('../models/tvEpisodeWatch');
+var TvRewatchEpisode = require('../models/tvRewatchEpisode');
 var authenticate = require('../authenticate');
 const { syncTrackingCounts, clearWatchlistForShow } = require('./tvtracking');
 const {
@@ -11,18 +12,25 @@ const {
 } = require('../services/tvTrackingService');
 const { invalidateUserStats } = require('../services/statsCache');
 const { normalizeRating } = require('../services/ratings');
+const { mergeEpisodePlaysForTime } = require('../services/userStatsDashboard');
 
 router.use(bodyParser.json());
 
 router.get('/stats', authenticate.verifyUser, async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const episodes = await TvEpisodeWatch.find({ userFrom: userId });
-    const tvMins = episodes.reduce((sum, ep) => sum + (ep.runtimeMinutes || 0), 0);
+    const [episodes, rewatches] = await Promise.all([
+      TvEpisodeWatch.find({ userFrom: userId }).lean(),
+      TvRewatchEpisode.find({ userFrom: userId }).lean(),
+    ]);
+    const plays = mergeEpisodePlaysForTime(episodes, rewatches);
+    const tvMins = plays.reduce((sum, ep) => sum + (ep.runtimeMinutes || 0), 0);
     const tvShowIds = await TvEpisodeWatch.distinct('tvId', { userFrom: userId });
     res.status(200).json({
       success: true,
       episodeCount: episodes.length,
+      episodePlayCount: plays.length,
+      episodeRewatchPlays: rewatches.length,
       tvMins,
       tvShowCount: tvShowIds.length,
     });

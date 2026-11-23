@@ -1,7 +1,9 @@
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
+const TvRewatchEpisode = require('../models/tvRewatchEpisode');
 const Watch = require('../models/watch');
 const { getCachedUserStats } = require('./statsCache');
 const { filmRuntimeMinutes } = require('./mediaMeta');
+const { mergeEpisodePlaysForTime } = require('./userStatsDashboard');
 const {
   resolveTimeZone,
   periodBounds,
@@ -44,32 +46,40 @@ async function buildWeekRecap(userId, options = {}) {
   }
 
   const bounds = periodBounds(timeZone);
-  const [weekEpisodes, weekFilms, allEpisodes, allFilms] = await Promise.all([
-    TvEpisodeWatch.find({
-      userFrom: userId,
-      watchedAt: { $gte: bounds.weekStartDate },
-    }).lean(),
-    Watch.find({
-      userFrom: userId,
-      watchedAt: { $gte: bounds.weekStartDate },
-    }).lean(),
-    TvEpisodeWatch.find({ userFrom: userId }).select('watchedAt').lean(),
-    Watch.find({ userFrom: userId }).select('watchedAt movieId').lean(),
-  ]);
+  const [weekCanonical, weekRewatches, weekFilms, allEpisodes, allRewatches, allFilms] =
+    await Promise.all([
+      TvEpisodeWatch.find({
+        userFrom: userId,
+        watchedAt: { $gte: bounds.weekStartDate },
+      }).lean(),
+      TvRewatchEpisode.find({
+        userFrom: userId,
+        watchedAt: { $gte: bounds.weekStartDate },
+      }).lean(),
+      Watch.find({
+        userFrom: userId,
+        watchedAt: { $gte: bounds.weekStartDate },
+      }).lean(),
+      TvEpisodeWatch.find({ userFrom: userId }).select('watchedAt runtimeMinutes tvId seasonNumber episodeNumber').lean(),
+      TvRewatchEpisode.find({ userFrom: userId }).select('watchedAt runtimeMinutes tvId seasonNumber episodeNumber').lean(),
+      Watch.find({ userFrom: userId }).select('watchedAt movieId').lean(),
+    ]);
 
-  // Unique titles for the week card; every play date feeds the streak.
+  // Unique titles for the week card; every play date feeds the streak + watch time.
   const films = dedupeFilms(weekFilms);
+  const weekPlays = mergeEpisodePlaysForTime(weekCanonical, weekRewatches);
+  const allPlays = mergeEpisodePlaysForTime(allEpisodes, allRewatches);
   const allFilmKeys = allFilms
     .filter((f) => f.watchedAt)
     .map((f) => dateKeyInZone(f.watchedAt, timeZone));
   const daySet = new Set([
-    ...allEpisodes.filter((ep) => ep.watchedAt).map((ep) => dateKeyInZone(ep.watchedAt, timeZone)),
+    ...allPlays.filter((ep) => ep.watchedAt).map((ep) => dateKeyInZone(ep.watchedAt, timeZone)),
     ...allFilmKeys,
   ]);
 
-  const episodesThisWeek = weekEpisodes.length;
+  const episodesThisWeek = weekCanonical.length;
   const filmsThisWeek = films.length;
-  const tvMinsThisWeek = weekEpisodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
+  const tvMinsThisWeek = weekPlays.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
   const filmMinsThisWeek = weekFilms.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
   const totalMinsThisWeek = tvMinsThisWeek + filmMinsThisWeek;
   const streak = computeStreakFromDaySet(daySet, bounds.todayKey);

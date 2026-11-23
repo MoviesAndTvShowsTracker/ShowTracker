@@ -1,4 +1,5 @@
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
+const TvRewatchEpisode = require('../models/tvRewatchEpisode');
 const TvShowTracking = require('../models/tvShowTracking');
 const Watch = require('../models/watch');
 const User = require('../models/user');
@@ -23,6 +24,35 @@ const {
   resolveTimeZone,
 } = require('./statsCalendar');
 const { dedupeFilms } = require('./filmDedupe');
+
+function episodeRuntimeKey(tvId, seasonNumber, episodeNumber) {
+  return `${tvId}:${seasonNumber}-${episodeNumber}`;
+}
+
+/**
+ * TV Time / Serializd: rewatches count toward watch time.
+ * Fill missing rewatch runtimes from the matching first-watch row.
+ */
+function mergeEpisodePlaysForTime(canonical, rewatches) {
+  const runtimeByKey = new Map();
+  for (const ep of canonical) {
+    const mins = ep.runtimeMinutes || 0;
+    if (mins <= 0) continue;
+    runtimeByKey.set(
+      episodeRuntimeKey(ep.tvId, ep.seasonNumber, ep.episodeNumber),
+      mins
+    );
+  }
+  const enrichedRewatches = rewatches.map((ep) => {
+    if ((ep.runtimeMinutes || 0) > 0) return ep;
+    const mins =
+      runtimeByKey.get(
+        episodeRuntimeKey(ep.tvId, ep.seasonNumber, ep.episodeNumber)
+      ) || 0;
+    return mins > 0 ? { ...ep, runtimeMinutes: mins } : ep;
+  });
+  return [...canonical, ...enrichedRewatches];
+}
 
 function buildCombinedDayMap(episodes, films, timeZone) {
   const map = {};
@@ -281,23 +311,28 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 6;
+const STATS_SCHEMA_VERSION = 7;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
   const now = options.now ? new Date(options.now) : new Date();
   const bounds = periodBounds(timeZone, now);
 
-  let [episodes, tracks, rawFilms, user] = await Promise.all([
+  let [episodes, rewatchEpisodes, tracks, rawFilms, user] = await Promise.all([
     TvEpisodeWatch.find({ userFrom: userId }).lean(),
+    TvRewatchEpisode.find({ userFrom: userId }).lean(),
     TvShowTracking.find({ userFrom: userId }).lean(),
     Watch.find({ userFrom: userId }).sort({ watchedAt: -1 }).lean(),
     User.findById(userId).lean(),
   ]);
 
   // Unique titles for library/taste; every play for diary days + watch time.
+  // TV mirrors films + TV Time: first watches stay unique episodeCount;
+  // rewatch rows add minutes (and diary-day activity) only.
   const films = dedupeFilms(rawFilms);
   const filmExtraPlays = Math.max(0, rawFilms.length - films.length);
+  const episodePlays = mergeEpisodePlaysForTime(episodes, rewatchEpisodes);
+  const episodeRewatchPlays = rewatchEpisodes.length;
 
   const missingRuntimeIds = films.filter((f) => !filmRuntimeMinutes(f)).map((f) => f.movieId);
   const { map: filmMetaMap, fetchesRemaining: filmMetaPending } = await getMovieMetaBatch(
@@ -306,13 +341,13 @@ async function buildUserStatsDashboard(userId, options = {}) {
   );
   const backfilled = await applyFilmRuntimeBackfill(films, filmMetaMap, 30);
 
-  const dayMap = buildCombinedDayMap(episodes, rawFilms, timeZone);
-  const tvMins = episodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
+  const dayMap = buildCombinedDayMap(episodePlays, rawFilms, timeZone);
+  const tvMins = episodePlays.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0);
   const filmMins = rawFilms.reduce((s, f) => s + filmRuntimeMinutes(f), 0);
   const filmsWithRuntime = films.filter((f) => filmRuntimeMinutes(f) > 0).length;
   const filmsMissingRuntime = films.length - filmsWithRuntime;
-  const epsWithRuntime = episodes.filter((ep) => (ep.runtimeMinutes || 0) > 0).length;
-  const epsMissingRuntime = episodes.length - epsWithRuntime;
+  const epsWithRuntime = episodePlays.filter((ep) => (ep.runtimeMinutes || 0) > 0).length;
+  const epsMissingRuntime = episodePlays.length - epsWithRuntime;
 
   const { longest: longestFilm, shortest: shortestFilm } = filmExtremes(films);
 
@@ -334,7 +369,7 @@ async function buildUserStatsDashboard(userId, options = {}) {
     finished: tracks.filter((t) => t.status === 'completed').length,
   };
 
-  const lastEpisodeAt = episodes.reduce((max, ep) => {
+  const lastEpisodeAt = episodePlays.reduce((max, ep) => {
     if (!ep.watchedAt) return max;
     const t = new Date(ep.watchedAt);
     return !max || t > max ? t : max;
@@ -371,12 +406,13 @@ async function buildUserStatsDashboard(userId, options = {}) {
     filmFetchesRemaining: filmMetaPending,
   });
 
-  const mostWatched = mostWatchedShow(episodes, tracks);
+  const mostWatched = mostWatchedShow(episodePlays, tracks);
   const binge = biggestBinge(dayMap);
 
   const year = {
     filmCount: countItemsSince(films, bounds.yearStartDate),
     episodeCount: countItemsSince(episodes, bounds.yearStartDate),
+    episodePlayCount: countItemsSince(episodePlays, bounds.yearStartDate),
     filmMins: sumFieldSince(dayMap, bounds.yearStart, 'filmMinutes'),
     tvMins: sumFieldSince(dayMap, bounds.yearStart, 'tvMinutes'),
   };
@@ -385,6 +421,7 @@ async function buildUserStatsDashboard(userId, options = {}) {
   const week = {
     filmCount: countItemsSince(films, bounds.weekStartDate),
     episodeCount: countItemsSince(episodes, bounds.weekStartDate),
+    episodePlayCount: countItemsSince(episodePlays, bounds.weekStartDate),
     filmMins: sumFieldSince(dayMap, bounds.weekStart, 'filmMinutes'),
     tvMins: sumFieldSince(dayMap, bounds.weekStart, 'tvMinutes'),
   };
@@ -393,6 +430,7 @@ async function buildUserStatsDashboard(userId, options = {}) {
   const month = {
     filmCount: countItemsSince(films, bounds.monthStartDate),
     episodeCount: countItemsSince(episodes, bounds.monthStartDate),
+    episodePlayCount: countItemsSince(episodePlays, bounds.monthStartDate),
     filmMins: sumFieldSince(dayMap, bounds.monthStart, 'filmMinutes'),
     tvMins: sumFieldSince(dayMap, bounds.monthStart, 'tvMinutes'),
   };
@@ -415,6 +453,8 @@ async function buildUserStatsDashboard(userId, options = {}) {
     filmPlayCount: rawFilms.length,
     tvShowCount,
     episodeCount: episodes.length,
+    episodePlayCount: episodePlays.length,
+    episodeRewatchPlays,
     filmMins,
     tvMins,
     totalMins,
@@ -458,9 +498,10 @@ async function buildUserStatsDashboard(userId, options = {}) {
     filmRuntimeCoverage: pct(filmsWithRuntime, films.length),
     episodeRuntimeKnown: epsWithRuntime,
     episodeRuntimeMissing: epsMissingRuntime,
-    episodeRuntimeCoverage: pct(epsWithRuntime, episodes.length),
+    episodeRuntimeCoverage: pct(epsWithRuntime, episodePlays.length),
     filmDuplicatesRemoved: filmExtraPlays,
     filmExtraPlays,
+    episodeRewatchPlays,
     runtimeBackfilled: backfilled,
     estimated: true,
   };
@@ -470,7 +511,7 @@ async function buildUserStatsDashboard(userId, options = {}) {
     avgEpisodeMins:
       epsWithRuntime > 0
         ? Math.round(
-            episodes.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0) / epsWithRuntime
+            episodePlays.reduce((s, ep) => s + (ep.runtimeMinutes || 0), 0) / epsWithRuntime
           )
         : 0,
     mostWatchedShow: mostWatched,
@@ -550,4 +591,8 @@ async function buildUserStatsDashboard(userId, options = {}) {
   };
 }
 
-module.exports = { buildUserStatsDashboard, STATS_SCHEMA_VERSION };
+module.exports = {
+  buildUserStatsDashboard,
+  STATS_SCHEMA_VERSION,
+  mergeEpisodePlaysForTime,
+};
