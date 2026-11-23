@@ -267,6 +267,24 @@ enum DiaryService {
         try await APIClient.shared.post("/api/tv/rewatch/unmark-batch", body: body)
     }
 
+    /// Casual rewatch play — does not enter structured rewatching.
+    static func logRewatchEpisode(_ body: MarkEpisodeBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/log", body: body)
+    }
+
+    static func logRewatchBatch(_ body: BatchEpisodesBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/log-batch", body: body)
+    }
+
+    /// Undo latest rewatch play, then canonical first-watch.
+    static func undoEpisodePlay(_ body: MarkEpisodeBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/undo-play", body: body)
+    }
+
+    static func undoEpisodePlayBatch(_ body: BatchEpisodesBody) async throws -> RewatchMutationResponse {
+        try await APIClient.shared.post("/api/tv/rewatch/undo-play-batch", body: body)
+    }
+
     // MARK: Stats / import
 
     static func weekRecap() async throws -> WeekRecap {

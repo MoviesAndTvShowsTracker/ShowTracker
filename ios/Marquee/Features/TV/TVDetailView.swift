@@ -43,6 +43,10 @@ struct TVDetailView: View {
     @State var rewatchSession: RewatchSessionDoc?
     @State var showStartRewatchConfirm = false
     @State var showCancelRewatchConfirm = false
+    @State var showSeasonActionConfirm = false
+    /// "S-E" → total plays (first watch + rewatches).
+    @State var episodePlayCounts: [String: Int] = [:]
+    @State var rewatchPlayTotal: Int = 0
 
     enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
@@ -111,10 +115,13 @@ struct TVDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .background(EnableSwipeBack())
         .alert(
-            "Unmark episode?",
+            "Episode watched",
             isPresented: $showUnmarkConfirm,
             presenting: episodePendingUnmark
         ) { ep in
+            Button("Log rewatch") {
+                Task { await performLogRewatch(ep) }
+            }
             Button("Unmark", role: .destructive) {
                 Task { await performUnmark(ep) }
             }
@@ -123,7 +130,20 @@ struct TVDetailView: View {
             }
         } message: { ep in
             let s = ep.season_number ?? selectedSeason
-            Text("Unmark S\(s) E\(ep.episode_number)\(ep.name.map { " — \($0)" } ?? "") as watched?")
+            let plays = episodePlayCounts["\(s)-\(ep.episode_number)"] ?? 1
+            Text("S\(s) E\(ep.episode_number)\(ep.name.map { " — \($0)" } ?? ""). Logged \(plays)×. Log another play or unmark?")
+        }
+        .alert("Season watched", isPresented: $showSeasonActionConfirm) {
+            Button("Rewatch season") {
+                Task { await performSeasonRewatch() }
+            }
+            Button("Unmark season", role: .destructive) {
+                pendingBatch = .unmarkSeason(season: selectedSeason, count: watchedInSeason.count)
+                showBatchConfirm = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Log a rewatch play for every aired episode in this season, or unmark them (latest rewatch first).")
         }
         .sheet(isPresented: $showRatingSheet) {
             ratingSheet
@@ -534,6 +554,9 @@ struct TVDetailView: View {
             }
             return "Rewatch in progress — original history kept"
         }
+        if rewatchPlayTotal > 0, tracking.status == "completed" {
+            return "\(progress.caption) · \(rewatchPlayTotal) rewatch play\(rewatchPlayTotal == 1 ? "" : "s")"
+        }
         return progress.caption
     }
 
@@ -682,6 +705,11 @@ struct TVDetailView: View {
                 tracking = rewatchState?.tracking ?? resolvedTrack
             }
             rewatchSession = rewatchState?.activeSession
+            episodePlayCounts = rewatchState?.playCounts ?? [:]
+            rewatchPlayTotal = rewatchState?.rewatchPlayTotal ?? 0
+            if let track = rewatchState?.tracking {
+                tracking = track
+            }
             if let r = tracking?.rating { showRating = min(5, r / 2) }
 
             let activeRewatchDocs = rewatchState?.activeSession?.episodes ?? []
@@ -786,20 +814,31 @@ struct TVDetailView: View {
     private func performUnmark(_ ep: TVEpisode) async {
         let season = ep.season_number ?? selectedSeason
         let key = "\(season)-\(ep.episode_number)"
-        watchedKeys.remove(key)
-        Haptics.light()
+        let playsBefore = episodePlayCounts[key] ?? (watchedKeys.contains(key) ? 1 : 0)
         episodePendingUnmark = nil
+        Haptics.light()
         let body = markBody(for: ep, afterMark: false)
         do {
             if isRewatching {
                 let res = try await DiaryService.unmarkRewatchEpisode(body)
                 applyRewatchMutation(res)
+                watchedKeys.remove(key)
             } else {
-                try await DiaryService.unmarkEpisode(body)
-                tracking = try? await DiaryService.tracking(for: idString)
+                let res = try await DiaryService.undoEpisodePlay(body)
+                applyRewatchMutation(res)
+                let playsAfter = res.playCounts?[key] ?? max(0, playsBefore - 1)
+                episodePlayCounts[key] = playsAfter > 0 ? playsAfter : nil
+                if playsAfter <= 0 {
+                    watchedKeys.remove(key)
+                }
+                if let track = res.tracking {
+                    tracking = track
+                } else {
+                    tracking = try? await DiaryService.tracking(for: idString)
+                }
             }
         } catch {
-            watchedKeys.insert(key)
+            if playsBefore > 0 { watchedKeys.insert(key) }
         }
     }
 
@@ -820,8 +859,16 @@ struct TVDetailView: View {
 
     private func applyRewatchMutation(_ res: RewatchMutationResponse) {
         if let track = res.tracking { tracking = track }
-        rewatchSession = res.session
-        if let docs = res.episodes ?? res.session?.episodes {
+        if res.session != nil { rewatchSession = res.session }
+        if let counts = res.playCounts {
+            episodePlayCounts = counts
+        }
+        if let total = res.rewatchPlayTotal {
+            rewatchPlayTotal = total
+        }
+        // Structured rewatch: session episodes are the checkmarks.
+        // Casual log/undo: keep canonical watchedKeys unless server returned session eps while rewatching.
+        if isRewatching, let docs = res.episodes ?? res.session?.episodes {
             watchedKeys = Set(docs.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
                 return "\(s)-\(e)"
@@ -830,6 +877,41 @@ struct TVDetailView: View {
         if res.completed == true {
             Haptics.success()
         }
+    }
+
+    func performLogRewatch(_ ep: TVEpisode) async {
+        episodePendingUnmark = nil
+        let body = markBody(for: ep, afterMark: true)
+        do {
+            let res = try await DiaryService.logRewatchEpisode(body)
+            applyRewatchMutation(res)
+            // Refresh play counts if response omitted map
+            if res.playCounts == nil, let state = try? await DiaryService.rewatchState(tvId: idString) {
+                episodePlayCounts = state.playCounts ?? episodePlayCounts
+                rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
+                if let track = state.tracking { tracking = track }
+            }
+            Haptics.success()
+        } catch {}
+    }
+
+    func performSeasonRewatch() async {
+        guard let detail, !batching else { return }
+        let targets = watchedInSeason.filter(\.hasAired)
+        guard !targets.isEmpty else { return }
+        batching = true
+        defer { batching = false }
+        do {
+            let body = batchBody(targets, keys: watchedKeys, catalog: targets, detail: detail)
+            let res = try await DiaryService.logRewatchBatch(body)
+            applyRewatchMutation(res)
+            if res.playCounts == nil, let state = try? await DiaryService.rewatchState(tvId: idString) {
+                episodePlayCounts = state.playCounts ?? episodePlayCounts
+                rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
+                if let track = state.tracking { tracking = track }
+            }
+            Haptics.success()
+        } catch {}
     }
 
     private func performStartRewatch() async {
@@ -908,7 +990,7 @@ struct TVDetailView: View {
         for ep in targets {
             if marking { keys.insert(ep.diaryKey) } else { keys.remove(ep.diaryKey) }
         }
-        watchedKeys = keys
+        if marking { watchedKeys = keys }
         if marking { Haptics.medium() } else { Haptics.light() }
 
         do {
@@ -918,13 +1000,25 @@ struct TVDetailView: View {
                     ? try await DiaryService.markRewatchBatch(body)
                     : try await DiaryService.unmarkRewatchBatch(body)
                 applyRewatchMutation(response)
-            } else {
-                let response = marking
-                    ? try await DiaryService.markBatch(body)
-                    : try await DiaryService.unmarkBatch(body)
+            } else if marking {
+                let response = try await DiaryService.markBatch(body)
                 applyBatch(response)
-                if marking, tracking?.status == "completed" {
+                if tracking?.status == "completed" {
                     Haptics.success()
+                }
+            } else {
+                // Play-aware season unmark: latest rewatch first, then canonical.
+                _ = try await DiaryService.undoEpisodePlayBatch(body)
+                if let state = try? await DiaryService.rewatchState(tvId: idString) {
+                    episodePlayCounts = state.playCounts ?? [:]
+                    rewatchPlayTotal = state.rewatchPlayTotal ?? 0
+                    if let track = state.tracking { tracking = track }
+                }
+                if let docs = try? await DiaryService.watchedEpisodes(tvId: idString) {
+                    watchedKeys = Set(docs.compactMap { doc in
+                        guard let s = doc.seasonNumber, let e = doc.episodeNumber else { return nil }
+                        return "\(s)-\(e)"
+                    })
                 }
             }
         } catch {

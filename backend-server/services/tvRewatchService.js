@@ -1,11 +1,73 @@
 const TvShowTracking = require('../models/tvShowTracking');
 const TvRewatchSession = require('../models/tvRewatchSession');
 const TvRewatchEpisode = require('../models/tvRewatchEpisode');
-const { findTracking, getWatchedEpisodesForShow } = require('./tvTrackingService');
+const {
+  findTracking,
+  getWatchedEpisodesForShow,
+  deleteWatchedEpisode,
+} = require('./tvTrackingService');
 const { normTvId } = require('./tvWatchlistService');
 
 function episodeSort(a, b) {
   return a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber;
+}
+
+function episodeKey(seasonNumber, episodeNumber) {
+  return `${seasonNumber}-${episodeNumber}`;
+}
+
+/** Full-show finishes only: first completion + completed sessions that covered the whole show. */
+async function computeTimesCompleted(userId, tvId, tracking) {
+  const id = String(tvId);
+  const total =
+    tracking?.totalEpisodes ||
+    tracking?.airedEpisodeCount ||
+    0;
+  const firstDone =
+    tracking?.status === 'completed' ||
+    tracking?.status === 'rewatching' ||
+    (total > 0 && (tracking?.watchedEpisodeCount || 0) >= total);
+
+  const sessions = await TvRewatchSession.find({
+    userFrom: userId,
+    tvId: id,
+    status: 'completed',
+  })
+    .select('watchedEpisodeCount totalEpisodes airedEpisodeCount')
+    .lean();
+
+  const fullRewatches = sessions.filter((s) => {
+    const need = s.totalEpisodes || s.airedEpisodeCount || total || 0;
+    return need > 0 && (s.watchedEpisodeCount || 0) >= need;
+  }).length;
+
+  if (!firstDone && fullRewatches === 0) return 0;
+  return Math.max(1, (firstDone ? 1 : 0) + fullRewatches);
+}
+
+/**
+ * plays[S-E] = 1 if first-watched + count of rewatch episode marks.
+ */
+async function getEpisodePlayCounts(userId, tvId) {
+  const id = String(tvId);
+  const [canonical, rewatchRows] = await Promise.all([
+    getWatchedEpisodesForShow(userId, id),
+    TvRewatchEpisode.find({ userFrom: userId, tvId: id })
+      .select('seasonNumber episodeNumber')
+      .lean(),
+  ]);
+
+  const plays = {};
+  for (const ep of canonical) {
+    plays[episodeKey(ep.seasonNumber, ep.episodeNumber)] = 1;
+  }
+  for (const ep of rewatchRows) {
+    const key = episodeKey(ep.seasonNumber, ep.episodeNumber);
+    plays[key] = (plays[key] || 0) + 1;
+  }
+
+  const rewatchPlayTotal = rewatchRows.length;
+  return { plays, rewatchPlayTotal };
 }
 
 function sessionPayload(session, episodes = []) {
@@ -157,17 +219,188 @@ async function mirrorSessionOntoTracking(tracking, session) {
   tracking.nextEpisode = session.nextEpisode;
   tracking.nextEpisodeName = session.nextEpisodeName;
   if (session.lastWatchedAt) tracking.lastWatchedAt = session.lastWatchedAt;
-  if (session.status === 'completed') {
-    const completedSessions = await TvRewatchSession.countDocuments({
-      userFrom: tracking.userFrom,
-      tvId: tracking.tvId,
-      status: 'completed',
-    });
-    // First finish + completed rewatch sessions.
-    tracking.timesCompleted = Math.max(1, completedSessions + 1);
+  if (session.status === 'completed' || session.status === 'active') {
+    tracking.timesCompleted = await computeTimesCompleted(
+      tracking.userFrom,
+      tracking.tvId,
+      tracking
+    );
   }
   await tracking.save();
   return tracking;
+}
+
+/**
+ * Casual rewatch play(s) without entering structured rewatching / Up Next mode.
+ * Each call creates a completed mini-session so the same episode can be logged again later.
+ */
+async function logEpisodeRewatches(userId, tvId, episodeList, meta = {}) {
+  const id = String(tvId);
+  const tracking = await findTracking(userId, id);
+  if (!tracking) {
+    const err = new Error('Show not found in your library.');
+    err.status = 404;
+    throw err;
+  }
+
+  const list = (Array.isArray(episodeList) ? episodeList : [episodeList]).filter(
+    (ep) => ep && Number.isFinite(ep.seasonNumber) && Number.isFinite(ep.episodeNumber)
+  );
+  if (!list.length) {
+    const err = new Error('No episodes provided');
+    err.status = 400;
+    throw err;
+  }
+
+  // Structured active run: mark into that session instead.
+  if (tracking.status === 'rewatching' && tracking.activeRewatchSessionId) {
+    return markEpisodes(userId, id, list, meta);
+  }
+
+  const now = new Date();
+  const sessionNumber = await nextSessionNumber(userId, id);
+  const totalEpisodes = meta.totalEpisodes ?? tracking.totalEpisodes ?? 0;
+  const session = await TvRewatchSession.create({
+    userFrom: userId,
+    tvId: id,
+    sessionNumber,
+    status: 'completed',
+    startedAt: now,
+    completedAt: now,
+    watchedEpisodeCount: list.length,
+    totalEpisodes,
+    airedEpisodeCount: meta.airedEpisodeCount ?? tracking.airedEpisodeCount ?? totalEpisodes,
+    nextSeason: null,
+    nextEpisode: null,
+    nextEpisodeName: null,
+    lastSeason: list[list.length - 1].seasonNumber,
+    lastEpisode: list[list.length - 1].episodeNumber,
+    lastWatchedAt: now,
+  });
+
+  await TvRewatchEpisode.insertMany(
+    list.map((ep) => ({
+      userFrom: userId,
+      tvId: id,
+      sessionId: session._id,
+      seasonNumber: ep.seasonNumber,
+      episodeNumber: ep.episodeNumber,
+      tmdbEpisodeId: ep.tmdbEpisodeId || '',
+      episodeName: ep.episodeName || '',
+      runtimeMinutes: ep.runtimeMinutes || 0,
+      watchedAt: now,
+    })),
+    { ordered: false }
+  ).catch((err) => {
+    if (err.code !== 11000) throw err;
+  });
+
+  // Do not flip status to rewatching — casual plays only.
+  if (tracking.status === 'completed' || (tracking.watchedEpisodeCount || 0) > 0) {
+    tracking.lastWatchedAt = now;
+  }
+  tracking.timesCompleted = await computeTimesCompleted(userId, id, tracking);
+  await tracking.save();
+
+  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  return {
+    tracking,
+    session: sessionPayload(session, list),
+    playCounts: plays,
+    rewatchPlayTotal,
+    completed: false,
+  };
+}
+
+/**
+ * Undo one play for an episode: latest rewatch mark first, then canonical first-watch.
+ * Never deletes other shows' data; never clears whole diary.
+ */
+async function undoEpisodePlay(userId, tvId, episode, meta = {}) {
+  const id = String(tvId);
+  const tracking = await findTracking(userId, id);
+  if (!tracking) {
+    const err = new Error('Show not found in your library.');
+    err.status = 404;
+    throw err;
+  }
+
+  const seasonNumber = episode.seasonNumber;
+  const episodeNumber = episode.episodeNumber;
+
+  // Active structured rewatch: unmark inside that session only.
+  if (tracking.status === 'rewatching' && tracking.activeRewatchSessionId) {
+    return unmarkEpisodes(userId, id, [{ seasonNumber, episodeNumber }], meta);
+  }
+
+  const latestRewatch = await TvRewatchEpisode.findOne({
+    userFrom: userId,
+    tvId: id,
+    seasonNumber,
+    episodeNumber,
+  })
+    .sort({ watchedAt: -1, createdAt: -1 })
+    .lean();
+
+  if (latestRewatch) {
+    await TvRewatchEpisode.deleteOne({ _id: latestRewatch._id });
+    const leftInSession = await TvRewatchEpisode.countDocuments({
+      sessionId: latestRewatch.sessionId,
+    });
+    if (leftInSession === 0) {
+      await TvRewatchSession.deleteOne({
+        _id: latestRewatch.sessionId,
+        userFrom: userId,
+        status: { $in: ['completed', 'cancelled'] },
+      });
+    } else {
+      await TvRewatchSession.updateOne(
+        { _id: latestRewatch.sessionId },
+        { $set: { watchedEpisodeCount: leftInSession } }
+      );
+    }
+  } else {
+    await deleteWatchedEpisode(userId, id, seasonNumber, episodeNumber);
+    const remaining = await getWatchedEpisodesForShow(userId, id);
+    tracking.watchedEpisodeCount = remaining.length;
+    if (remaining.length === 0) {
+      // Leave tracking row but clear completion — caller routes often rebuild; keep safe.
+      tracking.status = 'watching';
+      tracking.timesCompleted = 0;
+      tracking.nextSeason = null;
+      tracking.nextEpisode = null;
+      tracking.nextEpisodeName = null;
+    } else {
+      const total = tracking.totalEpisodes || 0;
+      if (total > 0 && remaining.length < total && tracking.status === 'completed') {
+        tracking.status = 'watching';
+      }
+      tracking.timesCompleted = await computeTimesCompleted(userId, id, tracking);
+    }
+    await tracking.save();
+  }
+
+  if (latestRewatch) {
+    tracking.timesCompleted = await computeTimesCompleted(userId, id, tracking);
+    await tracking.save();
+  }
+
+  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  return {
+    tracking,
+    playCounts: plays,
+    rewatchPlayTotal,
+    removedRewatch: Boolean(latestRewatch),
+  };
+}
+
+async function undoEpisodePlays(userId, tvId, episodeList, meta = {}) {
+  const list = Array.isArray(episodeList) ? episodeList : [episodeList];
+  let last = null;
+  for (const ep of list) {
+    last = await undoEpisodePlay(userId, tvId, ep, meta);
+  }
+  return last;
 }
 
 async function markEpisodes(userId, tvId, episodeList, meta = {}) {
@@ -341,14 +574,39 @@ async function getRewatchState(userId, tvId) {
   if (active) {
     episodes = await getSessionEpisodes(userId, active._id);
   }
-  const completedCount = sessions.filter((s) => s.status === 'completed').length;
+  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  const timesCompleted = tracking
+    ? await computeTimesCompleted(userId, id, tracking)
+    : 0;
+  const fullRewatchSessions = sessions.filter((s) => {
+    if (s.status !== 'completed') return false;
+    const need = s.totalEpisodes || s.airedEpisodeCount || tracking?.totalEpisodes || 0;
+    return need > 0 && (s.watchedEpisodeCount || 0) >= need;
+  }).length;
   return {
     tracking,
     activeSession: active ? sessionPayload(active, episodes) : null,
     sessions,
-    timesCompleted: tracking?.timesCompleted || (tracking?.status === 'completed' ? 1 : 0),
-    completedRewatches: completedCount,
+    timesCompleted,
+    completedRewatches: fullRewatchSessions,
+    playCounts: plays,
+    rewatchPlayTotal,
   };
+}
+
+/** Safe: only rewrites timesCompleted on tracking docs. Never deletes watches. */
+async function repairTimesCompletedForUser(userId) {
+  const tracks = await TvShowTracking.find({ userFrom: userId });
+  let updated = 0;
+  for (const tracking of tracks) {
+    const next = await computeTimesCompleted(userId, tracking.tvId, tracking);
+    if ((tracking.timesCompleted || 0) !== next) {
+      tracking.timesCompleted = next;
+      await tracking.save();
+      updated += 1;
+    }
+  }
+  return { scanned: tracks.length, updated };
 }
 
 /** Recent rewatch episode activity for diary. */
@@ -374,5 +632,11 @@ module.exports = {
   recentRewatchActivity,
   syncSessionProgress,
   getWatchedEpisodesForShow,
+  getEpisodePlayCounts,
+  computeTimesCompleted,
+  logEpisodeRewatches,
+  undoEpisodePlay,
+  undoEpisodePlays,
+  repairTimesCompletedForUser,
   normTvId,
 };

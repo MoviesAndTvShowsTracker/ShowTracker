@@ -315,18 +315,12 @@ async function runTvTimeImport({
       }
     }
 
-    // Count first finish + every imported rewatch run so profile history is visible
-    // even when a run was only a partial season.
-    if (sessions.length > 0) {
+    // Only full-show rewatch runs bump timesCompleted (partial season runs stay as plays).
+    if (fullRewatchCompletions > 0 || tracking.status === 'completed') {
       const base = tracking.status === 'completed' ? 1 : 0;
       tracking.timesCompleted = Math.max(
         tracking.timesCompleted || 0,
-        base + sessions.length
-      );
-    } else if (fullRewatchCompletions > 0) {
-      tracking.timesCompleted = Math.max(
-        tracking.timesCompleted || 0,
-        (tracking.status === 'completed' ? 1 : 0) + fullRewatchCompletions
+        base + fullRewatchCompletions
       );
     }
     if (

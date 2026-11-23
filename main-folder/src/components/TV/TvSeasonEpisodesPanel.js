@@ -61,6 +61,8 @@ export default function TvSeasonEpisodesPanel({
   const [ratingSavingKey, setRatingSavingKey] = useState(null);
   const [rewatchSession, setRewatchSession] = useState(null);
   const [rewatchBusy, setRewatchBusy] = useState(false);
+  const [playCounts, setPlayCounts] = useState({});
+  const [rewatchPlayTotal, setRewatchPlayTotal] = useState(0);
   const { confirm, confirmDialog } = useConfirmDialog();
 
   const showMeta = useMemo(
@@ -92,6 +94,8 @@ export default function TvSeasonEpisodesPanel({
         : epsRes.data.success
           ? epsRes.data.episodes || []
           : [];
+      setPlayCounts(rewatchRes.data?.playCounts || {});
+      setRewatchPlayTotal(rewatchRes.data?.rewatchPlayTotal || 0);
       applyDiaryState(tracking, episodes, session);
     });
   }, [tvShowId, applyDiaryState]);
@@ -123,6 +127,8 @@ export default function TvSeasonEpisodesPanel({
           : epsRes.data.success
             ? epsRes.data.episodes || []
             : [];
+        setPlayCounts(rewatchRes.data?.playCounts || {});
+        setRewatchPlayTotal(rewatchRes.data?.rewatchPlayTotal || 0);
         applyDiaryState(tracking, episodes, session);
       })
       .finally(() => setSeasonDataReady(true));
@@ -226,6 +232,8 @@ export default function TvSeasonEpisodesPanel({
     if (r.data.success) {
       const session = r.data.session;
       const episodes = r.data.episodes || session?.episodes || [];
+      if (r.data.playCounts) setPlayCounts(r.data.playCounts);
+      if (r.data.rewatchPlayTotal != null) setRewatchPlayTotal(r.data.rewatchPlayTotal);
       applyDiaryState(r.data.tracking ?? null, episodes, session ?? rewatchSession);
       // Keep Home / Library / Profile / Continue caches honest after any
       // episode mark/unmark/batch — the next visit will be instant *and* fresh.
@@ -233,6 +241,24 @@ export default function TvSeasonEpisodesPanel({
       clearSessionStats();
       onProgressChange?.(r.data);
     }
+  };
+
+  const refreshPlayState = async () => {
+    const [rewatchRes, epsRes] = await Promise.all([
+      api.get(`/api/tv/rewatch/${tvShowId}`).catch(() => ({ data: {} })),
+      api.get(`/api/tv/episodes/${tvShowId}`),
+    ]);
+    setPlayCounts(rewatchRes.data?.playCounts || {});
+    setRewatchPlayTotal(rewatchRes.data?.rewatchPlayTotal || 0);
+    const tracking = rewatchRes.data?.tracking;
+    const session = rewatchRes.data?.activeSession || null;
+    const rewatching = tracking?.status === 'rewatching';
+    const episodes = rewatching
+      ? session?.episodes || []
+      : epsRes.data.success
+        ? epsRes.data.episodes || []
+        : [];
+    applyDiaryState(tracking ?? track, episodes, session);
   };
 
   const markBase = isRewatching ? '/api/tv/rewatch' : '/api/tv/episodes';
@@ -312,13 +338,46 @@ export default function TvSeasonEpisodesPanel({
     }
   };
 
+  const logEpisodeRewatch = async (episode) => {
+    const epMeta = episodeFromTmdb(selectedSeason, episode);
+    const payload = buildMarkPayload(showMeta, epMeta, episodeIndex, watchedKeys, true);
+    const r = await api.post('/api/tv/rewatch/log', payload);
+    if (r.data?.success) {
+      haptic('success');
+      applyResponse(r);
+      if (!r.data.playCounts) await refreshPlayState();
+    }
+  };
+
+  const undoEpisodePlay = async (episode) => {
+    const epMeta = episodeFromTmdb(selectedSeason, episode);
+    const payload = buildMarkPayload(showMeta, epMeta, episodeIndex, watchedKeys, false);
+    if (isRewatching) {
+      await performEpisodeToggle(episode, true);
+      return;
+    }
+    const r = await api.post('/api/tv/rewatch/undo-play', payload);
+    if (r.data?.success) {
+      haptic('light');
+      applyResponse(r);
+      await refreshPlayState();
+    }
+  };
+
   const toggleEpisode = (episode) => {
     const key = episodeKey(selectedSeason, episode.episode_number);
     const isWatched = watchedKeys.has(key);
-    if (isWatched) {
+    const plays = playCounts[key] || (isWatched ? 1 : 0);
+    if (isWatched || plays > 0) {
       confirm({
-        ...episodeUnmarkConfirm(selectedSeason, episode.episode_number, episode.name),
-        onConfirm: () => performEpisodeToggle(episode, true),
+        title: 'Episode watched',
+        body: `S${selectedSeason} E${episode.episode_number}${
+          episode.name ? ` — ${episode.name}` : ''
+        }. Logged ${plays}×. Log another play or unmark?`,
+        actions: [
+          { label: 'Log rewatch', primary: true, onClick: () => logEpisodeRewatch(episode) },
+          { label: 'Unmark', destructive: true, onClick: () => undoEpisodePlay(episode) },
+        ],
       });
       return;
     }
@@ -350,11 +409,48 @@ export default function TvSeasonEpisodesPanel({
     setBatching(true);
     try {
       const payload = buildBatchPayload(showMeta, watchedInSeason, episodeIndex, watchedKeys, false);
-      const r = await api.post(`${markBase}/unmark-batch`, payload);
-      applyResponse(r);
+      if (isRewatching) {
+        const r = await api.post(`${markBase}/unmark-batch`, payload);
+        applyResponse(r);
+      } else {
+        await api.post('/api/tv/rewatch/undo-play-batch', payload);
+        await refreshPlayState();
+        invalidateUserTvLists();
+        clearSessionStats();
+      }
     } finally {
       setBatching(false);
     }
+  };
+
+  const rewatchSeason = async () => {
+    const watchedInSeason = seasonAiredMeta.filter((ep) =>
+      watchedKeys.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+    );
+    if (!watchedInSeason.length) return;
+    setBatching(true);
+    try {
+      const payload = buildBatchPayload(showMeta, watchedInSeason, episodeIndex, watchedKeys, true);
+      const r = await api.post('/api/tv/rewatch/log-batch', payload);
+      if (r.data?.success) {
+        haptic('success');
+        applyResponse(r);
+        if (!r.data.playCounts) await refreshPlayState();
+      }
+    } finally {
+      setBatching(false);
+    }
+  };
+
+  const openSeasonCompleteMenu = () => {
+    confirm({
+      title: 'Season watched',
+      body: 'Log a rewatch play for every aired episode in this season, or unmark them (latest rewatch first).',
+      actions: [
+        { label: 'Rewatch season', primary: true, onClick: rewatchSeason },
+        { label: 'Unmark season', destructive: true, onClick: unmarkSeason },
+      ],
+    });
   };
 
   const rateEpisode = async (ep, stars) => {
@@ -584,15 +680,10 @@ export default function TvSeasonEpisodesPanel({
             <button
               type="button"
               disabled={batching}
-              onClick={() =>
-                confirm({
-                  ...seasonUnmarkConfirm(selectedSeason, watchedInSeasonCount),
-                  onConfirm: unmarkSeason,
-                })
-              }
+              onClick={openSeasonCompleteMenu}
               className="btn-ghost !min-h-[40px] border border-border !px-3 !py-2 !text-xs disabled:opacity-50"
             >
-              Unmark season
+              Season watched
             </button>
           )}
         </div>
@@ -611,6 +702,7 @@ export default function TvSeasonEpisodesPanel({
               const aired = isEpisodeAired(epMeta);
               const releaseLabel = !aired ? formatEpisodeReleaseLabel(episode.air_date) : null;
               const isWatched = watchedKeys.has(key);
+              const plays = playCounts[key] || (isWatched ? 1 : 0);
               const isNext = aired && key === nextKey;
               const watchedAt = watchedByKey.get(key)?.watchedAt;
 
@@ -625,18 +717,28 @@ export default function TvSeasonEpisodesPanel({
                     type="button"
                     disabled={!aired || toggling === key || batching}
                     onClick={() => toggleEpisode(episode)}
-                    aria-label={isWatched ? 'Mark unwatched' : aired ? 'Mark watched' : 'Not released yet'}
-                    className={`pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
-                      isWatched
+                    aria-label={isWatched ? 'Episode options' : aired ? 'Mark watched' : 'Not released yet'}
+                    className={`pressable relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isWatched || plays > 0
                         ? 'border-accent bg-accent text-on-accent'
                         : 'border-border bg-surface hover:border-accent/50'
                     }`}
                   >
-                    {isWatched && <Check className="check-pop h-5 w-5" strokeWidth={3} />}
+                    {(isWatched || plays > 0) && <Check className="check-pop h-5 w-5" strokeWidth={3} />}
+                    {plays > 1 && (
+                      <span className="absolute -bottom-1 -right-1 rounded-full bg-ink px-1 text-[9px] font-bold text-on-accent">
+                        ×{plays}
+                      </span>
+                    )}
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-snug">
                       <span className="text-accent">{episode.episode_number}.</span> {episode.name}
+                      {plays > 1 && (
+                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent">
+                          ×{plays}
+                        </span>
+                      )}
                       {isNext && (
                         <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent">
                           Up next

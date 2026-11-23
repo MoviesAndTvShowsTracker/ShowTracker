@@ -92,4 +92,13 @@ test('expandAnthologySplits maps Haunting S2 onto Bly Manor S1', () => {
   assert.strictEqual(bly.episodeNumber, 3);
 });
 
+test('tvRewatchService exports play-count helpers', () => {
+  const svc = require('../services/tvRewatchService');
+  assert.equal(typeof svc.getEpisodePlayCounts, 'function');
+  assert.equal(typeof svc.logEpisodeRewatches, 'function');
+  assert.equal(typeof svc.undoEpisodePlay, 'function');
+  assert.equal(typeof svc.computeTimesCompleted, 'function');
+  assert.equal(typeof svc.repairTimesCompletedForUser, 'function');
+});
+
 console.log('All TV rewatch tests passed.');

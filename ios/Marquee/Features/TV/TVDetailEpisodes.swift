@@ -59,13 +59,9 @@ extension TVDetailView {
                             HStack(spacing: 8) {
                                 if seasonComplete {
                                     Button {
-                                        pendingBatch = .unmarkSeason(
-                                            season: selectedSeason,
-                                            count: watchedInSeason.count
-                                        )
-                                        showBatchConfirm = true
+                                        showSeasonActionConfirm = true
                                     } label: {
-                                        Label("Unmark season", systemImage: "xmark.circle")
+                                        Label("Season watched", systemImage: "checkmark.circle.fill")
                                     }
                                     .buttonStyle(SecondaryButtonStyle())
                                     .disabled(batching || watchedInSeason.isEmpty)
@@ -140,13 +136,10 @@ extension TVDetailView {
             $0.season == season && $0.episode == ep.episode_number
         } ?? false
 
+        let plays = episodePlayCounts[key] ?? (marked ? 1 : 0)
+
         return Button {
-            // Completed shows keep canonical checks; start a rewatch before marking again.
-            if tracking?.status == "completed" {
-                showStartRewatchConfirm = true
-                return
-            }
-            if marked {
+            if marked || plays > 0 {
                 episodePendingUnmark = ep
                 showUnmarkConfirm = true
             } else {
@@ -154,13 +147,26 @@ extension TVDetailView {
             }
         } label: {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: marked ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(marked ? theme.accent : theme.olive.opacity(0.45))
-                    .frame(width: 28, height: 28)
-                    .symbolEffect(.bounce, value: marked)
-                    .scaleEffect(marked ? 1.08 : 1)
-                    .animation(MarqueeMotion.standard, value: marked)
+                ZStack(alignment: .bottomTrailing) {
+                    Image(systemName: marked || plays > 0 ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle((marked || plays > 0) ? theme.accent : theme.olive.opacity(0.45))
+                        .frame(width: 28, height: 28)
+                        .symbolEffect(.bounce, value: plays)
+                        .scaleEffect((marked || plays > 0) ? 1.08 : 1)
+                        .animation(MarqueeMotion.standard, value: plays)
+
+                    if plays > 1 {
+                        Text("×\(plays)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(theme.onAccent)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(theme.accent)
+                            .clipShape(Capsule())
+                            .offset(x: 6, y: 4)
+                    }
+                }
 
                 CachedAsyncImage(url: AppConfig.posterURL(path: ep.still_path, size: "w185"))
                     .frame(width: 96, height: 54)
@@ -178,6 +184,11 @@ extension TVDetailView {
                             .foregroundStyle(theme.ink)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
+                        if plays > 1 {
+                            Text("×\(plays)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(theme.accent)
+                        }
                         if isNext {
                             Text("Up next")
                                 .font(.caption2.weight(.bold))

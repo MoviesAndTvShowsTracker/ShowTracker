@@ -297,6 +297,8 @@ struct RewatchStateResponse: Decodable, Sendable {
     let activeSession: RewatchSessionDoc?
     let timesCompleted: Int?
     let completedRewatches: Int?
+    let playCounts: [String: Int]?
+    let rewatchPlayTotal: Int?
 }
 
 struct RewatchMutationResponse: Decodable, Sendable {
@@ -306,6 +308,9 @@ struct RewatchMutationResponse: Decodable, Sendable {
     let episodes: [WatchedEpisodeDoc]?
     let completed: Bool?
     let resumed: Bool?
+    let playCounts: [String: Int]?
+    let rewatchPlayTotal: Int?
+    let removedRewatch: Bool?
 }
 
 struct ContinueResponse: Decodable, Sendable{
