@@ -411,7 +411,7 @@ struct ChangePasswordView: View {
                 SecureField("Current password", text: $currentPassword)
                 SecureField("New password", text: $newPassword)
             } footer: {
-                Text("Use at least 6 characters. Skip this if you only sign in with Google.")
+                Text("Use at least 6 characters. Skip this if you only sign in with Apple or Google — or use Forgot password on the sign-in screen to set one.")
             }
 
             Section {

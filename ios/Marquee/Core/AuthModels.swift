@@ -66,3 +66,14 @@ struct SuccessMessage: Decodable, Sendable{
     let message: String?
 }
 
+struct AppleFullNameBody: Encodable, Sendable {
+    let givenName: String
+    let familyName: String
+}
+
+struct AppleSignInBody: Encodable, Sendable {
+    let identityToken: String
+    let nonce: String
+    let fullName: AppleFullNameBody?
+}
+

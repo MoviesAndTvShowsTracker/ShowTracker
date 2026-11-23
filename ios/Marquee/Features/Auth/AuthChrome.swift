@@ -98,6 +98,36 @@ struct AuthOrDivider: View {
     }
 }
 
+struct ContinueWithAppleButton: View {
+    var busy: Bool = false
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                if busy {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "apple.logo")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(.white)
+                    Text("Continue with Apple")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(PressablePosterStyle())
+        .disabled(busy)
+        .accessibilityLabel("Continue with Apple")
+    }
+}
+
 struct ContinueWithGoogleButton: View {
     @Environment(\.marqueeTheme) private var theme
     var busy: Bool = false

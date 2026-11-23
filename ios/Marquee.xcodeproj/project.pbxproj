@@ -17,6 +17,7 @@
 		222B5F0B1CA5C9954CACC472 /* HomeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5587707C01F6F92D6D0B3CE9 /* HomeSchedule.swift */; };
 		270FEE28BADE67EB6AA27795 /* MarqueeVisualUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */; };
 		273676622AA62EEBEAF82BA8 /* MovieDetailPolishUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */; };
+		2A6C1965F99700C84A1577EB /* AppleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7226B0F7A48C93CBD1EC17AD /* AppleAuth.swift */; };
 		310F91E30C1BE3438F041581 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105A445C33145D47C5E4F219 /* AppDelegate.swift */; };
 		37120BB2B0A4976D4A6B9F0D /* WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD52AE55BFF26EEBD3A9CF3 /* WidgetSnapshotStore.swift */; };
 		403BE1B8D8181DFC4F55982F /* TVDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */; };
@@ -163,6 +164,7 @@
 		65AB0FCEBF9445716FF664D1 /* StatsBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsBadges.swift; sourceTree = "<group>"; };
 		679E9681A430AE6B5A4A84F1 /* EpisodeAlertScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeAlertScheduler.swift; sourceTree = "<group>"; };
 		6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeApp.swift; sourceTree = "<group>"; };
+		7226B0F7A48C93CBD1EC17AD /* AppleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleAuth.swift; sourceTree = "<group>"; };
 		7A5DD5294C0585D7384A4A4C /* HomeLobbySections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeLobbySections.swift; sourceTree = "<group>"; };
 		7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDetailPane.swift; sourceTree = "<group>"; };
 		7D6A7B5C1976974BAD871910 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
@@ -393,6 +395,7 @@
 				7D6A7B5C1976974BAD871910 /* APIClient.swift */,
 				C21BD1248B6E41C7DE62EFAD /* APIError.swift */,
 				236A1676876592D69CFAA55A /* AppConfig.swift */,
+				7226B0F7A48C93CBD1EC17AD /* AppleAuth.swift */,
 				1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */,
 				4FFFDD199442624DFA77ECA3 /* AuthModels.swift */,
 				9C0CA2C6489447764AC72E2A /* AuthStore.swift */,
@@ -616,6 +619,7 @@
 				B84981866352AFCDC9CF983B /* AppConfig.swift in Sources */,
 				310F91E30C1BE3438F041581 /* AppDelegate.swift in Sources */,
 				AA1FE325ABBBB9AC23F8BDCA /* AppPreferences.swift in Sources */,
+				2A6C1965F99700C84A1577EB /* AppleAuth.swift in Sources */,
 				B440E716D7605CAF65C1A1AF /* Atmosphere.swift in Sources */,
 				4F646CF8A61B195730C36F65 /* AuthChrome.swift in Sources */,
 				E30C5A16911EBB362A9A27EC /* AuthFlowView.swift in Sources */,

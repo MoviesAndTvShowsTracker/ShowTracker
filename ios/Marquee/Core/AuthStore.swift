@@ -125,6 +125,38 @@ final class AuthStore {
         try await refreshProfile()
     }
 
+    func signInWithApple(_ credentials: AppleSignInCredentials) async throws {
+        errorMessage = nil
+        let fullName: AppleFullNameBody? = {
+            guard credentials.givenName != nil || credentials.familyName != nil else { return nil }
+            return AppleFullNameBody(
+                givenName: credentials.givenName ?? "",
+                familyName: credentials.familyName ?? ""
+            )
+        }()
+        let response: LoginResponse = try await APIClient.shared.post(
+            "/users/apple",
+            body: AppleSignInBody(
+                identityToken: credentials.identityToken,
+                nonce: credentials.nonce,
+                fullName: fullName
+            ),
+            auth: false
+        )
+        guard let token = response.token, let userId = response.userIdString else {
+            throw APIError.server(message: response.message ?? "Apple sign-in failed.", status: 401)
+        }
+        let session = AuthSession(
+            token: token,
+            userId: userId,
+            email: response.email ?? "",
+            firstName: response.firstName ?? "",
+            username: response.username
+        )
+        persist(session)
+        try await refreshProfile()
+    }
+
     func forgotPassword(email: String) async throws {
         let _: SuccessMessage = try await APIClient.shared.post(
             "/users/forgot-password",

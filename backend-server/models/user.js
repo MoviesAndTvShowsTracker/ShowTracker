@@ -31,6 +31,11 @@ var User = new Schema({
         unique: true,
         sparse: true
     },
+    appleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     resetPasswordToken: {
         type: String,
         select: false

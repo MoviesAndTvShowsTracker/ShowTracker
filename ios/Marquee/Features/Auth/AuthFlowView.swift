@@ -38,19 +38,27 @@ struct SignInView: View {
     @State private var password = ""
     @State private var busy = false
     @State private var googleBusy = false
+    @State private var appleBusy = false
     @State private var error: String?
+
+    private var socialBusy: Bool { googleBusy || appleBusy }
 
     var body: some View {
         AuthScaffold(
             kicker: "Marquee",
             title: "Sign in",
-            subtitle: "Use Google or email."
+            subtitle: "Use Apple, Google, or email."
         ) {
             VStack(alignment: .leading, spacing: 16) {
+                ContinueWithAppleButton(busy: appleBusy) {
+                    Task { await appleSignIn() }
+                }
+                .disabled(busy || googleBusy)
+
                 ContinueWithGoogleButton(busy: googleBusy) {
                     Task { await googleSignIn() }
                 }
-                .disabled(busy)
+                .disabled(busy || appleBusy)
 
                 AuthOrDivider()
 
@@ -80,7 +88,7 @@ struct SignInView: View {
                     else { Text("Sign in") }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(busy || googleBusy || email.isEmpty || password.isEmpty)
+                .disabled(busy || socialBusy || email.isEmpty || password.isEmpty)
 
                 Button("Forgot password?", action: onForgot)
                     .font(.subheadline.weight(.medium))
@@ -117,6 +125,19 @@ struct SignInView: View {
             self.error = error.localizedDescription
         }
     }
+
+    private func appleSignIn() async {
+        appleBusy = true
+        error = nil
+        defer { appleBusy = false }
+        do {
+            let credentials = try await AppleAuth.signIn()
+            try await auth.signInWithApple(credentials)
+        } catch {
+            if AppleAuth.isCancellation(error) { return }
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 struct SignUpView: View {
@@ -128,19 +149,27 @@ struct SignUpView: View {
     @State private var password = ""
     @State private var busy = false
     @State private var googleBusy = false
+    @State private var appleBusy = false
     @State private var error: String?
+
+    private var socialBusy: Bool { googleBusy || appleBusy }
 
     var body: some View {
         AuthScaffold(
             kicker: "Marquee",
             title: "Create an account",
-            subtitle: "Use Google or email."
+            subtitle: "Use Apple, Google, or email."
         ) {
             VStack(alignment: .leading, spacing: 16) {
+                ContinueWithAppleButton(busy: appleBusy) {
+                    Task { await appleSignIn() }
+                }
+                .disabled(busy || googleBusy)
+
                 ContinueWithGoogleButton(busy: googleBusy) {
                     Task { await googleSignIn() }
                 }
-                .disabled(busy)
+                .disabled(busy || appleBusy)
 
                 AuthOrDivider()
 
@@ -174,7 +203,7 @@ struct SignUpView: View {
                     else { Text("Create account") }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(busy || googleBusy || email.isEmpty || password.count < 6)
+                .disabled(busy || socialBusy || email.isEmpty || password.count < 6)
 
                 Spacer(minLength: 28)
 
@@ -203,6 +232,19 @@ struct SignUpView: View {
             try await auth.signInWithGoogle(idToken: token)
         } catch {
             if GoogleAuth.isCancellation(error) { return }
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func appleSignIn() async {
+        appleBusy = true
+        error = nil
+        defer { appleBusy = false }
+        do {
+            let credentials = try await AppleAuth.signIn()
+            try await auth.signInWithApple(credentials)
+        } catch {
+            if AppleAuth.isCancellation(error) { return }
             self.error = error.localizedDescription
         }
     }

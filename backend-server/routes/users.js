@@ -5,6 +5,7 @@ var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
+const { verifyAppleIdentityToken, findOrCreateAppleUser } = require('../lib/appleAuth');
 const { uniqueUsername, normalizeEmail, findUserByEmail } = require('../lib/userHelpers');
 const { sendPasswordResetEmail } = require('../lib/mail');
 const {
@@ -100,6 +101,44 @@ router.post('/google', async (req, res, next) => {
     const message = String(err.message || '');
     if (/audience|wrong recipient/i.test(message)) {
       return res.status(401).json({ success: false, message: 'Google sign-in could not be verified.' });
+    }
+    return next(err);
+  }
+});
+
+router.post('/apple', async (req, res, next) => {
+  try {
+    const { identityToken, nonce, fullName } = req.body;
+    if (!identityToken) {
+      return res.status(400).json({ success: false, message: 'Missing Apple sign-in token.' });
+    }
+    if (!nonce) {
+      return res.status(400).json({ success: false, message: 'Missing Apple sign-in nonce.' });
+    }
+
+    const payload = await verifyAppleIdentityToken(identityToken, nonce);
+    const name =
+      fullName && (fullName.givenName || fullName.familyName)
+        ? {
+            givenName: fullName.givenName || '',
+            familyName: fullName.familyName || '',
+          }
+        : null;
+    const user = await findOrCreateAppleUser(payload, name);
+    const token = authenticate.getToken({ _id: user._id });
+
+    return res.status(200).json({
+      success: true,
+      token,
+      userId: user._id,
+      email: user.email,
+      firstName: user.firstName || '',
+      username: user.username,
+      message: 'Signed in with Apple.',
+    });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ success: false, message: err.message });
     }
     return next(err);
   }
