@@ -50,11 +50,14 @@ struct CastMember: Codable, Identifiable, Hashable, Sendable{
     let profile_path: String?
 }
 
-struct CrewMember: Codable, Identifiable, Hashable, Sendable{
-    var id: String { credit_id }
+struct CrewMember: Codable, Hashable, Sendable {
+    /// TMDB person id (navigates to PersonView).
+    let id: Int
     let credit_id: String
     let name: String?
     let job: String?
+    var department: String? = nil
+    var profile_path: String? = nil
 }
 
 struct MovieDetail: Decodable, Identifiable, Sendable{
@@ -151,5 +154,80 @@ struct TVEpisode: Codable, Identifiable, Hashable, Sendable{
         guard let date = Calendar.current.date(from: comps) else { return true }
         return Calendar.current.startOfDay(for: date) <= Calendar.current.startOfDay(for: Date())
     }
+}
+
+// MARK: - Person / filmography
+
+struct PersonDetail: Decodable, Identifiable, Sendable {
+    let id: Int
+    let name: String?
+    let biography: String?
+    let birthday: String?
+    let deathday: String?
+    let place_of_birth: String?
+    let known_for_department: String?
+    let profile_path: String?
+    let combined_credits: PersonCombinedCredits?
+
+    var displayName: String { name ?? "Untitled" }
+
+    var lifespanLine: String? {
+        guard let birthday, birthday.count >= 4 else { return nil }
+        let birth = String(birthday.prefix(4))
+        if let deathday, deathday.count >= 4 {
+            return "\(birth)–\(String(deathday.prefix(4)))"
+        }
+        return birth
+    }
+
+    var metaLine: String {
+        var parts: [String] = []
+        if let known_for_department, !known_for_department.isEmpty {
+            parts.append(known_for_department)
+        }
+        if let lifespanLine { parts.append(lifespanLine) }
+        return parts.joined(separator: " · ")
+    }
+}
+
+struct PersonCombinedCredits: Decodable, Sendable {
+    let cast: [PersonCredit]?
+    let crew: [PersonCredit]?
+}
+
+struct PersonCredit: Decodable, Hashable, Sendable, Identifiable {
+    let id: Int
+    let media_type: String?
+    let title: String?
+    let name: String?
+    let poster_path: String?
+    let release_date: String?
+    let first_air_date: String?
+    let character: String?
+    let job: String?
+    let department: String?
+    let vote_average: Double?
+    let vote_count: Int?
+    let adult: Bool?
+    let credit_id: String?
+    let episode_count: Int?
+
+    var stableId: String { "\(media_type ?? "x")-\(id)-\(credit_id ?? character ?? job ?? "")" }
+
+    var displayTitle: String { title ?? name ?? "Untitled" }
+
+    var year: String? {
+        let date = release_date ?? first_air_date
+        guard let date, date.count >= 4 else { return nil }
+        return String(date.prefix(4))
+    }
+
+    var dateKey: String { release_date ?? first_air_date ?? "" }
+
+    var kind: MediaKind {
+        media_type == "tv" ? .tv : .movie
+    }
+
+    var isAdult: Bool { adult == true }
 }
 

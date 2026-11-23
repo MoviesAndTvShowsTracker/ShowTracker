@@ -29,6 +29,14 @@ enum TMDBService {
         try await APIClient.shared.get("/api/tmdb/tv/\(tvId)/season/\(season)", auth: false)
     }
 
+    static func person(id: Int) async throws -> PersonDetail {
+        try await APIClient.shared.get(
+            "/api/tmdb/person/\(id)",
+            query: [URLQueryItem(name: "append_to_response", value: "combined_credits")],
+            auth: false
+        )
+    }
+
     static func discoverMovies(genreIds: [Int], page: Int = 1) async throws -> TMDBPaged<MediaItem> {
         try await discover(
             BrowseQuery(kind: .movie, sort: .popular, genreId: genreIds.first, page: page)

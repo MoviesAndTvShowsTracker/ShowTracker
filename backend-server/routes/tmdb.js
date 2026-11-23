@@ -9,6 +9,7 @@ const ALLOWED_PREFIXES = [
   'trending/',
   'movie/',
   'tv/',
+  'person/',
   'search/',
   'discover/',
   'genre/',

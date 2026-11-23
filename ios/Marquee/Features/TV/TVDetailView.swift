@@ -263,11 +263,29 @@ struct TVDetailView: View {
 
     private func tvCreditRows(_ detail: TVDetail) -> [CreditRow] {
         let crew = detail.credits?.crew ?? []
-        let creators = crew.filter { ["Creator", "Executive Producer", "Director"].contains($0.job ?? "") }.compactMap(\.name)
+        // Prefer Creator / Director for tappable chips; EP alone stays in plain text fallback.
+        let leadPeople = CreditRow.uniquePeople(crew, jobs: ["Creator", "Director"], limit: 4)
         let writers = crew.filter { ["Writer", "Screenplay", "Story", "Teleplay"].contains($0.job ?? "") }.compactMap(\.name)
         var rows: [CreditRow] = []
-        if !creators.isEmpty {
-            rows.append(CreditRow(label: "Creators", value: CreditRow.joinedNames(creators, limit: 3)))
+        if !leadPeople.isEmpty {
+            rows.append(
+                CreditRow(
+                    label: leadPeople.count == 1 ? "Creator" : "Creators",
+                    value: leadPeople.map(\.name).joined(separator: ", "),
+                    people: leadPeople
+                )
+            )
+        } else {
+            let eps = CreditRow.uniquePeople(crew, jobs: ["Executive Producer"], limit: 3)
+            if !eps.isEmpty {
+                rows.append(
+                    CreditRow(
+                        label: "Creators",
+                        value: eps.map(\.name).joined(separator: ", "),
+                        people: eps
+                    )
+                )
+            }
         }
         if !writers.isEmpty {
             rows.append(CreditRow(label: "Writing", value: CreditRow.joinedNames(writers, limit: 4)))

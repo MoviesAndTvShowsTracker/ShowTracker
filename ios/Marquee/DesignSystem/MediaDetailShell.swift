@@ -68,20 +68,40 @@ struct MediaMetaLine: View {
 
 // MARK: - Credits (typographic rows, not cards)
 
+struct CreditPersonRef: Identifiable, Hashable, Equatable {
+    let id: Int
+    let name: String
+}
+
 struct CreditRow: Identifiable, Hashable, Equatable {
     let id: String
     let label: String
+    /// Plain text when people are not individually tappable (e.g. Writing).
     let value: String
+    /// When non-empty, names render as chips → PersonView.
+    var people: [CreditPersonRef] = []
 
-    init(label: String, value: String) {
+    init(label: String, value: String, people: [CreditPersonRef] = []) {
         self.label = label
         self.value = value
-        self.id = "\(label)|\(value)"
+        self.people = people
+        self.id = "\(label)|\(value)|\(people.map(\.id))"
     }
 
     /// Stable, sorted join so Set iteration never reshuffles credit identity mid-session.
     static func joinedNames(_ names: [String], limit: Int) -> String {
         Array(Set(names.filter { !$0.isEmpty })).sorted().prefix(limit).joined(separator: ", ")
+    }
+
+    static func uniquePeople(_ crew: [CrewMember], jobs: Set<String>, limit: Int) -> [CreditPersonRef] {
+        var seen = Set<Int>()
+        var out: [CreditPersonRef] = []
+        for member in crew where jobs.contains(member.job ?? "") {
+            guard let name = member.name, !name.isEmpty, seen.insert(member.id).inserted else { continue }
+            out.append(CreditPersonRef(id: member.id, name: name))
+            if out.count >= limit { break }
+        }
+        return out.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }
 
@@ -121,19 +141,27 @@ private struct CreditsRowsPainted: View {
                             .fill(theme.border.opacity(0.85))
                             .frame(height: 1)
                     }
-                    HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    HStack(alignment: .top, spacing: 14) {
                         Text(row.label)
                             .font(.caption2.weight(.bold))
                             .tracking(1.0)
                             .textCase(.uppercase)
                             .foregroundStyle(theme.olive)
                             .frame(width: 72, alignment: .leading)
-                        Text(row.value)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(theme.ink)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 10)
+
+                        if row.people.isEmpty {
+                            Text(row.value)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(theme.ink)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 10)
+                        } else {
+                            CreditNameChips(people: row.people)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
-                    .padding(.vertical, 13)
+                    .padding(.vertical, 4)
                 }
             }
             .accessibilityElement(children: .contain)
@@ -142,6 +170,90 @@ private struct CreditsRowsPainted: View {
 }
 
 // MARK: - Cast rail
+
+struct CreditNameChips: View {
+    @Environment(\.marqueeTheme) private var theme
+    let people: [CreditPersonRef]
+
+    var body: some View {
+        FlexiblePersonChipWrap(people: people)
+    }
+}
+
+/// Simple wrapping HStack via Flow-like layout without extra deps.
+private struct FlexiblePersonChipWrap: View {
+    @Environment(\.marqueeTheme) private var theme
+    let people: [CreditPersonRef]
+
+    var body: some View {
+        // Prefer a readable wrap: use a VStack of HStacks via ViewThatFits-less manual wrap.
+        PersonChipFlowLayout(spacing: 8) {
+            ForEach(people) { person in
+                NavigationLink {
+                    PersonView(personId: person.id)
+                } label: {
+                    Text(person.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(theme.oliveSoft, in: Capsule(style: .continuous))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(theme.border, lineWidth: 1)
+                        )
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(PressablePosterStyle())
+                .accessibilityLabel("\(person.name), view filmography")
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct PersonChipFlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var widthUsed: CGFloat = 0
+
+        for sub in subviews {
+            let size = sub.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > maxWidth {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            widthUsed = max(widthUsed, x + size.width)
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+        }
+        return CGSize(width: maxWidth.isFinite ? maxWidth : widthUsed, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for sub in subviews {
+            let size = sub.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            sub.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+        }
+    }
+}
 
 struct MediaCastRail: View {
     @Environment(\.marqueeTheme) private var theme
@@ -155,12 +267,18 @@ struct MediaCastRail: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 14) {
                         ForEach(Array(cast.prefix(16)), id: \.id) { member in
-                            CastBubble(
-                                name: member.name,
-                                character: member.character,
-                                profilePath: member.profilePath,
-                                diameter: 76
-                            )
+                            NavigationLink {
+                                PersonView(personId: member.id)
+                            } label: {
+                                CastBubble(
+                                    name: member.name,
+                                    character: member.character,
+                                    profilePath: member.profilePath,
+                                    diameter: 76
+                                )
+                            }
+                            .buttonStyle(PressablePosterStyle())
+                            .accessibilityLabel("\(member.name), view filmography")
                         }
                     }
                     .padding(.trailing, 12)
