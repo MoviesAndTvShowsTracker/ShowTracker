@@ -45,29 +45,52 @@ async function computeTimesCompleted(userId, tvId, tracking) {
   return Math.max(1, (firstDone ? 1 : 0) + fullRewatches);
 }
 
+function toIso(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function pushPlayDate(playDates, key, value) {
+  const iso = toIso(value);
+  if (!iso) return;
+  if (!playDates[key]) playDates[key] = [];
+  playDates[key].push(iso);
+}
+
 /**
  * plays[S-E] = 1 if first-watched + count of rewatch episode marks.
+ * playDates[S-E] = ISO timestamps for each play, oldest → newest.
  */
 async function getEpisodePlayCounts(userId, tvId) {
   const id = String(tvId);
   const [canonical, rewatchRows] = await Promise.all([
     getWatchedEpisodesForShow(userId, id),
     TvRewatchEpisode.find({ userFrom: userId, tvId: id })
-      .select('seasonNumber episodeNumber')
+      .select('seasonNumber episodeNumber watchedAt createdAt')
       .lean(),
   ]);
 
   const plays = {};
+  const playDates = {};
   for (const ep of canonical) {
-    plays[episodeKey(ep.seasonNumber, ep.episodeNumber)] = 1;
+    const key = episodeKey(ep.seasonNumber, ep.episodeNumber);
+    plays[key] = 1;
+    pushPlayDate(playDates, key, ep.watchedAt || ep.createdAt);
   }
   for (const ep of rewatchRows) {
     const key = episodeKey(ep.seasonNumber, ep.episodeNumber);
     plays[key] = (plays[key] || 0) + 1;
+    pushPlayDate(playDates, key, ep.watchedAt || ep.createdAt);
+  }
+
+  for (const key of Object.keys(playDates)) {
+    playDates[key].sort();
   }
 
   const rewatchPlayTotal = rewatchRows.length;
-  return { plays, rewatchPlayTotal };
+  return { plays, playDates, rewatchPlayTotal };
 }
 
 function sessionPayload(session, episodes = []) {
@@ -302,11 +325,12 @@ async function logEpisodeRewatches(userId, tvId, episodeList, meta = {}) {
   tracking.timesCompleted = await computeTimesCompleted(userId, id, tracking);
   await tracking.save();
 
-  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  const { plays, playDates, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
   return {
     tracking,
     session: sessionPayload(session, list),
     playCounts: plays,
+    playDates,
     rewatchPlayTotal,
     completed: false,
   };
@@ -385,10 +409,11 @@ async function undoEpisodePlay(userId, tvId, episode, meta = {}) {
     await tracking.save();
   }
 
-  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  const { plays, playDates, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
   return {
     tracking,
     playCounts: plays,
+    playDates,
     rewatchPlayTotal,
     removedRewatch: Boolean(latestRewatch),
   };
@@ -574,7 +599,7 @@ async function getRewatchState(userId, tvId) {
   if (active) {
     episodes = await getSessionEpisodes(userId, active._id);
   }
-  const { plays, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
+  const { plays, playDates, rewatchPlayTotal } = await getEpisodePlayCounts(userId, id);
   const timesCompleted = tracking
     ? await computeTimesCompleted(userId, id, tracking)
     : 0;
@@ -590,6 +615,7 @@ async function getRewatchState(userId, tvId) {
     timesCompleted,
     completedRewatches: fullRewatchSessions,
     playCounts: plays,
+    playDates,
     rewatchPlayTotal,
   };
 }

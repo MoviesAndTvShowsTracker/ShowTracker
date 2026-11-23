@@ -46,6 +46,8 @@ struct TVDetailView: View {
     @State var showSeasonActionConfirm = false
     /// "S-E" → total plays (first watch + rewatches).
     @State var episodePlayCounts: [String: Int] = [:]
+    /// "S-E" → ISO watch dates, oldest → newest.
+    @State var episodePlayDates: [String: [String]] = [:]
     @State var rewatchPlayTotal: Int = 0
 
     enum BatchAction: Equatable {
@@ -108,16 +110,39 @@ struct TVDetailView: View {
         let s = ep.season_number ?? selectedSeason
         let name = ep.name.map { " — \($0)" } ?? ""
         let plays = playCount(for: ep)
+        let dates = playDates(for: ep)
+        let dateLine: String = {
+            guard let latest = dates.last.flatMap(shortWatchDate) else { return "" }
+            if dates.count == 1 { return " Watched \(latest)." }
+            return " Last watched \(latest)."
+        }()
         if plays > 1 {
-            return "S\(s) E\(ep.episode_number)\(name) is on \(plays) watches. Watch again, or peel off the latest one."
+            return "S\(s) E\(ep.episode_number)\(name) is on \(plays) watches.\(dateLine) Watch again, or peel off the latest one."
         }
-        return "S\(s) E\(ep.episode_number)\(name). Watch again, or clear this watch."
+        return "S\(s) E\(ep.episode_number)\(name).\(dateLine) Watch again, or clear this watch."
     }
 
     private func playCount(for ep: TVEpisode) -> Int {
         let s = ep.season_number ?? selectedSeason
         let key = "\(s)-\(ep.episode_number)"
         return episodePlayCounts[key] ?? (watchedKeys.contains(key) ? 1 : 0)
+    }
+
+    private func playDates(for ep: TVEpisode) -> [String] {
+        let s = ep.season_number ?? selectedSeason
+        let key = "\(s)-\(ep.episode_number)"
+        return episodePlayDates[key] ?? []
+    }
+
+    func shortWatchDate(_ iso: String?) -> String? {
+        guard let iso, iso.count >= 10 else { return nil }
+        let day = String(iso.prefix(10))
+        let parts = day.split(separator: "-")
+        guard parts.count == 3,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]),
+              let date = Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+        else { return nil }
+        return date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     var body: some View {
@@ -733,6 +758,7 @@ struct TVDetailView: View {
             playTxn.disablesAnimations = true
             withTransaction(playTxn) {
                 episodePlayCounts = rewatchState?.playCounts ?? [:]
+                episodePlayDates = rewatchState?.playDates ?? [:]
                 rewatchPlayTotal = rewatchState?.rewatchPlayTotal ?? 0
             }
             if let track = rewatchState?.tracking {
@@ -833,6 +859,11 @@ struct TVDetailView: View {
                     )
                 }
                 tracking = try? await DiaryService.tracking(for: idString)
+                if let state = try? await DiaryService.rewatchState(tvId: idString) {
+                    episodePlayCounts = state.playCounts ?? episodePlayCounts
+                    episodePlayDates = state.playDates ?? episodePlayDates
+                    rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
+                }
             }
         } catch {
             watchedKeys.remove(key)
@@ -891,6 +922,9 @@ struct TVDetailView: View {
         if let counts = res.playCounts {
             episodePlayCounts = counts
         }
+        if let dates = res.playDates {
+            episodePlayDates = dates
+        }
         if let total = res.rewatchPlayTotal {
             rewatchPlayTotal = total
         }
@@ -916,6 +950,7 @@ struct TVDetailView: View {
             // Refresh play counts if response omitted map
             if res.playCounts == nil, let state = try? await DiaryService.rewatchState(tvId: idString) {
                 episodePlayCounts = state.playCounts ?? episodePlayCounts
+                episodePlayDates = state.playDates ?? episodePlayDates
                 rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
                 if let track = state.tracking { tracking = track }
             }
@@ -935,6 +970,7 @@ struct TVDetailView: View {
             applyRewatchMutation(res)
             if res.playCounts == nil, let state = try? await DiaryService.rewatchState(tvId: idString) {
                 episodePlayCounts = state.playCounts ?? episodePlayCounts
+                episodePlayDates = state.playDates ?? episodePlayDates
                 rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
                 if let track = state.tracking { tracking = track }
             }
@@ -1031,6 +1067,11 @@ struct TVDetailView: View {
             } else if marking {
                 let response = try await DiaryService.markBatch(body)
                 applyBatch(response)
+                if let state = try? await DiaryService.rewatchState(tvId: idString) {
+                    episodePlayCounts = state.playCounts ?? episodePlayCounts
+                    episodePlayDates = state.playDates ?? episodePlayDates
+                    rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
+                }
                 if tracking?.status == "completed" {
                     Haptics.success()
                 }
@@ -1039,6 +1080,7 @@ struct TVDetailView: View {
                 _ = try await DiaryService.undoEpisodePlayBatch(body)
                 if let state = try? await DiaryService.rewatchState(tvId: idString) {
                     episodePlayCounts = state.playCounts ?? [:]
+                    episodePlayDates = state.playDates ?? [:]
                     rewatchPlayTotal = state.rewatchPlayTotal ?? 0
                     if let track = state.tracking { tracking = track }
                 }

@@ -201,6 +201,11 @@ extension TVDetailView {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(theme.olive)
                             }
+                            if let first = episodePlayDates[key]?.first.flatMap(shortWatchDate) {
+                                Text(plays > 1 ? "First \(first)" : "Watched \(first)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(theme.olive)
+                            }
                         }
 
                         if let overview = ep.overview, !overview.isEmpty {

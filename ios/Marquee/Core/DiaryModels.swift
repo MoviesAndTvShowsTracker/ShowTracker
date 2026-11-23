@@ -298,6 +298,8 @@ struct RewatchStateResponse: Decodable, Sendable {
     let timesCompleted: Int?
     let completedRewatches: Int?
     let playCounts: [String: Int]?
+    /// "S-E" → ISO timestamps, oldest → newest.
+    let playDates: [String: [String]]?
     let rewatchPlayTotal: Int?
 }
 
@@ -309,6 +311,7 @@ struct RewatchMutationResponse: Decodable, Sendable {
     let completed: Bool?
     let resumed: Bool?
     let playCounts: [String: Int]?
+    let playDates: [String: [String]]?
     let rewatchPlayTotal: Int?
     let removedRewatch: Bool?
 }
