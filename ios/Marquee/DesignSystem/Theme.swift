@@ -188,7 +188,7 @@ struct SectionKicker: View {
             .font(.caption.weight(.bold))
             .tracking(1.2)
             .textCase(.uppercase)
-            .foregroundStyle(accented ? theme.accent : theme.olive)
+            .foregroundStyle(accented ? theme.ink : theme.olive)
     }
 }
 

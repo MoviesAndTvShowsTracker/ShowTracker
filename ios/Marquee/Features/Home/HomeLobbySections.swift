@@ -69,7 +69,7 @@ private struct ThisWeekCardChrome: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.chip)
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(theme.accent)
+                    .foregroundStyle(theme.olive)
                     .textCase(.uppercase)
                     .tracking(0.4)
                 Text(item.title)
@@ -192,10 +192,10 @@ struct WeekPulseRow: View {
                             .font(.caption.weight(.bold))
                             .monospacedDigit()
                     }
-                    .foregroundStyle(theme.accent)
+                    .foregroundStyle(theme.olive)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(theme.accent.opacity(0.12), in: Capsule())
+                    .background(theme.oliveSoft, in: Capsule())
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
@@ -344,7 +344,7 @@ struct HomeShowRail: View {
                                     if let badge = badge?(item) {
                                         Text(badge)
                                             .font(.caption2.weight(.bold))
-                                            .foregroundStyle(theme.accent)
+                                            .foregroundStyle(theme.olive)
                                             .lineLimit(1)
                                             .frame(width: 110, alignment: .leading)
                                     }
@@ -400,7 +400,7 @@ struct HomeScheduleRail: View {
                                             .lineLimit(2)
                                         Text("S\(item.season)E\(item.episode)")
                                             .font(.caption.weight(.bold))
-                                            .foregroundStyle(theme.accent)
+                                            .foregroundStyle(theme.olive)
                                         Text(friendlyDate(item.airDate))
                                             .font(.caption2)
                                             .foregroundStyle(theme.inkMuted)
@@ -477,7 +477,7 @@ struct UpNextStrip: View {
                                             .lineLimit(1)
                                         Text(ShowProgress.from(track: item).episodeLine)
                                             .font(.caption2.weight(.bold))
-                                            .foregroundStyle(theme.accent)
+                                            .foregroundStyle(theme.olive)
                                         if let name = item.nextEpisodeName, !name.isEmpty {
                                             Text(name)
                                                 .font(.caption2)

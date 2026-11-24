@@ -98,7 +98,7 @@ struct BadgeCabinet: View {
                             .font(.caption.weight(.bold))
                             .tracking(0.8)
                             .textCase(.uppercase)
-                            .foregroundStyle(kind == .film ? theme.accent : theme.olive)
+                            .foregroundStyle(kind == .film ? theme.olive.opacity(0.7) : theme.olive)
                             .padding(.top, 4)
                         VStack(spacing: 0) {
                             ForEach(group) { badge in
@@ -150,7 +150,7 @@ private struct BadgeRow: View {
     let badge: DiaryBadge
 
     private var ink: Color {
-        badge.kind == .film ? theme.accent : theme.olive
+        badge.kind == .film ? theme.olive.opacity(0.7) : theme.olive
     }
 
     var body: some View {

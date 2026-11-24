@@ -29,10 +29,3 @@ struct BrandMark: View {
     }
 }
 
-struct BrandMarkImage: View {
-    var size: CGFloat = 64
-
-    var body: some View {
-        BrandMark(size: size, lit: true)
-    }
-}

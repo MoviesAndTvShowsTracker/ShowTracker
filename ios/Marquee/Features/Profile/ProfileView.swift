@@ -311,62 +311,6 @@ struct ProfileView: View {
     }
 }
 
-struct TimeSplitBar: View {
-    @Environment(\.marqueeTheme) private var theme
-    let filmMins: Int
-    let tvMins: Int
-    var filmShare: Int? = nil
-    var tvShare: Int? = nil
-
-    private var filmFraction: CGFloat {
-        let shareTotal = (filmShare ?? 0) + (tvShare ?? 0)
-        if shareTotal > 0 {
-            return CGFloat(filmShare ?? 0) / CGFloat(shareTotal)
-        }
-        let total = max(filmMins + tvMins, 1)
-        return CGFloat(filmMins) / CGFloat(total)
-    }
-
-    var body: some View {
-        if filmMins + tvMins <= 0, (filmShare ?? 0) + (tvShare ?? 0) <= 0 {
-            EmptyView()
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                GeometryReader { geo in
-                    let hasFilms = filmMins > 0 || (filmShare ?? 0) > 0
-                    let hasTV = tvMins > 0 || (tvShare ?? 0) > 0
-                    HStack(spacing: 2) {
-                        if hasFilms {
-                            Capsule()
-                                .fill(theme.olive)
-                                .frame(width: hasTV ? max(4, geo.size.width * filmFraction) : nil)
-                                .frame(maxWidth: hasTV ? nil : .infinity)
-                        }
-                        if hasTV {
-                            Capsule().fill(theme.accent).frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-                .frame(height: 8)
-                HStack(alignment: .firstTextBaseline) {
-                    legend(theme.olive, "Films")
-                    Spacer()
-                    legend(theme.accent, "TV shows (episodes)")
-                }
-            }
-        }
-    }
-
-    private func legend(_ color: Color, _ title: String) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(color)
-        }
-    }
-}
-
 enum ProfileListKind: String {
     case favoriteFilms, watchedFilms, filmWatchlist, favoriteTV, watchedTV, tvWatchlist
 
@@ -461,6 +405,8 @@ struct ProfileListView: View {
                 isTV = true
                 movies = try await DiaryService.tvWatchlist().map { ($0.tvId, $0.tvTitle ?? "Show", $0.posterPath) }
             }
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't load that list. Pull to refresh.")
+        }
     }
 }

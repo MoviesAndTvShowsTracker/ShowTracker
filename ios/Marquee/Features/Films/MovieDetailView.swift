@@ -199,9 +199,13 @@ struct MovieDetailView: View {
                 Spacer()
                 Button("Save rating") {
                     Task {
-                        try? await DiaryService.rateMovie(id: idString, rating: max(1, rating * 2))
-                        showRatingSheet = false
-                        Haptics.success()
+                        do {
+                            try await DiaryService.rateMovie(id: idString, rating: max(1, rating * 2))
+                            showRatingSheet = false
+                            Haptics.success()
+                        } catch {
+                            Feedback.failed("Couldn't save your rating. Try again.")
+                        }
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -342,7 +346,9 @@ struct MovieDetailView: View {
                 favorited = true
             }
             Haptics.light()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update favorites. Try again.")
+        }
     }
 
     private func performWatch(_ detail: MovieDetail, isRewatch: Bool) async {
@@ -422,6 +428,8 @@ struct MovieDetailView: View {
                 watchlisted = true
             }
             Haptics.light()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update your watchlist. Try again.")
+        }
     }
 }

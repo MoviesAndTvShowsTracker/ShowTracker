@@ -64,7 +64,7 @@ struct CachedAsyncImage: View {
             } else {
                 Rectangle()
                     .fill(MarqueeColor.deepOlive.opacity(0.08))
-                    .overlay { ProgressView().tint(MarqueeColor.hibiscus) }
+                    .overlay { ProgressView().tint(MarqueeColor.oliveLeaf) }
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)

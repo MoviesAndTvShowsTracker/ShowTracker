@@ -182,10 +182,10 @@ extension TVDetailView {
                             if isNext {
                                 Text("Up next")
                                     .font(.caption2.weight(.bold))
-                                    .foregroundStyle(theme.accent)
+                                    .foregroundStyle(theme.olive)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(theme.accent.opacity(0.12))
+                                    .background(theme.oliveSoft)
                                     .clipShape(Capsule())
                             }
                         }
@@ -244,7 +244,7 @@ extension TVDetailView {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(minHeight: 72, alignment: .top)
-        .background(isNext ? theme.accent.opacity(0.06) : Color.clear)
+        .background(isNext ? theme.oliveSoft.opacity(0.6) : Color.clear)
         .sensoryFeedback(.success, trigger: marked)
     }
 

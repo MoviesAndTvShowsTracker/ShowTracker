@@ -639,9 +639,13 @@ struct TVDetailView: View {
                 Spacer()
                 Button("Save rating") {
                     Task {
-                        try? await DiaryService.rateShow(tvId: idString, rating: max(1, showRating * 2))
-                        showRatingSheet = false
-                        Haptics.success()
+                        do {
+                            try await DiaryService.rateShow(tvId: idString, rating: max(1, showRating * 2))
+                            showRatingSheet = false
+                            Haptics.success()
+                        } catch {
+                            Feedback.failed("Couldn't save your rating. Try again.")
+                        }
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -967,7 +971,9 @@ struct TVDetailView: View {
                 if let track = state.tracking { tracking = track }
             }
             Haptics.success()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't log that rewatch. Try again.")
+        }
     }
 
     func performSeasonRewatch() async {
@@ -987,7 +993,9 @@ struct TVDetailView: View {
                 if let track = state.tracking { tracking = track }
             }
             Haptics.success()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't log those rewatches. Try again.")
+        }
     }
 
     private func performStartRewatch() async {
@@ -1006,7 +1014,9 @@ struct TVDetailView: View {
             withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
                 pane = .episodes
             }
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update the rewatch. Try again.")
+        }
     }
 
     private func performCancelRewatch() async {
@@ -1024,7 +1034,9 @@ struct TVDetailView: View {
                 })
             }
             Haptics.light()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update the rewatch. Try again.")
+        }
     }
 
     func confirmMarkShow() async {
@@ -1193,7 +1205,9 @@ struct TVDetailView: View {
                 favorited = true
             }
             Haptics.light()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update favorites. Try again.")
+        }
     }
 
     private func toggleWatchlist(_ detail: TVDetail) async {
@@ -1209,7 +1223,9 @@ struct TVDetailView: View {
                 watchlisted = true
             }
             Haptics.light()
-        } catch {}
+        } catch {
+            Feedback.failed("Couldn't update your watchlist. Try again.")
+        }
     }
 
     private func pause() async {

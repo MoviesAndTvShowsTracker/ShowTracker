@@ -88,7 +88,7 @@ struct DiaryActivityView: View {
     var body: some View {
         Group {
             if loading && items.isEmpty {
-                ProgressView().tint(theme.accent).frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView().tint(theme.olive).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty, let error {
                 ErrorStateView(message: error) { Task { await load() } }
             } else {
@@ -238,16 +238,16 @@ struct DiaryActivityView: View {
             VStack(spacing: 4) {
                 Text("\(calendar.component(.day, from: day))")
                     .font(.subheadline.weight(selected || isToday ? .bold : .medium))
-                    .foregroundStyle(selected ? theme.onAccent : theme.ink)
+                    .foregroundStyle(selected ? theme.surface : theme.ink)
                 Capsule()
-                    .fill(count == 0 ? Color.clear : theme.accent.opacity(0.35 + 0.65 * intensity))
+                    .fill(count == 0 ? Color.clear : theme.olive.opacity(0.25 + 0.75 * intensity))
                     .frame(width: 14, height: 4)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 48)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(selected ? theme.accent : (isToday ? theme.oliveSoft : Color.clear))
+                    .fill(selected ? theme.ink : (isToday ? theme.oliveSoft : Color.clear))
             )
         }
         .buttonStyle(.plain)

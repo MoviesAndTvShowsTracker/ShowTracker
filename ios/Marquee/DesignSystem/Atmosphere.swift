@@ -1,35 +1,29 @@
 import SwiftUI
 
 /// Soft color washes that slowly roam the canvas.
+/// Soft olive/hibiscus haze painted into the canvas *behind* content.
+/// Static: drawn once and rasterised, so scrolling never re-blurs it and it
+/// never tints posters or cards (it only shows in the gaps between them).
 struct AmbientBlobs: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AppPreferences.self) private var preferences
 
     var body: some View {
         Group {
             if preferences.blobsEnabled {
-                TimelineView(.animation(minimumInterval: shouldMove ? 1 / 24 : 120)) { context in
-                    let t = context.date.timeIntervalSinceReferenceDate
-                    Canvas { ctx, size in
-                        for spec in specs(size: size, light: colorScheme != .dark) {
-                            paint(ctx, spec: spec, t: t, moving: shouldMove)
-                        }
+                Canvas { ctx, size in
+                    for spec in specs(size: size, light: colorScheme != .dark) {
+                        paint(ctx, spec: spec, t: 0, moving: false)
                     }
                 }
                 .blur(radius: 42)
-                .blendMode(colorScheme == .dark ? .screen : .multiply)
-                .opacity(colorScheme == .dark ? 0.88 : 0.78)
+                .opacity(colorScheme == .dark ? 0.55 : 0.6)
+                .drawingGroup()
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .ignoresSafeArea()
-    }
-
-    private var shouldMove: Bool {
-        scenePhase == .active && !reduceMotion
     }
 
     private func specs(size: CGSize, light: Bool) -> [BlobSpec] {
@@ -131,7 +125,13 @@ private struct MarqueeCanvasModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(theme.surface)
+            .background {
+                ZStack {
+                    theme.surface
+                    AmbientBlobs()
+                }
+                .ignoresSafeArea()
+            }
             .containerBackground(theme.surface, for: .navigation)
             // Let the system scroll-edge material do the work — a forced
             // toolbarBackground reads as a hard slab over posters (esp. iOS 27

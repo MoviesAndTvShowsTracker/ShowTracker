@@ -458,7 +458,7 @@ struct ContinueHeroCard: View {
                         .lineLimit(2)
                     Text(progress.episodeLine)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(theme.accent)
+                        .foregroundStyle(theme.olive)
                     if let name = progress.next?.name, !name.isEmpty {
                         Text(name)
                             .font(.caption)

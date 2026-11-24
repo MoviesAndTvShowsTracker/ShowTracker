@@ -202,7 +202,7 @@ struct TVLandingView: View {
                             .font(.caption2.weight(.bold))
                             .tracking(0.8)
                             .textCase(.uppercase)
-                            .foregroundStyle(theme.accent)
+                            .foregroundStyle(theme.olive)
                         Text("Your shows")
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(theme.ink)

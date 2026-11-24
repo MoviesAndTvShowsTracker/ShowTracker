@@ -19,9 +19,6 @@ struct RootView: View {
             ZStack {
                 theme.surface.ignoresSafeArea()
                 destination
-                AmbientBlobs()
-                    .opacity(revealed ? 1 : 0)
-                    .allowsHitTesting(false)
             }
             .modifier(LaunchRevealMask(revealed: revealed, settled: settled))
             .allowsHitTesting(revealed)
@@ -29,6 +26,8 @@ struct RootView: View {
             if !settled {
                 LaunchSplashView(revealed: revealed)
             }
+
+            FeedbackBanner()
         }
         .animation(reduceMotion ? nil : MarqueeMotion.standard, value: showWelcome)
         .respectReducedMotion()
