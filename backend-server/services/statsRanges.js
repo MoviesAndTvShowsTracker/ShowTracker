@@ -271,7 +271,7 @@ function buildRange(rangeKey, window, ctx) {
       buildBiggestNight(epPlayRows, filmPlayRows, timeZone, dayMap, keyOf),
       [...trackById.values()]
     ),
-    topShows: topShows(eps, trackById),
+    topShows: topShows(eps, trackById, rangeKey === 'all' ? 10 : 5),
     films: recentFilms(films),
     hotTakes: buildHotTakes(uniqueFilms, filmMetaMap, 4),
     taste: trimTaste(
@@ -323,4 +323,49 @@ function buildStatsRanges({ episodes, episodePlays, rawFilms, tracks, filmMetaMa
   };
 }
 
-module.exports = { buildStatsRanges, rangeWindows, makeStamper };
+/** Your highest-rated titles (diary ratings are stored 1–10 → stars). */
+function topRated(items, map, limit = 10) {
+  return items
+    .filter((it) => Number.isFinite(Number(it.rating)) && Number(it.rating) > 0)
+    .sort(
+      (a, b) =>
+        Number(b.rating) - Number(a.rating) ||
+        new Date(b.watchedAt || b.updatedAt || 0) - new Date(a.watchedAt || a.updatedAt || 0)
+    )
+    .slice(0, limit)
+    .map((it) => ({ ...map(it), rating: Number(it.rating) / 2 }));
+}
+
+/** Half-star buckets 0.5…5 → 10 counts. */
+function ratingDistribution(items) {
+  const buckets = Array.from({ length: 10 }, (_, i) => ({ stars: (i + 1) / 2, count: 0 }));
+  for (const it of items) {
+    const r = Math.round(Number(it.rating));
+    if (Number.isFinite(r) && r >= 1 && r <= 10) buckets[r - 1].count += 1;
+  }
+  return buckets;
+}
+
+/** All-time minutes per weekday (Mon…Sun) from the combined day map. */
+function weekdayTotals(dayMap) {
+  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const out = labels.map((label) => ({ label, tvMins: 0, filmMins: 0, plays: 0, days: 0 }));
+  for (const [key, b] of Object.entries(dayMap || {})) {
+    const dow = new Date(keyToUtc(key)).getUTCDay(); // 0 = Sun
+    const i = (dow + 6) % 7;
+    out[i].tvMins += b.tvMinutes || 0;
+    out[i].filmMins += b.filmMinutes || 0;
+    out[i].plays += (b.episodes || 0) + (b.films || 0);
+    out[i].days += 1;
+  }
+  return out;
+}
+
+module.exports = {
+  buildStatsRanges,
+  rangeWindows,
+  makeStamper,
+  topRated,
+  ratingDistribution,
+  weekdayTotals,
+};

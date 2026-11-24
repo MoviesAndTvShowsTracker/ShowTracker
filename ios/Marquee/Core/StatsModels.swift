@@ -45,6 +45,49 @@ struct DashboardStats: Decodable, Sendable{
     let previousYear: StatsPeriod?
     let memberSince: String?
     var ranges: StatsRanges? = nil
+    var tv: StatsTVBlock? = nil
+    var weekday: [StatsWeekdayBucket]? = nil
+}
+
+struct StatsTVBlock: Decodable, Sendable {
+    let showCount: Int?
+    let episodeCount: Int?
+    let tvMins: Int?
+    let avgEpisodeMins: Int?
+    let topRated: [StatsRatedTitle]?
+    let ratingDistribution: [StatsRatingBucket]?
+}
+
+/// A film or show from your own top-rated list (stars 0.5…5).
+struct StatsRatedTitle: Decodable, Identifiable, Sendable {
+    var id: String { movieId ?? tvId ?? displayTitle }
+    let movieId: String?
+    let tvId: String?
+    let title: String?
+    let tvTitle: String?
+    let poster: String?
+    let tvPosterImage: String?
+    let rating: Double?
+
+    var displayTitle: String { title ?? tvTitle ?? "" }
+    var posterPath: String? { poster ?? tvPosterImage }
+}
+
+struct StatsRatingBucket: Decodable, Identifiable, Sendable {
+    var id: Double { stars ?? 0 }
+    let stars: Double?
+    let count: Int?
+}
+
+struct StatsWeekdayBucket: Decodable, Identifiable, Sendable {
+    var id: String { label ?? "" }
+    let label: String?
+    let tvMins: Int?
+    let filmMins: Int?
+    let plays: Int?
+    let days: Int?
+
+    var totalMins: Int { (tvMins ?? 0) + (filmMins ?? 0) }
 }
 
 // MARK: - Range-scoped stats (week / month / year / all)
@@ -427,6 +470,8 @@ struct StatsFilmsBlock: Decodable, Sendable{
     let avgRuntime: Int?
     let thisWeek: Int?
     let thisYear: Int?
+    var topRated: [StatsRatedTitle]? = nil
+    var ratingDistribution: [StatsRatingBucket]? = nil
 }
 
 struct StatsFilmExtreme: Decodable, Sendable{

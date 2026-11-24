@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// All-time diary stats. One "Lately" card carries the week/month/year view;
+/// everything else is the whole diary: screen time, TV, films, habits, badges.
 struct StatsView: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -7,20 +9,18 @@ struct StatsView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var rangeKey: StatsRangeKey = .week
-    @State private var tasteRoom: TasteRoom = .tv
+    @State private var decadeRoom: Room = .films
     @State private var didPickInitialRange = false
 
-    private enum TasteRoom: String, CaseIterable, Identifiable {
-        case tv = "TV"
+    private enum Room: String, CaseIterable, Identifiable {
         case films = "Films"
+        case tv = "TV"
         var id: String { rawValue }
     }
 
-    private var range: StatsRange? { stats?.ranges?[rangeKey] }
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 24) {
                 if loading && stats == nil {
                     skeleton
                 } else if let error, stats == nil {
@@ -30,22 +30,27 @@ struct StatsView: View {
                 } else if isEmpty {
                     EmptyDiaryCard(
                         title: "The house lights are still up",
-                        message: "Mark a film or an episode and this page becomes your lobby diary: when you watch, what you rewatch, and the nights that stuck.",
+                        message: "Mark a film or an episode and your screen time, top shows and favorite genres start filling in here.",
                         cta: nil
                     )
-                } else {
-                    MarqueeHero(
-                        rangeKey: rangeKey,
-                        range: range,
-                        dateLine: StatsDates.rangeLine(rangeKey, start: range?.start, end: range?.end)
-                    )
-                    .animation(reduceMotion ? nil : MarqueeMotion.standard, value: rangeKey)
+                } else if let stats {
+                    ScreenTimeHero(overview: stats.overview, since: sinceLabel)
 
-                    rangeSections
-                        .id(rangeKey)
-                        .transition(reduceMotion ? AnyTransition.opacity : AnyTransition(.blurReplace))
+                    if let ranges = stats.ranges {
+                        LatelyCard(ranges: ranges, rangeKey: $rangeKey)
+                            .stageIn(reduceMotion)
+                    }
 
-                    allTimeSections
+                    TicketStubRow(activity: stats.activity, memberSince: stats.memberSince)
+                        .stageIn(reduceMotion)
+
+                    tvChapter(stats)
+                    filmsChapter(stats)
+                    habitsChapter(stats)
+
+                    BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
+                        .padding(.top, 8)
+                        .stageIn(reduceMotion)
                 }
             }
             .padding(.horizontal, 20)
@@ -56,148 +61,214 @@ struct StatsView: View {
         .marqueeCanvas()
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.large)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if stats != nil, !isEmpty {
-                StatsRangeSwitch(selection: $rangeKey)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-            }
-        }
         .refreshable { await load(refresh: true) }
         .task { await load(refresh: false) }
     }
 
-    // MARK: Range-scoped
+    // MARK: TV
 
     @ViewBuilder
-    private var rangeSections: some View {
-        if let range, !range.isQuiet {
-            VStack(alignment: .leading, spacing: 28) {
-                if let trend = range.trend, !(trend.buckets ?? []).isEmpty {
-                    RunChart(rangeKey: rangeKey, trend: trend)
-                        .stageIn(reduceMotion)
-                }
+    private func tvChapter(_ stats: DashboardStats) -> some View {
+        let o = stats.overview
+        if (o?.episodeCount ?? 0) > 0 || (stats.library?.totalTracked ?? 0) > 0 {
+            StatsChapterHeader(
+                icon: "tv",
+                title: "TV",
+                summary: "\((o?.tvShowCount ?? 0).formatted()) shows · \((o?.episodeCount ?? 0).formatted()) episodes"
+            )
 
-                TicketStubRow(activity: stats?.activity, memberSince: stats?.memberSince)
-                    .stageIn(reduceMotion)
+            FactGrid(facts: [
+                StatsFact(label: "Watch time", value: StatsFormat.span(o?.tvMins ?? 0)),
+                StatsFact(label: "Avg episode", value: "\(stats.tv?.avgEpisodeMins ?? stats.funFacts?.avgEpisodeMins ?? 0)", unit: "min"),
+                StatsFact(label: "Finished", value: "\(stats.library?.finished ?? 0)", unit: "shows"),
+                (stats.ratings?.shows?.count ?? 0) > 0
+                    ? StatsFact(label: "Your rating", value: ratingValue(stats.ratings?.shows), unit: ratingUnit(stats.ratings?.shows))
+                    : StatsFact(label: "Watching", value: "\(stats.library?.watching ?? 0)", unit: "shows"),
+            ])
+            .stageIn(reduceMotion)
 
-                if let rhythm = range.rhythm, (rhythm.peakMins ?? 0) > 0 {
-                    HouseLightsDial(
-                        hours: paddedHours(rhythm.byHour),
-                        peakHour: rhythm.peakHour ?? 0,
-                        caption: rhythm.caption ?? "Your lobby hours"
-                    )
-                    .stageIn(reduceMotion)
-                }
-
-                if let shows = range.topShows, !shows.isEmpty {
-                    TopBillingList(shows: shows)
-                        .stageIn(reduceMotion)
-                }
-
-                if let films = range.films, !films.isEmpty {
-                    FilmsOnMarqueeRail(films: films, total: range.totals?.filmPlays ?? films.count)
-                }
-
-                if let night = range.biggestNight, (night.count ?? 0) > 1 {
-                    BiggestNightStrip(night: night)
-                }
-
-                tasteBlock(range.taste)
-                    .stageIn(reduceMotion)
-
-                if let takes = range.hotTakes, !takes.isEmpty {
-                    HotTakesBlock(takes: takes)
-                        .stageIn(reduceMotion)
-                }
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 28) {
-                TicketStubRow(activity: stats?.activity, memberSince: stats?.memberSince)
-                if let last = stats?.activity?.lastWatchedAt, let day = StatsDates.shortDay(last) {
-                    Text("Last in the lobby on \(day). Switch the range to look back.")
-                        .font(.subheadline)
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-        }
-    }
-
-    // MARK: All time
-
-    @ViewBuilder
-    private var allTimeSections: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            HStack(spacing: 10) {
-                Rectangle().fill(theme.border).frame(height: 1)
-                SectionKicker(text: "Across the diary")
-                    .fixedSize()
-                Rectangle().fill(theme.border).frame(height: 1)
-            }
-            .padding(.top, 8)
-            .accessibilityAddTraits(.isHeader)
-
-            if let lobby = stats?.lobbyType {
-                LobbyTypePlaque(lobby: lobby)
+            if let shows = stats.ranges?.all?.topShows, !shows.isEmpty {
+                TopBillingList(shows: shows)
                     .stageIn(reduceMotion)
             }
-            if let library = stats?.library, (library.totalTracked ?? 0) > 0 {
-                ShelvesBlock(library: library)
+
+            if let library = stats.library, (library.totalTracked ?? 0) > 0 {
+                ShowProgressBar(library: library)
                     .stageIn(reduceMotion)
             }
-            if let arcs = stats?.seasonArcs, !arcs.isEmpty {
-                SeasonArcRibbons(arcs: arcs)
-            }
-            BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
-                .stageIn(reduceMotion)
-            if let since = memberSinceLine {
-                Text(since)
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 4)
-            }
-        }
-    }
 
-    private var memberSinceLine: String? {
-        guard let raw = stats?.memberSince else { return nil }
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = iso.date(from: raw) ?? ISO8601DateFormatter().date(from: raw) else { return nil }
-        return "In the lobby since \(date.formatted(.dateTime.month(.wide).year()))"
-    }
-
-    // MARK: Taste
-
-    @ViewBuilder
-    private func tasteBlock(_ taste: StatsTaste?) -> some View {
-        let tvGenres = taste?.tv?.genreByEpisodes ?? []
-        let filmGenres = taste?.films?.genreByCount ?? []
-        if !tvGenres.isEmpty || !filmGenres.isEmpty {
-            let room: TasteRoom = tvGenres.isEmpty ? .films : (filmGenres.isEmpty ? .tv : tasteRoom)
-            VStack(alignment: .leading, spacing: 14) {
-                StatsSectionHeader(kicker: "Taste", title: "What filled the screen")
-                if !tvGenres.isEmpty && !filmGenres.isEmpty {
-                    Picker("Room", selection: $tasteRoom.animation(MarqueeMotion.standard)) {
-                        ForEach(TasteRoom.allCases) { Text($0.rawValue).tag($0) }
+            if let genres = stats.taste?.tv?.genreByEpisodes, !genres.isEmpty {
+                GlassCard(padding: 18) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            SectionKicker(text: "TV genres")
+                            Text("By episodes watched")
+                                .font(.headline)
+                                .foregroundStyle(theme.ink)
+                        }
+                        GenreMeterList(items: Array(genres.prefix(6)), tint: theme.olive)
                     }
-                    .pickerStyle(.segmented)
                 }
-                GenreMeterList(items: Array((room == .tv ? tvGenres : filmGenres).prefix(6)), tint: theme.olive)
-                    .id(room)
-                    .transition(.opacity)
+                .stageIn(reduceMotion)
+            }
+
+            if let rated = stats.tv?.topRated, !rated.isEmpty {
+                RatedPosterRail(kicker: "Your top-rated shows", title: "Five-star television", items: rated, isTV: true)
             }
         }
     }
 
-    // MARK: Loading
+    // MARK: Films
+
+    @ViewBuilder
+    private func filmsChapter(_ stats: DashboardStats) -> some View {
+        let o = stats.overview
+        if (o?.filmCount ?? 0) > 0 {
+            StatsChapterHeader(
+                icon: "film",
+                title: "Films",
+                summary: "\((o?.filmCount ?? 0).formatted()) films · \((stats.films?.thisYear ?? 0).formatted()) this year"
+            )
+
+            FactGrid(facts: [
+                StatsFact(label: "Watch time", value: StatsFormat.span(o?.filmMins ?? 0)),
+                StatsFact(label: "Avg runtime", value: "\(stats.films?.avgRuntime ?? 0)", unit: "min"),
+                StatsFact(label: "This year", value: "\(stats.films?.thisYear ?? 0)", unit: "films"),
+                (stats.ratings?.films?.count ?? 0) > 0
+                    ? StatsFact(label: "Your rating", value: ratingValue(stats.ratings?.films), unit: ratingUnit(stats.ratings?.films))
+                    : StatsFact(label: "Total plays", value: "\((o?.filmPlayCount ?? o?.filmCount ?? 0).formatted())"),
+            ])
+            .stageIn(reduceMotion)
+
+            if let rated = stats.films?.topRated, !rated.isEmpty {
+                RatedPosterRail(kicker: "Your top-rated films", title: "The ones you'd see again", items: rated, isTV: false)
+            }
+
+            if let dist = stats.films?.ratingDistribution, dist.contains(where: { ($0.count ?? 0) > 0 }) {
+                RatingHistogram(
+                    buckets: dist,
+                    average: stats.ratings?.films?.average,
+                    count: stats.ratings?.films?.count
+                )
+                .stageIn(reduceMotion)
+            }
+
+            if let genres = stats.taste?.films?.genreByCount, !genres.isEmpty {
+                GenreStack(kicker: "Film genres", genres: genres)
+                    .stageIn(reduceMotion)
+            }
+
+            if stats.films?.longest != nil || stats.films?.shortest != nil {
+                DoubleFeature(longest: stats.films?.longest, shortest: stats.films?.shortest)
+                    .stageIn(reduceMotion)
+            }
+
+            if let films = stats.ranges?.all?.films, !films.isEmpty {
+                FilmsOnMarqueeRail(films: films, total: o?.filmCount ?? films.count)
+            }
+        }
+    }
+
+    // MARK: Habits
+
+    @ViewBuilder
+    private func habitsChapter(_ stats: DashboardStats) -> some View {
+        let weekday = stats.weekday ?? []
+        let night = stats.biggestNight
+        let tvDecades = stats.taste?.tv?.decades ?? []
+        let filmDecades = stats.taste?.films?.decades ?? []
+        let hasWeekday = weekday.contains { $0.totalMins > 0 }
+        let hasNight = (night?.count ?? 0) > 1
+        let hasDecades = !tvDecades.isEmpty || !filmDecades.isEmpty
+
+        if hasWeekday || hasNight || hasDecades {
+            StatsChapterHeader(icon: "calendar", title: "Habits", summary: habitsSummary(stats))
+
+            if hasWeekday {
+                WeekdayBars(days: weekday)
+                    .stageIn(reduceMotion)
+            }
+
+            if let night, hasNight {
+                BiggestNightStrip(night: night)
+            }
+
+            if hasDecades {
+                let room: Room = filmDecades.isEmpty ? .tv : (tvDecades.isEmpty ? .films : decadeRoom)
+                GlassCard(padding: 18) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                SectionKicker(text: "Decades")
+                                Text(topDecadeLine(room == .films ? filmDecades : tvDecades))
+                                    .font(.headline)
+                                    .foregroundStyle(theme.ink)
+                            }
+                            Spacer()
+                            if !tvDecades.isEmpty && !filmDecades.isEmpty {
+                                Picker("Decades", selection: $decadeRoom.animation(MarqueeMotion.standard)) {
+                                    ForEach(Room.allCases) { Text($0.rawValue).tag($0) }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 130)
+                            }
+                        }
+                        DecadeMeterList(
+                            title: "",
+                            decades: topDecades(room == .films ? filmDecades : tvDecades),
+                            tint: theme.olive
+                        )
+                        .id(room)
+                        .transition(.opacity)
+                    }
+                }
+                .stageIn(reduceMotion)
+            }
+        }
+    }
+
+    /// The six biggest decades, shown in date order.
+    private func topDecades(_ decades: [TasteDecade]) -> [TasteDecade] {
+        decades
+            .sorted { ($0.count ?? 0) > ($1.count ?? 0) }
+            .prefix(6)
+            .sorted { ($0.decade ?? "") < ($1.decade ?? "") }
+    }
+
+    private func habitsSummary(_ stats: DashboardStats) -> String? {
+        guard let avg = stats.funFacts?.avgMinsPerActiveDay, avg > 0 else { return nil }
+        return "\(StatsFormat.minutes(avg)) on an average watching day"
+    }
+
+    private func topDecadeLine(_ decades: [TasteDecade]) -> String {
+        guard let top = decades.max(by: { ($0.count ?? 0) < ($1.count ?? 0) }), let d = top.decade else {
+            return "Across the eras"
+        }
+        return "Most at home in the \(d)"
+    }
+
+    // MARK: Helpers
+
+    private func ratingValue(_ summary: StatsRatingSummary?) -> String {
+        guard let avg = summary?.average, avg > 0 else { return "—" }
+        return String(format: "%.1f", avg)
+    }
+
+    private func ratingUnit(_ summary: StatsRatingSummary?) -> String? {
+        guard let n = summary?.count, n > 0 else { return nil }
+        return "★ · \(n)"
+    }
+
+    private var sinceLabel: String? {
+        let raw = stats?.activity?.firstLoggedOn ?? stats?.memberSince
+        guard let raw, let date = StatsDates.date(fromKey: raw) else { return nil }
+        return date.formatted(.dateTime.month(.abbreviated).year())
+    }
 
     private var skeleton: some View {
         VStack(spacing: 16) {
-            SkeletonBlock(height: 44, radius: 22)
-            SkeletonBlock(height: 280, radius: 28)
-            SkeletonBlock(height: 200, radius: 20)
+            SkeletonBlock(height: 300, radius: 28)
+            SkeletonBlock(height: 240, radius: 20)
             HStack(spacing: 10) {
                 SkeletonBlock(height: 72, radius: 14)
                 SkeletonBlock(height: 72, radius: 14)
@@ -211,15 +282,6 @@ struct StatsView: View {
         let o = stats?.overview
         return (o?.episodeCount ?? 0) == 0 && (o?.filmCount ?? 0) == 0
             && (stats?.library?.totalTracked ?? 0) == 0
-    }
-
-    private func paddedHours(_ hours: [StatsHourBucket]?) -> [StatsHourBucket] {
-        var out = Array(repeating: StatsHourBucket(), count: 24)
-        guard let hours else { return out }
-        for (i, bucket) in hours.prefix(24).enumerated() {
-            out[i] = bucket
-        }
-        return out
     }
 
     private func load(refresh: Bool) async {
@@ -239,11 +301,11 @@ struct StatsView: View {
         }
     }
 
-    /// Open on the narrowest range that has something in it, so first look is never "0m".
+    /// Lately opens on the narrowest range that has something in it.
     private func pickInitialRange(_ stats: DashboardStats) {
         guard !didPickInitialRange, let ranges = stats.ranges else { return }
         didPickInitialRange = true
-        rangeKey = StatsRangeKey.allCases.first { ranges[$0]?.isQuiet == false } ?? .week
+        rangeKey = [StatsRangeKey.week, .month, .year].first { ranges[$0]?.isQuiet == false } ?? .week
     }
 }
 

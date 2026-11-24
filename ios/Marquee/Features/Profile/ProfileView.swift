@@ -11,8 +11,6 @@ struct ProfileView: View {
     @State private var favoritesTV: [FavoriteTVDoc] = []
     @State private var watchedTV: [FavoriteTVDoc] = []
     @State private var overview: StatsOverview?
-    @State private var lobbyType: StatsLobbyType?
-    @State private var lobbyCaption: String?
     @State private var ready = false
     @State private var error: String?
     @State private var avatarItem: PhotosPickerItem?
@@ -144,47 +142,15 @@ struct ProfileView: View {
         return date.formatted(.dateTime.month(.abbreviated).year())
     }
 
+    /// TV Time-style glance: TV and film time side by side, tap for the full page.
     private var statsTeaser: some View {
         NavigationLink {
             StatsView()
         } label: {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        SectionKicker(text: "Lobby")
-                        Spacer()
-                        Text("Open diary")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(theme.olive)
-                    }
-                    Text(lobbyType?.label ?? "Your lobby")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(theme.ink)
-                        .lineLimit(2)
-                    Text(lobbyType?.blurb ?? lobbyCaption ?? catalogueLine)
-                        .font(.subheadline)
-                        .foregroundStyle(theme.inkMuted)
-                        .lineLimit(3)
-                }
-            }
+            ScreenTimeStrip(overview: overview)
         }
-        .buttonStyle(.plain)
-    }
-
-    private var catalogueLine: String {
-        let films = overview?.filmCount ?? watchedFilms.count
-        let eps = overview?.episodeCount ?? 0
-        let shows = overview?.tvShowCount ?? 0
-        var parts: [String] = []
-        if films > 0 { parts.append("\(films) films") }
-        if shows > 0, eps > 0 {
-            parts.append("\(shows) TV shows (\(eps) episodes)")
-        } else if eps > 0 {
-            parts.append("\(eps) TV episodes")
-        } else if shows > 0 {
-            parts.append("\(shows) TV shows")
-        }
-        return parts.isEmpty ? "Start logging to see your rhythm." : parts.joined(separator: " · ")
+        .buttonStyle(PressableRowStyle())
+        .accessibilityHint("Opens your stats")
     }
 
     private var librarySummary: some View {
@@ -335,8 +301,6 @@ struct ProfileView: View {
                 favoritesTV = favTV
                 watchedTV = watchedShows
                 overview = dash.overview
-                lobbyType = dash.lobbyType
-                lobbyCaption = dash.rhythm?.caption
                 ready = true
                 error = nil
             }

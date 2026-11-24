@@ -1,27 +1,28 @@
 import Charts
 import SwiftUI
 
-// MARK: - Range switch (glass chrome)
+// MARK: - Compact range switch (inside the Lately card)
 
 struct StatsRangeSwitch: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.colorScheme) private var scheme
     @Binding var selection: StatsRangeKey
+    var options: [StatsRangeKey] = [.week, .month, .year]
     @Namespace private var pill
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(StatsRangeKey.allCases) { key in
+            ForEach(options) { key in
                 let selected = key == selection
                 Button {
                     guard key != selection else { return }
                     withAnimation(MarqueeMotion.standard) { selection = key }
                 } label: {
                     Text(key.title)
-                        .font(.subheadline.weight(selected ? .semibold : .medium))
-                        .foregroundStyle(selected ? MarqueeColor.saltGrey : theme.ink)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(selected ? MarqueeColor.saltGrey : theme.inkMuted)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 6)
                         .background {
                             if selected {
                                 Capsule(style: .continuous)
@@ -35,29 +36,28 @@ struct StatsRangeSwitch: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(4)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(3)
+        .background(theme.oliveSoft, in: Capsule(style: .continuous))
         .sensoryFeedback(.selection, trigger: selection)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Stats range")
+        .accessibilityLabel("Range")
     }
 }
 
-// MARK: - Marquee hero
+// MARK: - Screen time hero (all time)
 
 /// The sign over the door: Deep Olive panel, a bulb row that chases once on reveal.
-struct MarqueeHero: View {
+struct ScreenTimeHero: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let rangeKey: StatsRangeKey
-    let range: StatsRange?
-    let dateLine: String?
+    let overview: StatsOverview?
+    let since: String?
 
     @State private var lit = 0
+    @State private var shown = false
     private let bulbCount = 18
 
-    private var totals: StatsRangeTotals? { range?.totals }
     private var ink: Color { MarqueeColor.saltGrey }
     private var panel: Color { scheme == .dark ? MarqueeColor.surfaceElevatedDark : MarqueeColor.deepOlive }
 
@@ -65,45 +65,42 @@ struct MarqueeHero: View {
         VStack(alignment: .leading, spacing: 18) {
             bulbs
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text(rangeKey.heroKicker)
-                    if let dateLine {
-                        Text("·")
-                        Text(dateLine)
-                    }
-                }
-                .font(.caption.weight(.bold))
-                .tracking(1.2)
-                .textCase(.uppercase)
-                .foregroundStyle(ink.opacity(0.7))
-
-                Text(range?.isQuiet == false ? StatsFormat.span(totals?.totalMins ?? 0) : "0m")
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(since.map { "Screen time · since \($0)" } ?? "Screen time")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+                    .foregroundStyle(ink.opacity(0.7))
+                Text(StatsFormat.span(shown ? (overview?.totalMins ?? 0) : 0))
+                    .font(.system(size: 50, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(ink)
                     .contentTransition(.numericText())
-                    .minimumScaleFactor(0.6)
+                    .minimumScaleFactor(0.55)
                     .lineLimit(1)
-
-                Text(subline)
+                Text(hoursLine)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(ink.opacity(0.78))
-                    .contentTransition(.opacity)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(ink.opacity(0.75))
             }
 
-            HStack(spacing: 0) {
-                figure("Episodes", totals?.episodePlays ?? 0)
-                divider
-                figure("Films", totals?.filmPlays ?? 0)
-                divider
-                figure("Shows", totals?.showCount ?? 0)
-                divider
-                figure("Days", totals?.activeDays ?? 0)
+            HStack(alignment: .top, spacing: 0) {
+                column(
+                    icon: "tv",
+                    title: "TV",
+                    time: overview?.tvMins ?? 0,
+                    detail: countLine(overview?.episodeCount, "episode", overview?.tvShowCount, "show")
+                )
+                Rectangle().fill(ink.opacity(0.14)).frame(width: 1).padding(.horizontal, 14)
+                column(
+                    icon: "film",
+                    title: "Films",
+                    time: overview?.filmMins ?? 0,
+                    detail: countLine(overview?.filmCount, "film", nil, "")
+                )
             }
+            .fixedSize(horizontal: false, vertical: true)
 
-            SplitRule(tvMins: totals?.tvMins ?? 0, filmMins: totals?.filmMins ?? 0, ink: ink)
+            SplitRule(tvMins: overview?.tvMins ?? 0, filmMins: overview?.filmMins ?? 0, ink: ink)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -111,7 +108,6 @@ struct MarqueeHero: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(panel)
                 .overlay(alignment: .topTrailing) {
-                    // Soft house-light falloff — depth without a gradient wash.
                     Circle()
                         .fill(MarqueeColor.saltGrey.opacity(scheme == .dark ? 0.05 : 0.08))
                         .frame(width: 260, height: 260)
@@ -125,22 +121,38 @@ struct MarqueeHero: View {
                 .stroke(MarqueeColor.saltGrey.opacity(scheme == .dark ? 0.1 : 0), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
-        .task(id: rangeKey) { await chase() }
+        .task { await reveal() }
     }
 
-    private var subline: String {
-        guard let range, !range.isQuiet else { return rangeKey.quietLine }
-        if rangeKey == .all {
-            let days = totals?.activeDays ?? 0
-            return days > 0 ? "Across \(days) diary days." : "Your whole diary."
+    private var hoursLine: String {
+        let hours = (overview?.totalMins ?? 0) / 60
+        guard hours > 0 else { return "Your diary starts with the first mark." }
+        return "\(hours.formatted()) hours in the dark"
+    }
+
+    private func countLine(_ a: Int?, _ aUnit: String, _ b: Int?, _ bUnit: String) -> String {
+        var parts: [String] = []
+        if let a, a > 0 { parts.append("\(a.formatted()) \(aUnit)\(a == 1 ? "" : "s")") }
+        if let b, b > 0 { parts.append("\(b.formatted()) \(bUnit)\(b == 1 ? "" : "s")") }
+        return parts.isEmpty ? "Nothing yet" : parts.joined(separator: " · ")
+    }
+
+    private func column(icon: String, title: String, time: Int, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(ink.opacity(0.7))
+            Text(time > 0 ? StatsFormat.span(time) : "—")
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(ink.opacity(0.65))
+                .lineLimit(2)
         }
-        guard let prev = range.previous?.totalMins else { return "" }
-        let now = totals?.totalMins ?? 0
-        if prev <= 0 { return "Nothing logged by \(rangeKey.previousPhrase). Fresh run." }
-        let delta = now - prev
-        if abs(delta) < 15 { return "Level with \(rangeKey.previousPhrase)." }
-        let arrow = delta > 0 ? "↑" : "↓"
-        return "\(arrow) \(StatsFormat.minutes(abs(delta))) vs \(rangeKey.previousPhrase)"
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var bulbs: some View {
@@ -157,41 +169,94 @@ struct MarqueeHero: View {
         .accessibilityHidden(true)
     }
 
-    private func chase() async {
+    /// Bulbs chase on, then the total rolls up — once per appearance.
+    private func reveal() async {
         if reduceMotion {
             lit = bulbCount
+            shown = true
             return
         }
-        lit = 0
+        guard lit == 0 else { return }
         for i in 1...bulbCount {
-            try? await Task.sleep(for: .milliseconds(28))
+            try? await Task.sleep(for: .milliseconds(26))
             if Task.isCancelled { return }
             withAnimation(.easeOut(duration: 0.18)) { lit = i }
+            if i == bulbCount / 2 {
+                withAnimation(.smooth(duration: 0.6)) { shown = true }
+            }
         }
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(ink.opacity(0.14))
-            .frame(width: 1, height: 28)
-    }
-
-    private func figure(_ label: String, _ value: Int) -> some View {
-        VStack(spacing: 3) {
-            Text("\(value)")
-                .font(.title3.weight(.bold).monospacedDigit())
-                .foregroundStyle(ink)
-                .contentTransition(.numericText(value: Double(value)))
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(ink.opacity(0.62))
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
-/// TV vs film split on the hero — two inks, no accent.
-private struct SplitRule: View {
+// MARK: - Screen time strip (You tab)
+
+/// Compact Deep Olive glance at total time: TV and films side by side.
+struct ScreenTimeStrip: View {
+    @Environment(\.colorScheme) private var scheme
+    let overview: StatsOverview?
+
+    private var ink: Color { MarqueeColor.saltGrey }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Screen time")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+                    .foregroundStyle(ink.opacity(0.7))
+                Spacer()
+                HStack(spacing: 4) {
+                    Text("Stats")
+                    Image(systemName: "chevron.right")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(ink.opacity(0.8))
+            }
+            HStack(alignment: .top, spacing: 0) {
+                cell(icon: "tv", time: overview?.tvMins ?? 0, detail: count(overview?.episodeCount, "episode"))
+                Rectangle().fill(ink.opacity(0.14)).frame(width: 1).padding(.horizontal, 14)
+                cell(icon: "film", time: overview?.filmMins ?? 0, detail: count(overview?.filmCount, "film"))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            SplitRule(tvMins: overview?.tvMins ?? 0, filmMins: overview?.filmMins ?? 0, ink: ink)
+        }
+        .padding(16)
+        .background(
+            scheme == .dark ? MarqueeColor.surfaceElevatedDark : MarqueeColor.deepOlive,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Screen time. TV \(StatsFormat.span(overview?.tvMins ?? 0)), films \(StatsFormat.span(overview?.filmMins ?? 0))")
+    }
+
+    private func count(_ n: Int?, _ unit: String) -> String {
+        let n = n ?? 0
+        return "\(n.formatted()) \(unit)\(n == 1 ? "" : "s")"
+    }
+
+    private func cell(icon: String, time: Int, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(ink.opacity(0.7))
+                Text(time > 0 ? StatsFormat.span(time) : "—")
+                    .font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(ink.opacity(0.65))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// TV vs film split — two inks, no accent.
+struct SplitRule: View {
     let tvMins: Int
     let filmMins: Int
     let ink: Color
@@ -204,7 +269,7 @@ private struct SplitRule: View {
 
     var body: some View {
         if tvMins + filmMins > 0 {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 6) {
                 GeometryReader { geo in
                     HStack(spacing: 3) {
                         if tvMins > 0 {
@@ -218,111 +283,164 @@ private struct SplitRule: View {
                 }
                 .frame(height: 6)
                 HStack {
-                    Label("TV \(StatsFormat.minutes(tvMins))", systemImage: "tv")
+                    Text("TV \(Int((tvFraction * 100).rounded()))%")
                     Spacer()
-                    Label("Films \(StatsFormat.minutes(filmMins))", systemImage: "film")
+                    Text("Films \(100 - Int((tvFraction * 100).rounded()))%")
                 }
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(ink.opacity(0.7))
-                .labelStyle(SplitLabelStyle())
-                .contentTransition(.numericText())
+                .font(.caption2.weight(.semibold).monospacedDigit())
+                .foregroundStyle(ink.opacity(0.65))
             }
         }
     }
 }
 
-private struct SplitLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
-            configuration.icon.imageScale(.small)
-            configuration.title
+// MARK: - Lately (range card)
+
+struct LatelyCard: View {
+    @Environment(\.marqueeTheme) private var theme
+    let ranges: StatsRanges
+    @Binding var rangeKey: StatsRangeKey
+
+    private var range: StatsRange? { ranges[rangeKey] }
+    private var totals: StatsRangeTotals? { range?.totals }
+
+    var body: some View {
+        GlassCard(padding: 18) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center) {
+                    SectionKicker(text: "Lately")
+                    Spacer()
+                    StatsRangeSwitch(selection: $rangeKey)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(range?.isQuiet == false ? StatsFormat.span(totals?.totalMins ?? 0) : "0m")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.ink)
+                        .contentTransition(.numericText())
+                    Text(subline)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(deltaColor)
+                        .contentTransition(.opacity)
+                }
+                .animation(MarqueeMotion.standard, value: rangeKey)
+
+                if let trend = range?.trend, !(trend.buckets ?? []).isEmpty {
+                    RunChart(trend: trend)
+                        .id(rangeKey)
+                        .transition(.opacity)
+                }
+
+                HStack(spacing: 14) {
+                    pill("\(totals?.episodePlays ?? 0)", "episodes")
+                    pill("\(totals?.filmPlays ?? 0)", "films")
+                    pill("\(totals?.activeDays ?? 0)", "days")
+                    Spacer(minLength: 0)
+                }
+                .animation(MarqueeMotion.standard, value: rangeKey)
+            }
+        }
+    }
+
+    private var delta: Int? {
+        guard let range, !range.isQuiet, let prev = range.previous?.totalMins, prev > 0 else { return nil }
+        return (totals?.totalMins ?? 0) - prev
+    }
+
+    private var deltaColor: Color {
+        guard let delta, abs(delta) >= 15 else { return theme.inkMuted }
+        return delta > 0 ? theme.olive : theme.inkMuted
+    }
+
+    private var subline: String {
+        guard let range else { return "" }
+        let when = StatsDates.rangeLine(rangeKey, start: range.start, end: range.end) ?? rangeKey.heroKicker
+        if range.isQuiet { return "\(when) · \(rangeKey.quietLine)" }
+        guard let delta else { return when }
+        if abs(delta) < 15 { return "\(when) · level with \(rangeKey.previousPhrase)" }
+        let arrow = delta > 0 ? "↑" : "↓"
+        return "\(when) · \(arrow) \(StatsFormat.minutes(abs(delta))) vs \(rangeKey.previousPhrase)"
+    }
+
+    private func pill(_ value: String, _ label: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(theme.ink)
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(theme.inkMuted)
         }
     }
 }
 
-// MARK: - The run (trend chart with scrub)
+// MARK: - Run chart (scrubbable)
 
 struct RunChart: View {
     @Environment(\.marqueeTheme) private var theme
-    let rangeKey: StatsRangeKey
     let trend: StatsRangeTrend
 
     @State private var selectedKey: String?
 
     private var buckets: [StatsRangeBucket] { trend.buckets ?? [] }
     private var selected: StatsRangeBucket? { buckets.first { $0.key == selectedKey } }
-    private var peak: StatsRangeBucket? { buckets.max { $0.totalMins < $1.totalMins } }
 
     var body: some View {
-        GlassCard(padding: 18) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        SectionKicker(text: "The run")
-                        Text(headline)
-                            .font(.headline)
-                            .foregroundStyle(theme.ink)
-                            .contentTransition(.numericText())
-                            .animation(MarqueeMotion.micro, value: selectedKey)
-                    }
-                    Spacer()
-                    legend
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(readout)
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(theme.inkMuted)
+                .contentTransition(.numericText())
+                .animation(MarqueeMotion.micro, value: selectedKey)
 
-                Chart(buckets) { bucket in
-                    BarMark(
-                        x: .value("When", bucket.id),
-                        y: .value("Minutes", bucket.tvMins ?? 0),
-                        width: .ratio(barRatio)
-                    )
-                    .foregroundStyle(by: .value("Kind", "TV"))
-                    .opacity(opacity(for: bucket))
-                    .clipShape(UnevenRoundedRectangle(cornerRadii: .init(bottomLeading: 3, bottomTrailing: 3)))
+            Chart(buckets) { bucket in
+                BarMark(
+                    x: .value("When", bucket.id),
+                    y: .value("Minutes", bucket.tvMins ?? 0),
+                    width: .ratio(barRatio)
+                )
+                .foregroundStyle(by: .value("Kind", "TV"))
+                .opacity(opacity(for: bucket))
+                .clipShape(UnevenRoundedRectangle(cornerRadii: .init(bottomLeading: 3, bottomTrailing: 3)))
 
-                    BarMark(
-                        x: .value("When", bucket.id),
-                        y: .value("Minutes", bucket.filmMins ?? 0),
-                        width: .ratio(barRatio)
-                    )
-                    .foregroundStyle(by: .value("Kind", "Films"))
-                    .opacity(opacity(for: bucket))
-                    .clipShape(UnevenRoundedRectangle(cornerRadii: .init(topLeading: 3, topTrailing: 3)))
-                }
-                .chartForegroundStyleScale(["TV": theme.olive, "Films": theme.olive.opacity(0.4)])
-                .chartLegend(.hidden)
-                .chartYAxis(.hidden)
-                .chartXAxis {
-                    AxisMarks(values: axisValues) { value in
-                        AxisValueLabel {
-                            if let id = value.as(String.self) {
-                                Text(label(for: id))
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundStyle(theme.inkMuted)
-                            }
+                BarMark(
+                    x: .value("When", bucket.id),
+                    y: .value("Minutes", bucket.filmMins ?? 0),
+                    width: .ratio(barRatio)
+                )
+                .foregroundStyle(by: .value("Kind", "Films"))
+                .opacity(opacity(for: bucket))
+                .clipShape(UnevenRoundedRectangle(cornerRadii: .init(topLeading: 3, topTrailing: 3)))
+            }
+            .chartForegroundStyleScale(["TV": theme.olive, "Films": theme.olive.opacity(0.4)])
+            .chartLegend(.hidden)
+            .chartYAxis(.hidden)
+            .chartXAxis {
+                AxisMarks(values: axisValues) { value in
+                    AxisValueLabel {
+                        if let id = value.as(String.self) {
+                            Text(label(for: id))
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(theme.inkMuted)
                         }
                     }
                 }
-                .chartXSelection(value: $selectedKey)
-                .frame(height: 150)
-                .sensoryFeedback(.selection, trigger: selectedKey)
-                .accessibilityLabel("Watch time by \(trend.unit ?? "period")")
             }
+            .chartXSelection(value: $selectedKey)
+            .frame(height: 120)
+            .sensoryFeedback(.selection, trigger: selectedKey)
+            .accessibilityLabel("Watch time by \(trend.unit ?? "period")")
         }
     }
 
     private var barRatio: Double { buckets.count > 14 ? 0.62 : 0.5 }
 
-    private var headline: String {
-        if let selected {
-            let when = longLabel(selected)
-            return selected.totalMins > 0
-                ? "\(when) · \(StatsFormat.minutes(selected.totalMins))"
-                : "\(when) · dark"
-        }
-        if let peak, peak.totalMins > 0 {
-            return "Peak \(longLabel(peak)) · \(StatsFormat.minutes(peak.totalMins))"
-        }
-        return "No screenings yet"
+    private var readout: String {
+        guard let selected else { return "Drag across the bars" }
+        let when = longLabel(selected)
+        return selected.totalMins > 0 ? "\(when) · \(StatsFormat.minutes(selected.totalMins))" : "\(when) · nothing logged"
     }
 
     private func opacity(for bucket: StatsRangeBucket) -> Double {
@@ -354,22 +472,6 @@ struct RunChart: View {
             return StatsFormat.monthLabel(key)
         default:
             return key
-        }
-    }
-
-    private var legend: some View {
-        HStack(spacing: 10) {
-            dot(theme.olive, "TV")
-            dot(theme.olive.opacity(0.4), "Films")
-        }
-        .font(.caption2.weight(.semibold))
-        .foregroundStyle(theme.inkMuted)
-    }
-
-    private func dot(_ color: Color, _ text: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(text)
         }
     }
 }
@@ -444,14 +546,16 @@ struct TicketStubShape: Shape {
 struct TopBillingList: View {
     @Environment(\.marqueeTheme) private var theme
     let shows: [StatsTopShow]
+    @State private var expanded = false
 
     private var maxPlays: Int { max(shows.map { $0.plays ?? 0 }.max() ?? 1, 1) }
+    private var visible: [StatsTopShow] { expanded ? shows : Array(shows.prefix(5)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StatsSectionHeader(kicker: "Top billing", title: "Shows you kept coming back to")
+            StatsSectionHeader(kicker: "Most watched", title: "Top billing")
             VStack(spacing: 0) {
-                ForEach(Array(shows.enumerated()), id: \.element.id) { index, show in
+                ForEach(Array(visible.enumerated()), id: \.element.id) { index, show in
                     if let tvId = Int(show.tvId?.stringValue ?? "") {
                         NavigationLink {
                             TVDetailView(tvId: tvId)
@@ -462,9 +566,27 @@ struct TopBillingList: View {
                     } else {
                         row(index: index, show: show)
                     }
-                    if index < shows.count - 1 {
+                    if index < visible.count - 1 {
                         Rectangle().fill(theme.border).frame(height: 1).padding(.leading, 86)
                     }
+                }
+                if shows.count > 5 {
+                    Rectangle().fill(theme.border).frame(height: 1)
+                    Button {
+                        withAnimation(MarqueeMotion.standard) { expanded.toggle() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(expanded ? "Show fewer" : "Show all \(shows.count)")
+                            Image(systemName: "chevron.down")
+                                .rotationEffect(.degrees(expanded ? 180 : 0))
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(theme.olive)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressableRowStyle())
                 }
             }
             .padding(.vertical, 4)
@@ -498,7 +620,7 @@ struct TopBillingList: View {
                         }
                 }
                 .frame(height: 5)
-                Text("\(show.plays ?? 0) plays · \(StatsFormat.minutes(show.mins ?? 0))")
+                Text("\(show.plays ?? 0) episodes · \(StatsFormat.minutes(show.mins ?? 0))")
                     .font(.caption)
                     .foregroundStyle(theme.inkMuted)
                     .monospacedDigit()
@@ -522,11 +644,7 @@ struct FilmsOnMarqueeRail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StatsSectionHeader(
-                kicker: "On the marquee",
-                title: total == 1 ? "1 film" : "\(total) films",
-                trailing: nil
-            )
+            StatsSectionHeader(kicker: "Recently watched", title: "Last on the marquee")
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
                     ForEach(films) { film in

@@ -8,6 +8,7 @@ const { zonedParts, dateKeyInZone } = require('./statsCalendar');
 const { filmRuntimeMinutes } = require('./mediaMeta');
 
 const MAX_NIGHT_MINUTES = 18 * 60;
+const MAX_NIGHT_PLAYS = 30;
 
 function emptyHour() {
   return { mins: 0, filmMins: 0, tvMins: 0, playCount: 0 };
@@ -221,7 +222,7 @@ function buildBiggestNight(episodePlays, films, timeZone, dayMap, keyOf = null) 
     const count = (bucket.episodes || 0) + (bucket.films || 0);
     const minutes = (bucket.tvMinutes || 0) + (bucket.filmMinutes || 0);
     // Bulk imports stamp hundreds of plays on one day — not a night anyone lived.
-    if (minutes > MAX_NIGHT_MINUTES) continue;
+    if (minutes > MAX_NIGHT_MINUTES || count > MAX_NIGHT_PLAYS) continue;
     if (count > bestCount || (count === bestCount && minutes > bestMins)) {
       bestDate = date;
       bestCount = count;

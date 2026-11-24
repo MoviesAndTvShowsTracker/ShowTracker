@@ -1,41 +1,33 @@
 import XCTest
 
-/// Screenshot walk of the Stats page: every range, then the all-time tail.
+/// Screenshot walk of the You tab glance and the full Stats page.
 /// Shots land in /tmp/marquee-shots/stats-*.png.
 final class StatsShotTests: XCTestCase {
-    func testStatsRanges() throws {
+    func testStatsPage() throws {
         let app = XCUIApplication()
         app.launch()
 
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15))
         app.tabBars.buttons["You"].tap()
 
-        let entry = app.staticTexts["Open diary"]
-        for _ in 0..<4 where !entry.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Screen time")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 20))
+        sleep(1)
+        shot("stats-profile")
         entry.tap()
 
         XCTAssertTrue(app.buttons["Week"].waitForExistence(timeout: 30))
         sleep(2)
-        shot("stats-open")
+        shot("stats-00-top")
 
-        for range in ["Week", "Month", "Year", "All"] {
-            app.buttons[range].tap()
-            sleep(2)
-            shot("stats-\(range.lowercased())-top")
+        app.buttons["Year"].tap()
+        sleep(1)
+        shot("stats-01-year")
+
+        for i in 2...12 {
             app.swipeUp()
             sleep(1)
-            shot("stats-\(range.lowercased())-mid")
-            app.swipeDown()
-            app.swipeDown()
-        }
-
-        for i in 1...5 {
-            app.swipeUp()
-            sleep(1)
-            shot("stats-tail-\(i)")
+            shot(String(format: "stats-%02d", i))
         }
     }
 

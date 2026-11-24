@@ -3,7 +3,13 @@
  * Run: node backend-server/scripts/test-stats-ranges.js
  */
 const assert = require('assert');
-const { buildStatsRanges, rangeWindows } = require('../services/statsRanges');
+const {
+  buildStatsRanges,
+  rangeWindows,
+  topRated,
+  ratingDistribution,
+  weekdayTotals,
+} = require('../services/statsRanges');
 const { periodBounds } = require('../services/statsCalendar');
 
 function test(name, fn) {
@@ -137,6 +143,25 @@ test('bulk-import days never win biggest night', () => {
     bounds,
   });
   assert.notStrictEqual(r.year.biggestNight?.date, '2026-02-02');
+});
+
+test('top rated sorts by stars and maps the 1–10 scale', () => {
+  const rows = [film(1, '2026-01-01', 90, 6), film(2, '2026-01-02', 90, 10), film(3, '2026-01-03', 90, null)];
+  const top = topRated(rows, (f) => ({ id: f.movieId }));
+  assert.deepStrictEqual(top.map((t) => [t.id, t.rating]), [[2, 5], [1, 3]]);
+});
+
+test('rating distribution buckets half stars', () => {
+  const d = ratingDistribution([{ rating: 10 }, { rating: 9 }, { rating: 10 }, { rating: 0 }]);
+  assert.strictEqual(d[9].count, 2);
+  assert.strictEqual(d[8].count, 1);
+  assert.strictEqual(d.reduce((s, b) => s + b.count, 0), 3);
+});
+
+test('weekday totals start on Monday', () => {
+  const w = weekdayTotals({ '2026-11-16': { episodes: 1, films: 0, tvMinutes: 40, filmMinutes: 0 } });
+  assert.strictEqual(w[0].label, 'Mon');
+  assert.strictEqual(w[0].tvMins, 40);
 });
 
 console.log('all stats range checks passed');

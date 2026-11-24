@@ -32,7 +32,7 @@ const {
   buildHotTakes,
   attachEpisodePosters,
 } = require('./lobbyDiaryStats');
-const { buildStatsRanges } = require('./statsRanges');
+const { buildStatsRanges, topRated, ratingDistribution, weekdayTotals } = require('./statsRanges');
 const { topTvIdsByEpisodes } = require('./mediaMeta');
 const { getTvMetaBatch } = require('../lib/tmdb');
 
@@ -322,7 +322,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 10;
+const STATS_SCHEMA_VERSION = 12;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
@@ -622,7 +622,26 @@ async function buildUserStatsDashboard(userId, options = {}) {
         minutes: w.filmMinutes,
       })),
       shareOfScreenTime: pct(filmMins, totalMins),
+      topRated: topRated(films, (f) => ({
+        movieId: String(f.movieId),
+        title: f.movieTitle || null,
+        poster: f.moviePosterImage || null,
+      })),
+      ratingDistribution: ratingDistribution(films),
     },
+    tv: {
+      showCount: tvShowCount,
+      episodeCount: episodes.length,
+      tvMins,
+      avgEpisodeMins: funFacts.avgEpisodeMins,
+      topRated: topRated(tracks, (t) => ({
+        tvId: String(t.tvId),
+        tvTitle: t.tvTitle || null,
+        tvPosterImage: t.tvPosterImage || null,
+      })),
+      ratingDistribution: ratingDistribution(tracks),
+    },
+    weekday: weekdayTotals(dayMap),
     previousYear,
     funFacts,
     ratings: {
