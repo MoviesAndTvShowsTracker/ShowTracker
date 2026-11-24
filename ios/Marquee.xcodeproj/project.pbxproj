@@ -155,6 +155,7 @@
 		4008A22CC8C03698DEEBF42E /* Marquee.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Marquee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		40095993909287866C995224 /* DiaryChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryChrome.swift; sourceTree = "<group>"; };
 		4A354714057269A94D9717B3 /* RatingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsService.swift; sourceTree = "<group>"; };
+		4C785CDBD994AF0397DBED9E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4FFFDD199442624DFA77ECA3 /* AuthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthModels.swift; sourceTree = "<group>"; };
 		549888C1A8ED8E3CA8B0C049 /* AccessibilityMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityMotion.swift; sourceTree = "<group>"; };
 		5587707C01F6F92D6D0B3CE9 /* HomeSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSchedule.swift; sourceTree = "<group>"; };
@@ -261,6 +262,7 @@
 		552CE6F336C1E91C8935FF58 /* MarqueeUITests */ = {
 			isa = PBXGroup;
 			children = (
+				4C785CDBD994AF0397DBED9E /* Info.plist */,
 				988D34967043B51497143CFF /* LobbyShotTests.swift */,
 				E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */,
 				3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */,
@@ -818,8 +820,6 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Marquee;
-				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
@@ -861,7 +861,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Marquee/Info.plist;
+				INFOPLIST_FILE = MarqueeUITests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -958,8 +958,6 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Marquee;
-				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
@@ -983,7 +981,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = DWXW4WF2VQ;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Marquee/Info.plist;
+				INFOPLIST_FILE = MarqueeUITests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

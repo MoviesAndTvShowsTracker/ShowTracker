@@ -9,8 +9,6 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     TARGETED_DEVICE_FAMILY: "1"
-    INFOPLIST_KEY_UILaunchScreen_Generation: YES
-    INFOPLIST_KEY_UILaunchScreen_BackgroundColor: LaunchBackground
     INFOPLIST_KEY_CFBundleDisplayName: Marquee
     INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
     GENERATE_INFOPLIST_FILE: YES
@@ -66,6 +64,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: false
         API_BASE_URL: https://marquee-4kjw.onrender.com
         GIDClientID: 375100697427-dk86bn82i5edmfd1m82u1uc05o2dq3h5.apps.googleusercontent.com
         GIDServerClientID: 375100697427-oahuj0bruvllnjg2safa4igmnthuihmm.apps.googleusercontent.com
@@ -115,10 +115,9 @@ targets:
         CODE_SIGN_STYLE: Automatic
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     info:
-      path: Marquee/Info.plist
+      path: MarqueeUITests/Info.plist
       properties:
         CFBundleDisplayName: Marquee
-        UILaunchScreen: {}
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UIApplicationSupportsIndirectInputEvents: true
