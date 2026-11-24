@@ -7,7 +7,8 @@
     "start": "concurrently \"node ./bin/www\" \"npm run main-folder\"",
     "start:api": "node ./bin/www",
     "import-tvtime": "node scripts/import-tvtime.js",
-    "test:stats": "node scripts/test-stats-calendar.js"
+    "test:stats": "node scripts/test-stats-calendar.js",
+    "test:home": "node scripts/test-home-feed.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.18",

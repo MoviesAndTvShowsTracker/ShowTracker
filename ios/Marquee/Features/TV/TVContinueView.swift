@@ -214,45 +214,21 @@ struct TVContinueView: View {
     }
 
     private func markNext() async {
-        guard let next = progress.next else {
+        guard let track = tracking ?? seed, progress.next != nil else {
             error = "No next episode."
             return
         }
         marking = true
         defer { marking = false }
-        let total = catalog ?? catalogTotal ?? tracking?.totalEpisodes ?? tracking?.airedEpisodeCount
-        var followingSeason = next.season
-        var followingEpisode = next.episode + 1
-        var followingName: String?
-        if let season = try? await TMDBService.season(tvId: tvId, season: next.season) {
-            if let later = season.episodes?.first(where: { $0.episode_number > next.episode }) {
-                followingSeason = later.season_number ?? next.season
-                followingEpisode = later.episode_number
-                followingName = later.name
-            } else {
-                followingSeason = next.season + 1
-                followingEpisode = 1
-            }
-        }
         do {
-            try await DiaryService.markEpisode(
-                MarkEpisodeBody(
-                    tvId: idString,
-                    seasonNumber: next.season,
-                    episodeNumber: next.episode,
-                    runtimeMinutes: episode?.runtime,
-                    episodeName: episode?.name ?? next.name,
-                    tvTitle: tracking?.tvTitle ?? seed?.tvTitle,
-                    tvPosterImage: tracking?.posterPath ?? seed?.posterPath,
-                    totalEpisodes: total,
-                    airedEpisodeCount: total,
-                    nextSeason: followingSeason,
-                    nextEpisode: followingEpisode,
-                    nextEpisodeName: followingName
-                )
+            let result = try await EpisodeMarker.markNext(
+                track: track,
+                catalogTotal: catalog ?? catalogTotal,
+                runtime: episode?.runtime,
+                episodeName: episode?.name
             )
             Haptics.success()
-            tracking = try await DiaryService.tracking(for: idString)
+            tracking = result.updated ?? tracking
             episode = await fetchEpisode(for: tracking)
         } catch {
             self.error = error.localizedDescription

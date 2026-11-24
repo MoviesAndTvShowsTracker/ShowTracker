@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct DiaryActivityItem: Decodable, Identifiable, Sendable {
+struct DiaryActivityItem: Codable, Identifiable, Sendable {
     let id: String
     let kind: String
     let mediaId: String?
@@ -47,7 +47,7 @@ struct DiaryActivityItem: Decodable, Identifiable, Sendable {
     }
 }
 
-private struct DiaryActivityResponse: Decodable, Sendable {
+struct DiaryActivityResponse: Decodable, Sendable {
     let success: Bool?
     let items: [DiaryActivityItem]?
 }
@@ -397,11 +397,7 @@ struct DiaryActivityView: View {
     private func load() async {
         error = nil
         do {
-            let res: DiaryActivityResponse = try await APIClient.shared.get(
-                "/api/diary/activity",
-                query: [URLQueryItem(name: "limit", value: "120")]
-            )
-            items = res.items ?? []
+            items = try await DiaryService.activity(limit: 120)
             if let newest = items.compactMap(\.parsedDate).max() {
                 monthAnchor = startOfMonth(newest)
                 selectedDay = newest

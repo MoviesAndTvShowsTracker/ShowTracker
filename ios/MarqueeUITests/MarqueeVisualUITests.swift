@@ -15,35 +15,15 @@ final class MarqueeVisualUITests: XCTestCase {
             if dont.waitForExistence(timeout: 1) { dont.tap() }
         }
 
-        XCTAssertTrue(app.staticTexts["Continue"].waitForExistence(timeout: 5))
-        let homeShot = app.screenshot()
-        let homeAttach = XCTAttachment(screenshot: homeShot)
-        homeAttach.name = "home-continue"
+        XCTAssertTrue(app.descendants(matching: .any)["home-upnext"].firstMatch.waitForExistence(timeout: 5))
+        let homeAttach = XCTAttachment(screenshot: app.screenshot())
+        homeAttach.name = "home-upnext"
         homeAttach.lifetime = .keepAlways
         add(homeAttach)
 
-        // Swipe carousel
-        let card = app.descendants(matching: .any)["Continue watching"].firstMatch
-        if card.exists {
-            card.swipeLeft()
-            sleep(1)
-            let page2 = app.screenshot()
-            let a2 = XCTAttachment(screenshot: page2)
-            a2.name = "home-continue-page2"
-            a2.lifetime = .keepAlways
-            add(a2)
-        }
-
-        let calendar = app.buttons["Watch calendar"].firstMatch
-        if !calendar.exists {
-            app.swipeUp()
-        }
-        let link = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "Watch calendar")).firstMatch
-        if link.waitForExistence(timeout: 3) {
-            link.tap()
-        } else {
-            app.otherElements["Watch calendar"].tap()
-        }
+        let calendar = app.buttons["watch-calendar-link"].firstMatch
+        for _ in 0..<4 where !calendar.isHittable { app.swipeUp() }
+        calendar.tap()
 
         XCTAssertTrue(app.navigationBars["Watch calendar"].waitForExistence(timeout: 5)
             || app.staticTexts["Watch calendar"].waitForExistence(timeout: 2))

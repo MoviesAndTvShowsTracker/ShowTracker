@@ -190,6 +190,14 @@ enum DiaryService {
         return res.tracking
     }
 
+    static func activity(limit: Int) async throws -> [DiaryActivityItem] {
+        let res: DiaryActivityResponse = try await APIClient.shared.get(
+            "/api/diary/activity",
+            query: [URLQueryItem(name: "limit", value: String(limit))]
+        )
+        return res.items ?? []
+    }
+
     static func continueWatching() async throws -> [TrackingRecord] {
         let res: ContinueResponse = try await APIClient.shared.get("/api/tv/tracking/continue")
         return res.tracks ?? []

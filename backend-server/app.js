@@ -83,6 +83,7 @@ app.use('/api/tmdb', tmdbRouter);
 app.use('/api/ratings', ratingsRouter);
 app.use('/api/devices', devicesRouter);
 app.use('/api/diary', diaryRouter);
+app.use('/api/home', require('./routes/home'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 

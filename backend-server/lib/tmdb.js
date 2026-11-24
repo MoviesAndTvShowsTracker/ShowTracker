@@ -35,11 +35,16 @@ function rowToTvMeta(row) {
 }
 
 async function tmdbRequest(endpoint) {
+  if (memoryCache.has(endpoint)) return memoryCache.get(endpoint);
+  const data = await fetchTmdb(endpoint);
+  if (data) memoryCache.set(endpoint, data);
+  return data;
+}
+
+/** Rate-limited TMDB fetch with no caching. */
+async function fetchTmdb(endpoint) {
   const key = apiKey();
   if (!key) return null;
-
-  const cacheKey = endpoint;
-  if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey);
 
   const gap = Date.now() - lastRequestAt;
   if (gap < REQUEST_DELAY_MS) await sleep(REQUEST_DELAY_MS - gap);
@@ -50,9 +55,7 @@ async function tmdbRequest(endpoint) {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    const data = await res.json();
-    memoryCache.set(cacheKey, data);
-    return data;
+    return await res.json();
   } catch {
     return null;
   }
@@ -186,7 +189,25 @@ async function getTvMetaBatch(tvIds, { maxFetches = DEFAULT_MAX_FETCHES, priorit
   return { map, fetchesRemaining: Math.max(0, uncached.length - fetches) };
 }
 
+// Air dates change, so seasons expire after 6 hours (memoryCache never does).
+const SEASON_TTL_MS = 6 * 60 * 60 * 1000;
+const seasonCache = new Map();
+
+async function getTvSeason(tvId, season) {
+  const key = `tv/${tvId}/season/${season}`;
+  const hit = seasonCache.get(key);
+  if (hit && Date.now() - hit.at < SEASON_TTL_MS) return hit.data;
+  const data = await fetchTmdb(key);
+  if (data) {
+    seasonCache.delete(key);
+    seasonCache.set(key, { data, at: Date.now() });
+    if (seasonCache.size > 500) seasonCache.delete(seasonCache.keys().next().value);
+  }
+  return data;
+}
+
 module.exports = {
+  getTvSeason,
   getMovieMeta,
   getTvMeta,
   getMovieMetaBatch,
