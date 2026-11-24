@@ -10,6 +10,8 @@ struct MediaBrowseView: View {
     let kind: MediaKind
     var initialGenreId: Int? = nil
     var initialProviders: Set<Int>? = nil
+    /// Decade or year span from the Films landing chips.
+    var years: ClosedRange<Int>? = nil
 
     @State private var sort: BrowseSort = .popular
     @State private var genreId: Int? = nil
@@ -40,12 +42,14 @@ struct MediaBrowseView: View {
             genreId: genreId,
             providerIds: providerIds,
             watchRegion: preferences.resolvedWatchRegion,
+            years: years,
             page: page
         )
     }
 
     private var title: String {
-        kind == .movie ? "Browse films" : "Browse TV"
+        if let years { return "\(years.lowerBound)s films" }
+        return kind == .movie ? "Browse films" : "Browse TV"
     }
 
     var body: some View {

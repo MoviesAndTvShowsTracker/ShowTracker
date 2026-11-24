@@ -16,8 +16,14 @@ struct HeroCarousel: View {
         VStack(spacing: 10) {
             TabView(selection: $page) {
                 ForEach(Array(slides.enumerated()), id: \.element.id) { index, item in
-                    MediaNavLink(id: item.id, kind: kind) {
-                        slide(item)
+                    ZStack(alignment: .bottomTrailing) {
+                        MediaNavLink(id: item.id, kind: kind) {
+                            slide(item)
+                        }
+                        if kind == .movie {
+                            TrailerButton(movieId: item.id, title: item.displayTitle)
+                                .padding(16)
+                        }
                     }
                     .tag(index)
                 }
@@ -61,11 +67,6 @@ struct HeroCarousel: View {
             )
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(kind == .movie ? "Film" : "TV")
-                    .font(.caption.weight(.bold))
-                    .tracking(MarqueeType.labelTracking)
-                    .textCase(.uppercase)
-                    .foregroundStyle(.white.opacity(0.8))
                 Text(item.displayTitle)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.white)
@@ -77,9 +78,47 @@ struct HeroCarousel: View {
                 }
             }
             .padding(18)
+            .padding(.trailing, kind == .movie ? 110 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .accessibilityIdentifier("heroSlide")
+    }
+}
+
+/// Opens the film's YouTube trailer. Fetched on tap, so the hero costs nothing extra to load.
+private struct TrailerButton: View {
+    @Environment(\.marqueeTheme) private var theme
+    @Environment(\.openURL) private var openURL
+    let movieId: Int
+    let title: String
+    @State private var loading = false
+
+    var body: some View {
+        Button {
+            guard !loading else { return }
+            loading = true
+            Task {
+                let url = await TMDBService.trailerURL(movieId: movieId)
+                loading = false
+                if let url { openURL(url) } else { Feedback.failed("No trailer for this film yet.") }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if loading {
+                    ProgressView().tint(theme.onAccent).controlSize(.small)
+                } else {
+                    Image(systemName: "play.fill")
+                }
+                Text("Trailer")
+            }
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(theme.onAccent)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(theme.accent, in: Capsule())
+        }
+        .buttonStyle(PressablePosterStyle())
+        .accessibilityLabel("Play trailer for \(title)")
     }
 }

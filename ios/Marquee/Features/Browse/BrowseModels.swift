@@ -78,6 +78,7 @@ struct BrowseQuery: Equatable {
     var genreId: Int? = nil
     var providerIds: Set<Int> = []
     var watchRegion: String = Locale.current.region?.identifier.uppercased() ?? "US"
+    var years: ClosedRange<Int>? = nil
     var page: Int = 1
 
     var summary: String {

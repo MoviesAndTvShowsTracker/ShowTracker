@@ -19,6 +19,7 @@ struct CatalogShelfHeader: View {
     @Environment(\.marqueeTheme) private var theme
     let title: String
     var eyebrow: String? = nil
+    var subtitle: String? = nil
     var seeAll: AnyView? = nil
 
     var body: some View {
@@ -34,6 +35,11 @@ struct CatalogShelfHeader: View {
                 Text(title)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(theme.inkMuted)
+                }
             }
             Spacer(minLength: 8)
             if let seeAll {
@@ -54,6 +60,10 @@ struct CatalogShelf: View {
     var limit: Int = 14
     var seeAllLabel: String? = nil
     var seeAllDestination: (() -> AnyView)? = nil
+    var subtitle: String? = nil
+    var posterWidth: CGFloat? = nil
+    /// Replaces the year under posters (e.g. release day).
+    var caption: ((MediaItem) -> String?)? = nil
 
     private var slice: [MediaItem] {
         let cap = style == .ranked ? min(limit, 10) : limit
@@ -68,6 +78,7 @@ struct CatalogShelf: View {
                 CatalogShelfHeader(
                     title: title,
                     eyebrow: eyebrow,
+                    subtitle: subtitle,
                     seeAll: seeAllView
                 )
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -96,11 +107,12 @@ struct CatalogShelf: View {
                                     PosterTile(
                                         title: item.displayTitle,
                                         posterPath: item.poster_path,
-                                        width: style.posterWidth,
-                                        year: item.year
+                                        width: posterWidth ?? style.posterWidth,
+                                        year: caption?(item) ?? item.year
                                     )
                                 }
                             }
+                            .filmQuickActions(item, kind: kind)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -235,7 +247,7 @@ struct GenreChipRail: View {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: 12) {
-                CatalogShelfHeader(title: title, eyebrow: "Jump in")
+                CatalogShelfHeader(title: title)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(genres) { genre in

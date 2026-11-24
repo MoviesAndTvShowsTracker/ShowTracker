@@ -49,6 +49,26 @@ enum TMDBService {
         )
     }
 
+    /// Raw movie discover for curated shelves (params are TMDB discover keys).
+    static func discoverMovies(_ params: [String: String]) async throws -> [MediaItem] {
+        var query = [URLQueryItem(name: "include_adult", value: "false")]
+        query += params.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        let page: TMDBPaged<MediaItem> = try await APIClient.shared.get("/api/tmdb/discover/movie", query: query, auth: false)
+        return page.results
+    }
+
+    static func trendingPeople() async throws -> [TrendingPerson] {
+        let page: TMDBPaged<TrendingPerson> = try await APIClient.shared.get("/api/tmdb/trending/person/week", auth: false)
+        return page.results
+    }
+
+    static func trailerURL(movieId: Int) async -> URL? {
+        guard let res: TMDBVideoList = try? await APIClient.shared.get("/api/tmdb/movie/\(movieId)/videos", auth: false) else { return nil }
+        let youtube = (res.results ?? []).filter { $0.site == "YouTube" && $0.type == "Trailer" }
+        guard let pick = youtube.first(where: { $0.official == true }) ?? youtube.first else { return nil }
+        return URL(string: "https://www.youtube.com/watch?v=\(pick.key)")
+    }
+
     static func discover(_ browse: BrowseQuery) async throws -> TMDBPaged<MediaItem> {
         let path = browse.kind == .movie ? "/api/tmdb/discover/movie" : "/api/tmdb/discover/tv"
         var query = [
@@ -58,6 +78,11 @@ enum TMDBService {
         ]
         if let genreId = browse.genreId {
             query.append(URLQueryItem(name: "with_genres", value: String(genreId)))
+        }
+        if let years = browse.years {
+            let field = browse.kind == .movie ? "primary_release_date" : "first_air_date"
+            query.append(URLQueryItem(name: "\(field).gte", value: "\(years.lowerBound)-01-01"))
+            query.append(URLQueryItem(name: "\(field).lte", value: "\(years.upperBound)-12-31"))
         }
         if browse.sort == .topRated {
             // Avoid obscure 10.0 one-vote titles when sorting by rating.

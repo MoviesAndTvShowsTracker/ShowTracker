@@ -1,139 +1,50 @@
 import SwiftUI
 
 private struct FilmsLandingCache: Codable {
-    var trending: [MediaItem]
+    var today: [MediaItem]
+    var week: [MediaItem]
     var nowPlaying: [MediaItem]
-    var upcoming: [MediaItem]
-    var topRated: [MediaItem]
-    var onServices: [MediaItem]
-    var mood: [MediaItem]
-    var moodId: String
 }
 
 struct FilmsLandingView: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(AppPreferences.self) private var preferences
 
-    @State private var trending: [MediaItem] = []
+    @State private var today: [MediaItem] = []
+    @State private var week: [MediaItem] = []
     @State private var nowPlaying: [MediaItem] = []
-    @State private var upcoming: [MediaItem] = []
-    @State private var topRated: [MediaItem] = []
-    @State private var onServices: [MediaItem] = []
-    @State private var moodItems: [MediaItem] = []
     @State private var moodPack = CatalogMood.filmPack()
     @State private var loading = true
     @State private var error: String?
-    @State private var loadToken = 0
+    /// Bumped by pull-to-refresh; lazy shelves refetch when it changes.
+    @State private var refresh = 0
 
-    private var hasServices: Bool { !preferences.preferredProviderIds.isEmpty }
+    private var diary: FilmDiaryIndex { .shared }
+    private var providers: Set<Int> { preferences.preferredProviderIds }
+    private var region: String { preferences.resolvedWatchRegion }
 
     private var servicesTitle: String {
         let names = StreamingProviderOption.allCases
-            .filter { preferences.preferredProviderIds.contains($0.rawValue) }
+            .filter { providers.contains($0.rawValue) }
             .map(\.title)
-        if names.isEmpty { return "On streaming" }
-        if names.count == 1 { return "On \(names[0])" }
-        if names.count == 2 { return "On \(names[0]) & \(names[1])" }
-        return "On your services"
+        switch names.count {
+        case 0: return "New to streaming"
+        case 1: return "New on \(names[0])"
+        default: return "New on your services"
+        }
     }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 28) {
+            LazyVStack(alignment: .leading, spacing: 30) {
                 LandingIdentityTitle(title: "Films")
 
-                if loading && trending.isEmpty {
+                if loading && week.isEmpty {
                     LandingSkeleton()
-                } else if trending.isEmpty, let error {
-                    ErrorStateView(message: error) {
-                        Task { await load() }
-                    }
+                } else if week.isEmpty, let error {
+                    ErrorStateView(message: error) { Task { await load() } }
                 } else {
-                    if !trending.isEmpty {
-                        HeroCarousel(items: trending, kind: .movie)
-                    }
-
-                    ServicesWatchBar()
-
-                    // Ranked = only intentional “different” poster treatment.
-                    CatalogShelf(
-                        title: "Top 10 this week",
-                        items: trending,
-                        kind: .movie,
-                        style: .ranked,
-                        limit: 10
-                    )
-
-                    // Cinema = only landscape break on this page.
-                    if hasServices {
-                        CatalogShelf(
-                            title: servicesTitle,
-                            items: onServices,
-                            kind: .movie,
-                            style: .cinema,
-                            eyebrow: "Wide picks · your subscriptions",
-                            limit: 12,
-                            seeAllLabel: "Browse",
-                            seeAllDestination: {
-                                AnyView(
-                                    MediaBrowseView(
-                                        kind: .movie,
-                                        initialProviders: preferences.preferredProviderIds
-                                    )
-                                )
-                            }
-                        )
-                    }
-
-                    CatalogShelf(
-                        title: "In theaters",
-                        items: nowPlaying,
-                        kind: .movie,
-                        style: .posters,
-                        eyebrow: "Now playing",
-                        limit: 14
-                    )
-
-                    CatalogShelf(
-                        title: "Coming soon",
-                        items: upcoming,
-                        kind: .movie,
-                        style: .posters,
-                        eyebrow: "Upcoming",
-                        limit: 14
-                    )
-
-                    CatalogShelf(
-                        title: "Top rated",
-                        items: topRated,
-                        kind: .movie,
-                        style: .posters,
-                        eyebrow: "All time favorites",
-                        limit: 14
-                    )
-
-                    GenreChipRail(kind: .movie, genres: CatalogMood.filmGenreChips())
-
-                    CatalogShelf(
-                        title: moodPack.title,
-                        items: moodItems,
-                        kind: .movie,
-                        style: .posters,
-                        eyebrow: moodPack.eyebrow,
-                        limit: 14,
-                        seeAllLabel: "More",
-                        seeAllDestination: {
-                            AnyView(MediaBrowseView(kind: .movie, initialGenreId: moodPack.genreId))
-                        }
-                    )
-
-                    browseFooter
-
-                    if let error {
-                        InlineErrorBanner(message: error) {
-                            Task { await load() }
-                        }
-                    }
+                    sections
                 }
             }
             .padding(.vertical, 16)
@@ -150,143 +61,137 @@ struct FilmsLandingView: View {
                 }
             }
         }
-        .task { await load() }
-        .refreshable { await load() }
-        .onChange(of: preferences.preferredProviderIds) { _, _ in
-            Task { await load(servicesOnly: true) }
+        .task {
+            async let index: Void = diary.refresh()
+            await load()
+            await index
+        }
+        .refreshable {
+            refresh += 1
+            async let index: Void = diary.refresh(force: true)
+            await load()
+            await index
         }
     }
 
-    private var browseFooter: some View {
-        NavigationLink {
-            MediaBrowseView(kind: .movie)
-        } label: {
-            HStack(spacing: 10) {
-                Text("Browse all films")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                Spacer()
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .foregroundStyle(theme.olive)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(theme.border, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressablePosterStyle())
-        .padding(.horizontal, 20)
-    }
-
-    private func load(servicesOnly: Bool = false) async {
-        error = nil
-        moodPack = CatalogMood.filmPack()
-        loadToken += 1
-        let token = loadToken
-
-        if !servicesOnly,
-           trending.isEmpty,
-           let cached = ResponseCache.load(FilmsLandingCache.self, key: "films.landing.v3") {
-            trending = cached.trending
-            nowPlaying = cached.nowPlaying
-            upcoming = cached.upcoming
-            topRated = cached.topRated
-            onServices = cached.onServices
-            moodItems = cached.moodId == moodPack.id ? cached.mood : cached.mood
-            loading = false
+    @ViewBuilder
+    private var sections: some View {
+        if !today.isEmpty {
+            HeroCarousel(items: today, kind: .movie)
         }
 
-        do {
-            let region = preferences.resolvedWatchRegion
-            let providers = preferences.preferredProviderIds
-            let mood = moodPack
+        ServicesWatchBar()
 
-            if servicesOnly {
-                if providers.isEmpty {
-                    onServices = []
-                } else {
-                    let stream = try await TMDBService.discover(
-                        BrowseQuery(
-                            kind: .movie,
-                            sort: .popular,
-                            providerIds: providers,
-                            watchRegion: region
-                        )
-                    )
-                    guard token == loadToken else { return }
-                    onServices = dedupe(stream.results, against: trending)
+        CatalogShelf(title: "Top 10 this week", items: week, kind: .movie, style: .ranked, limit: 10)
+
+        LazyShelf(
+            key: "films.new.\(region).\(providers.sorted().map(String.init).joined(separator: "-"))",
+            refresh: refresh,
+            load: { [providers, region] in try await FilmShelfQueries.newOnStreaming(providers: providers, region: region) }
+        ) { items in
+            CatalogShelf(
+                title: servicesTitle,
+                items: items,
+                kind: .movie,
+                style: .cinema,
+                limit: 12,
+                seeAllLabel: "Browse",
+                seeAllDestination: { [providers] in
+                    AnyView(MediaBrowseView(kind: .movie, initialProviders: providers))
                 }
-                return
-            }
-
-            async let t = TMDBService.fetchPaged("trending/movie/week")
-            async let n = TMDBService.fetchPaged("movie/now_playing")
-            async let u = TMDBService.fetchPaged("movie/upcoming")
-            async let r = TMDBService.fetchPaged("movie/top_rated")
-            async let moodPage = TMDBService.discover(
-                BrowseQuery(kind: .movie, sort: .popular, genreId: mood.genreId, watchRegion: region)
             )
+        }
 
-            let trend = try await t.results
-            let now = try await n.results
-            let soon = try await u.results
-            let top = try await r.results
-            let moodResults = (try? await moodPage.results) ?? []
-
-            var stream: [MediaItem] = []
-            if !providers.isEmpty {
-                stream = (try? await TMDBService.discover(
-                    BrowseQuery(
-                        kind: .movie,
-                        sort: .popular,
-                        providerIds: providers,
-                        watchRegion: region
-                    )
-                ).results) ?? []
+        if let loved = diary.loved {
+            LazyShelf(key: "films.recs.\(loved.id)", refresh: refresh, load: {
+                try await FilmShelfQueries.recommendations(for: loved.id)
+            }) { items in
+                CatalogShelf(
+                    title: "Because you loved \(loved.title)",
+                    items: items.filter { diary.watchCounts[$0.id] == nil },
+                    kind: .movie
+                )
             }
+        }
 
-            guard token == loadToken else { return }
+        CatalogShelf(title: "In theaters", items: nowPlaying, kind: .movie)
 
-            trending = trend
-            nowPlaying = now
-            upcoming = soon
-            topRated = top
-            onServices = dedupe(stream, against: trend)
-            moodItems = dedupe(moodResults, against: trend + stream)
-            ResponseCache.store(
-                FilmsLandingCache(
-                    trending: trend,
-                    nowPlaying: now,
-                    upcoming: soon,
-                    topRated: top,
-                    onServices: onServices,
-                    mood: moodItems,
-                    moodId: mood.id
-                ),
-                key: "films.landing.v3"
+        LazyShelf(key: "films.coming", refresh: refresh, load: FilmShelfQueries.comingSoon) { items in
+            ComingSoonSection(items: items)
+        }
+
+        LazyShelf(key: "films.faces.v2", refresh: refresh, load: FilmShelfQueries.faces) { people in
+            FacesRail(people: people)
+        }
+
+        LazyShelf(key: "films.short.v2", refresh: refresh, load: FilmShelfQueries.shortAndGreat) { items in
+            CatalogShelf(
+                title: "Short and great",
+                items: items,
+                kind: .movie,
+                subtitle: "Under 95 minutes",
+                posterWidth: 96
             )
-            loading = false
-        } catch {
-            if trending.isEmpty {
-                self.error = error.localizedDescription
-            } else {
-                self.error = "Couldn’t refresh. Showing last saved films."
-            }
-            loading = false
+        }
+
+        LazyShelf(key: "films.gems.v2", refresh: refresh, load: FilmShelfQueries.hiddenGems) { items in
+            CatalogShelf(title: "Hidden gems", items: items, kind: .movie, subtitle: "Highly rated, rarely seen")
+        }
+
+        LazyShelf(key: "films.top.v2", refresh: refresh, load: FilmShelfQueries.topRated) { items in
+            CatalogShelf(title: "Top rated", items: items, kind: .movie)
+        }
+
+        LazyShelf(key: "films.mood.\(moodPack.id)", refresh: refresh, load: { [moodPack, region] in
+            try await TMDBService.discover(
+                BrowseQuery(kind: .movie, sort: .popular, genreId: moodPack.genreId, watchRegion: region)
+            ).results
+        }) { items in
+            CatalogShelf(
+                title: moodPack.title,
+                items: items,
+                kind: .movie,
+                seeAllLabel: "More",
+                seeAllDestination: { [moodPack] in
+                    AnyView(MediaBrowseView(kind: .movie, initialGenreId: moodPack.genreId))
+                },
+                subtitle: moodPack.eyebrow
+            )
+        }
+
+        FilmBrowseCard(genres: CatalogMood.filmGenreChips())
+
+        if let error {
+            InlineErrorBanner(message: error) { Task { await load() } }
         }
     }
 
-    private func dedupe(_ items: [MediaItem], against existing: [MediaItem]) -> [MediaItem] {
-        let seen = Set(existing.map(\.id))
-        var out: [MediaItem] = []
-        for item in items where !seen.contains(item.id) {
-            out.append(item)
-            if out.count >= 14 { break }
+    /// First paint: only the three lists above the fold. Everything else loads lazily.
+    private func load() async {
+        error = nil
+        if week.isEmpty, let cached = ResponseCache.load(FilmsLandingCache.self, key: "films.landing.v4") {
+            today = cached.today
+            week = cached.week
+            nowPlaying = cached.nowPlaying
+            loading = false
         }
-        return out.isEmpty ? Array(items.prefix(14)) : out
+        do {
+            async let d = TMDBService.fetchPaged("trending/movie/day")
+            async let w = TMDBService.fetchPaged("trending/movie/week")
+            async let n = TMDBService.fetchPaged("movie/now_playing")
+            let (dayList, weekList) = try await (d.results, w.results)
+            let now = (try? await n.results) ?? []
+            today = dayList
+            week = weekList
+            nowPlaying = now
+            ResponseCache.store(
+                FilmsLandingCache(today: dayList, week: weekList, nowPlaying: now),
+                key: "films.landing.v4"
+            )
+        } catch {
+            self.error = week.isEmpty ? error.localizedDescription : "Couldn’t refresh. Showing last saved films."
+        }
+        loading = false
     }
 }
 

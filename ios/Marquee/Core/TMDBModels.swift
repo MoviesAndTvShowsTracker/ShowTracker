@@ -244,3 +244,25 @@ struct PersonCredit: Decodable, Hashable, Sendable, Identifiable {
     var isAdult: Bool { adult == true }
 }
 
+
+struct TrendingPerson: Codable, Identifiable, Hashable, Sendable {
+    let id: Int
+    let name: String
+    let profile_path: String?
+    let known_for_department: String?
+    let known_for: [KnownFor]?
+
+    struct KnownFor: Codable, Hashable, Sendable {
+        let media_type: String?
+    }
+}
+
+struct TMDBVideoList: Decodable, Sendable {
+    struct Video: Decodable, Sendable {
+        let key: String
+        let site: String?
+        let type: String?
+        let official: Bool?
+    }
+    let results: [Video]?
+}
