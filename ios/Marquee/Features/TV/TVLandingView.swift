@@ -200,7 +200,7 @@ struct TVLandingView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Your library")
                             .font(.caption2.weight(.bold))
-                            .tracking(0.8)
+                            .tracking(MarqueeType.labelTracking)
                             .textCase(.uppercase)
                             .foregroundStyle(theme.olive)
                         Text("Your shows")

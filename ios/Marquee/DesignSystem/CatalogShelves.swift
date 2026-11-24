@@ -27,7 +27,7 @@ struct CatalogShelfHeader: View {
                 if let eyebrow, !eyebrow.isEmpty {
                     Text(eyebrow)
                         .font(.caption2.weight(.bold))
-                        .tracking(0.8)
+                        .tracking(MarqueeType.labelTracking)
                         .textCase(.uppercase)
                         .foregroundStyle(theme.olive)
                 }
@@ -124,6 +124,7 @@ struct CatalogShelf: View {
 }
 
 struct RankedPosterTile: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var rankFigure: CGFloat = 56
     @Environment(\.marqueeTheme) private var theme
     let rank: Int
     let title: String
@@ -134,7 +135,7 @@ struct RankedPosterTile: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             Text("\(rank)")
-                .font(.system(size: 56, weight: .heavy, design: .rounded))
+                .font(.system(size: rankFigure, weight: .heavy))
                 .foregroundStyle(theme.ink.opacity(0.14))
                 .offset(x: 6, y: 4)
                 .accessibilityHidden(true)

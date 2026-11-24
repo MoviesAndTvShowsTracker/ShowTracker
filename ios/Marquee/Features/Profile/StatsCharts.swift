@@ -72,7 +72,7 @@ struct DecadeMeterList: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.caption.weight(.bold))
-                .tracking(0.8)
+                .tracking(MarqueeType.labelTracking)
                 .textCase(.uppercase)
                 .foregroundStyle(theme.inkMuted)
                 .padding(.top, 4)

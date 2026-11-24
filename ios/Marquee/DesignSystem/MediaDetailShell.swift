@@ -144,7 +144,7 @@ private struct CreditsRowsPainted: View {
                     HStack(alignment: .top, spacing: 14) {
                         Text(row.label)
                             .font(.caption2.weight(.bold))
-                            .tracking(1.0)
+                            .tracking(MarqueeType.labelTracking)
                             .textCase(.uppercase)
                             .foregroundStyle(theme.olive)
                             .frame(width: 72, alignment: .leading)
@@ -559,7 +559,7 @@ private struct MediaDetailHero: View {
                 if let genresLine, !genresLine.isEmpty {
                     Text(genresLine)
                         .font(.footnote.weight(.semibold))
-                        .tracking(0.3)
+                        .tracking(MarqueeType.labelTracking)
                         .foregroundStyle(Color.white.opacity(0.8))
                         .lineLimit(2)
                         .opacity(appeared ? Double(1 - collapse) * 0.95 : 0)

@@ -55,7 +55,7 @@ struct PersonView: View {
                     } else if let only = segments.first {
                         Text(only.label)
                             .font(.caption.weight(.bold))
-                            .tracking(0.8)
+                            .tracking(MarqueeType.labelTracking)
                             .textCase(.uppercase)
                             .foregroundStyle(theme.olive)
                             .padding(.horizontal, 20)

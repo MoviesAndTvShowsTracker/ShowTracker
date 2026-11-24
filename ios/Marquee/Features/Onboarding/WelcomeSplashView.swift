@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct WelcomeSplashView: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var titleFigure: CGFloat = 32
+    @ScaledMetric(relativeTo: .largeTitle) private var glyphSize: CGFloat = 72
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onContinue: () -> Void
@@ -70,12 +72,12 @@ struct WelcomeSplashView: View {
                     )
                     .frame(height: 220)
                 Image(systemName: step.visual)
-                    .font(.system(size: 72, weight: .semibold))
+                    .font(.system(size: glyphSize, weight: .semibold))
                     .foregroundStyle(theme.olive)
                     .symbolRenderingMode(.hierarchical)
             }
             Text(step.title)
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: titleFigure, weight: .bold))
                 .foregroundStyle(theme.olive)
             Text(step.text)
                 .font(.body)

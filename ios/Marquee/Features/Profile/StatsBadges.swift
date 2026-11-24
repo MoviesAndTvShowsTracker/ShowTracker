@@ -96,7 +96,7 @@ struct BadgeCabinet: View {
                     if !group.isEmpty {
                         Text(kind.rawValue)
                             .font(.caption.weight(.bold))
-                            .tracking(0.8)
+                            .tracking(MarqueeType.labelTracking)
                             .textCase(.uppercase)
                             .foregroundStyle(kind == .film ? theme.olive.opacity(0.7) : theme.olive)
                             .padding(.top, 4)

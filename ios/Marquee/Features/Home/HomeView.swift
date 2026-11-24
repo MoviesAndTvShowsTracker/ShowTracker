@@ -556,6 +556,7 @@ struct ContinueCard: View {
 }
 
 struct WeekRecapCard: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var weekFigure: CGFloat = 40
     @Environment(\.marqueeTheme) private var theme
     let recap: WeekRecap
 
@@ -619,7 +620,7 @@ struct WeekRecapCard: View {
 
             // One hero number — don’t also put “Time” in a third mini-card.
             Text(StatsFormat.minutes(minutes))
-                .font(.system(size: 40, weight: .bold, design: .rounded))
+                .font(.system(size: weekFigure, weight: .bold))
                 .foregroundStyle(theme.ink)
                 .monospacedDigit()
                 .contentTransition(.numericText())

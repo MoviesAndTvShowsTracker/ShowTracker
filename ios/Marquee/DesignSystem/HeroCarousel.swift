@@ -63,7 +63,7 @@ struct HeroCarousel: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(kind == .movie ? "Film" : "TV")
                     .font(.caption.weight(.bold))
-                    .tracking(1)
+                    .tracking(MarqueeType.labelTracking)
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.8))
                 Text(item.displayTitle)

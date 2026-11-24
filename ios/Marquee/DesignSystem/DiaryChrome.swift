@@ -124,7 +124,7 @@ struct MetaCell: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption2.weight(.bold))
-                .tracking(0.8)
+                .tracking(MarqueeType.labelTracking)
                 .textCase(.uppercase)
                 .foregroundStyle(theme.olive)
             Text(value)

@@ -76,7 +76,7 @@ struct FactGrid: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(fact.label)
                 .font(.caption2.weight(.bold))
-                .tracking(0.8)
+                .tracking(MarqueeType.labelTracking)
                 .textCase(.uppercase)
                 .foregroundStyle(theme.inkMuted)
                 .lineLimit(1)
@@ -407,7 +407,7 @@ struct DoubleFeature: View {
         let content = VStack(alignment: .leading, spacing: 8) {
             Label(label, systemImage: icon)
                 .font(.caption2.weight(.bold))
-                .tracking(0.8)
+                .tracking(MarqueeType.labelTracking)
                 .textCase(.uppercase)
                 .foregroundStyle(theme.inkMuted)
             Text(StatsFormat.minutes(film.minutes ?? 0))

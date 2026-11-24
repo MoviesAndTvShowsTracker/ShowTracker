@@ -101,6 +101,11 @@ extension View {
     }
 }
 
+/// Type tokens. SF Pro only (DESIGN.md); uppercase labels share one tracking.
+enum MarqueeType {
+    static let labelTracking: CGFloat = 1.0
+}
+
 enum MarqueeMotion {
     static let micro = Animation.spring(response: 0.22, dampingFraction: 0.86)
     static let standard = Animation.spring(response: 0.32, dampingFraction: 0.84)
@@ -168,7 +173,7 @@ struct OliveChip: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.bold))
-            .tracking(0.6)
+            .tracking(MarqueeType.labelTracking)
             .textCase(.uppercase)
             .foregroundStyle(theme.olive)
             .padding(.horizontal, 10)
@@ -186,7 +191,7 @@ struct SectionKicker: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.bold))
-            .tracking(1.2)
+            .tracking(MarqueeType.labelTracking)
             .textCase(.uppercase)
             .foregroundStyle(accented ? theme.ink : theme.olive)
     }

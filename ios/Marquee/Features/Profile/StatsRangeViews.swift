@@ -48,6 +48,7 @@ struct StatsRangeSwitch: View {
 
 /// The sign over the door: Deep Olive panel, a bulb row that chases once on reveal.
 struct ScreenTimeHero: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var heroFigure: CGFloat = 50
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -68,11 +69,11 @@ struct ScreenTimeHero: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(since.map { "Screen time · since \($0)" } ?? "Screen time")
                     .font(.caption.weight(.bold))
-                    .tracking(1.2)
+                    .tracking(MarqueeType.labelTracking)
                     .textCase(.uppercase)
                     .foregroundStyle(ink.opacity(0.7))
                 Text(StatsFormat.span(shown ? (overview?.totalMins ?? 0) : 0))
-                    .font(.system(size: 50, weight: .bold, design: .rounded))
+                    .font(.system(size: heroFigure, weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(ink)
                     .contentTransition(.numericText())
@@ -202,7 +203,7 @@ struct ScreenTimeStrip: View {
             HStack {
                 Text("Screen time")
                     .font(.caption.weight(.bold))
-                    .tracking(1.2)
+                    .tracking(MarqueeType.labelTracking)
                     .textCase(.uppercase)
                     .foregroundStyle(ink.opacity(0.7))
                 Spacer()
@@ -297,6 +298,7 @@ struct SplitRule: View {
 // MARK: - Lately (range card)
 
 struct LatelyCard: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var latelyFigure: CGFloat = 34
     @Environment(\.marqueeTheme) private var theme
     let ranges: StatsRanges
     @Binding var rangeKey: StatsRangeKey
@@ -315,7 +317,7 @@ struct LatelyCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(range?.isQuiet == false ? StatsFormat.span(totals?.totalMins ?? 0) : "0m")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .font(.system(size: latelyFigure, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(theme.ink)
                         .contentTransition(.numericText())
@@ -504,7 +506,7 @@ struct TicketStubRow: View {
                 }
                 Text(label)
                     .font(.caption2.weight(.bold))
-                    .tracking(0.8)
+                    .tracking(MarqueeType.labelTracking)
                     .textCase(.uppercase)
                     .foregroundStyle(theme.inkMuted)
                     .lineLimit(1)
@@ -599,7 +601,7 @@ struct TopBillingList: View {
     private func row(index: Int, show: StatsTopShow) -> some View {
         HStack(spacing: 12) {
             Text("\(index + 1)")
-                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                .font(.system(.title3).weight(.bold).monospacedDigit())
                 .foregroundStyle(index == 0 ? theme.ink : theme.inkMuted)
                 .frame(width: 18)
             CachedAsyncImage(url: AppConfig.posterURL(path: show.tvPosterImage, size: "w185"))

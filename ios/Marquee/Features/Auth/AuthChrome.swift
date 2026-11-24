@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AuthScaffold<Content: View>: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var titleFigure: CGFloat = 40
     @Environment(\.marqueeTheme) private var theme
     var kicker: String
     var title: String
@@ -30,7 +31,7 @@ struct AuthScaffold<Content: View>: View {
                 .shadow(color: theme.olive.opacity(0.2), radius: 18, y: 10)
             SectionKicker(text: kicker)
             Text(title)
-                .font(.system(size: 40, weight: .bold))
+                .font(.system(size: titleFigure, weight: .bold))
                 .tracking(-1)
                 .foregroundStyle(theme.olive)
             Text(subtitle)
@@ -55,7 +56,7 @@ struct AuthTextField: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.bold))
-                .tracking(0.9)
+                .tracking(MarqueeType.labelTracking)
                 .textCase(.uppercase)
                 .foregroundStyle(theme.olive)
             Group {
