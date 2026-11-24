@@ -189,5 +189,7 @@ module.exports = {
   ensureMovieRuntime,
   filmRuntimeMinutes,
   buildTasteProfile,
+  buildTasteProfileFromMaps,
+  topTvIdsByEpisodes,
   MAX_RUNTIME_BACKFILL,
 };

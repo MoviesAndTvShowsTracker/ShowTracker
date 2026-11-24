@@ -306,7 +306,9 @@ enum DiaryService {
         let env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
         return env.stats ?? DashboardStats(
             insight: nil, overview: nil, library: nil, taste: nil, year: nil,
-            week: nil, activity: nil, funFacts: nil, films: nil, ratings: nil, milestones: nil
+            week: nil, activity: nil, funFacts: nil, films: nil, ratings: nil, milestones: nil,
+            rhythm: nil, lobbyType: nil, seasonArcs: nil, biggestNight: nil, hotTakes: nil,
+            previousYear: nil, memberSince: nil
         )
     }
 

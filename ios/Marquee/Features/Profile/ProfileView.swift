@@ -11,6 +11,8 @@ struct ProfileView: View {
     @State private var favoritesTV: [FavoriteTVDoc] = []
     @State private var watchedTV: [FavoriteTVDoc] = []
     @State private var overview: StatsOverview?
+    @State private var lobbyType: StatsLobbyType?
+    @State private var lobbyCaption: String?
     @State private var ready = false
     @State private var error: String?
     @State private var avatarItem: PhotosPickerItem?
@@ -147,29 +149,22 @@ struct ProfileView: View {
             StatsView()
         } label: {
             GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        SectionKicker(text: "Estimated watch time")
+                        SectionKicker(text: "Lobby")
                         Spacer()
-                        Text("All stats")
+                        Text("Open diary")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(theme.olive)
                     }
-                    Text(StatsFormat.span(overview?.totalMins ?? 0))
-                        .font(.system(size: 32, weight: .bold, design: .serif))
-                        .foregroundStyle(theme.olive)
-                        .minimumScaleFactor(0.65)
-                        .lineLimit(1)
-                        .monospacedDigit()
-                    Text(catalogueLine)
+                    Text(lobbyType?.label ?? "Your lobby")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(theme.ink)
+                        .lineLimit(2)
+                    Text(lobbyType?.blurb ?? lobbyCaption ?? catalogueLine)
                         .font(.subheadline)
                         .foregroundStyle(theme.inkMuted)
-                    TimeSplitBar(
-                        filmMins: overview?.filmMins ?? 0,
-                        tvMins: overview?.tvMins ?? 0,
-                        filmShare: overview?.filmShare,
-                        tvShare: overview?.tvShare
-                    )
+                        .lineLimit(3)
                 }
             }
         }
@@ -330,7 +325,7 @@ struct ProfileView: View {
             let watched = try await wf
             let favTV = try await ft
             let watchedShows = try await wt
-            let dash = try await stats.overview
+            let dash = try await stats
             var transaction = Transaction()
             transaction.disablesAnimations = !ready
             withTransaction(transaction) {
@@ -339,7 +334,9 @@ struct ProfileView: View {
                 watchedFilms = watched
                 favoritesTV = favTV
                 watchedTV = watchedShows
-                overview = dash
+                overview = dash.overview
+                lobbyType = dash.lobbyType
+                lobbyCaption = dash.rhythm?.caption
                 ready = true
                 error = nil
             }

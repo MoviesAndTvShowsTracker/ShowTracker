@@ -37,17 +37,253 @@ struct DashboardStats: Decodable, Sendable{
     let films: StatsFilmsBlock?
     let ratings: StatsRatings?
     let milestones: [StatsMilestone]?
+    let rhythm: StatsRhythm?
+    let lobbyType: StatsLobbyType?
+    let seasonArcs: [StatsSeasonArc]?
+    let biggestNight: StatsBiggestNight?
+    let hotTakes: [StatsHotTake]?
+    let previousYear: StatsPeriod?
+    let memberSince: String?
+    var ranges: StatsRanges? = nil
+}
+
+// MARK: - Range-scoped stats (week / month / year / all)
+
+enum StatsRangeKey: String, CaseIterable, Identifiable, Sendable {
+    case week, month, year, all
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .week: "Week"
+        case .month: "Month"
+        case .year: "Year"
+        case .all: "All"
+        }
+    }
+
+    var heroKicker: String {
+        switch self {
+        case .week: "This week"
+        case .month: "This month"
+        case .year: "This year"
+        case .all: "All time"
+        }
+    }
+
+    var previousPhrase: String {
+        switch self {
+        case .week: "this point last week"
+        case .month: "this point last month"
+        case .year: "this point last year"
+        case .all: ""
+        }
+    }
+
+    var quietLine: String {
+        switch self {
+        case .week: "Quiet week so far. The lobby's open."
+        case .month: "Nothing on the bill this month yet."
+        case .year: "A fresh year. First ticket's on you."
+        case .all: "Nothing logged yet."
+        }
+    }
+}
+
+struct StatsRanges: Decodable, Sendable {
+    let week: StatsRange?
+    let month: StatsRange?
+    let year: StatsRange?
+    let all: StatsRange?
+
+    subscript(key: StatsRangeKey) -> StatsRange? {
+        switch key {
+        case .week: week
+        case .month: month
+        case .year: year
+        case .all: all
+        }
+    }
+}
+
+struct StatsRange: Decodable, Sendable {
+    let key: String?
+    let start: String?
+    let end: String?
+    let totals: StatsRangeTotals?
+    let previous: StatsRangePrevious?
+    let trend: StatsRangeTrend?
+    let rhythm: StatsRhythm?
+    let biggestNight: StatsBiggestNight?
+    let topShows: [StatsTopShow]?
+    let films: [StatsRangeFilm]?
+    let hotTakes: [StatsHotTake]?
+    let taste: StatsTaste?
+
+    var isQuiet: Bool { (totals?.episodePlays ?? 0) + (totals?.filmPlays ?? 0) == 0 }
+}
+
+struct StatsRangeTotals: Decodable, Sendable {
+    let totalMins: Int?
+    let tvMins: Int?
+    let filmMins: Int?
+    let episodeCount: Int?
+    let episodePlays: Int?
+    let rewatchPlays: Int?
+    let filmCount: Int?
+    let filmPlays: Int?
+    let showCount: Int?
+    let activeDays: Int?
+}
+
+struct StatsRangePrevious: Decodable, Sendable {
+    let start: String?
+    let end: String?
+    let totalMins: Int?
+    let plays: Int?
+}
+
+struct StatsRangeTrend: Decodable, Sendable {
+    let unit: String?
+    let buckets: [StatsRangeBucket]?
+}
+
+struct StatsRangeBucket: Decodable, Identifiable, Sendable, Equatable {
+    var id: String { key ?? label ?? "" }
+    let key: String?
+    let label: String?
+    let tvMins: Int?
+    let filmMins: Int?
+    let plays: Int?
+    let future: Bool?
+
+    var totalMins: Int { (tvMins ?? 0) + (filmMins ?? 0) }
+}
+
+struct StatsTopShow: Decodable, Identifiable, Sendable {
+    var id: String { tvId?.stringValue ?? tvTitle ?? "" }
+    let tvId: FlexibleID?
+    let tvTitle: String?
+    let tvPosterImage: String?
+    let plays: Int?
+    let mins: Int?
+}
+
+struct StatsRangeFilm: Decodable, Identifiable, Sendable {
+    var id: String { "\(movieId ?? "")-\(watchedAt ?? "")" }
+    let movieId: String?
+    let title: String?
+    let poster: String?
+    let watchedAt: String?
+    let rating: Double?
 }
 
 struct StatsOverview: Decodable, Sendable{
     let episodeCount: Int?
     let filmCount: Int?
     let tvShowCount: Int?
+    let episodePlayCount: Int?
+    let episodeRewatchPlays: Int?
+    let filmPlayCount: Int?
     let totalMins: Int?
     let filmMins: Int?
     let tvMins: Int?
     let filmShare: Int?
     let tvShare: Int?
+}
+
+struct StatsRhythm: Decodable, Sendable {
+    let byHour: [StatsHourBucket]?
+    let peakHour: Int?
+    let peakMins: Int?
+    let persona: String?
+    let caption: String?
+}
+
+struct StatsHourBucket: Decodable, Sendable {
+    let mins: Int?
+    let filmMins: Int?
+    let tvMins: Int?
+    let playCount: Int?
+
+    init(mins: Int? = 0, filmMins: Int? = 0, tvMins: Int? = 0, playCount: Int? = 0) {
+        self.mins = mins
+        self.filmMins = filmMins
+        self.tvMins = tvMins
+        self.playCount = playCount
+    }
+}
+
+struct StatsLobbyType: Decodable, Sendable {
+    let schedule: String?
+    let scheduleLabel: String?
+    let pass: String?
+    let passLabel: String?
+    let finish: String?
+    let finishLabel: String?
+    let media: String?
+    let mediaLabel: String?
+    let label: String?
+    let blurb: String?
+    let rewatchRate: Int?
+}
+
+struct StatsSeasonArc: Decodable, Identifiable, Sendable {
+    var id: String { tvId?.stringValue ?? tvTitle ?? UUID().uuidString }
+    let tvId: FlexibleID?
+    let tvTitle: String?
+    let tvPosterImage: String?
+    let passes: [StatsSeasonPass]?
+    let passCount: Int?
+    let totalMins: Int?
+    let totalPlays: Int?
+}
+
+struct StatsSeasonPass: Decodable, Identifiable, Sendable {
+    var id: String { "\(kind ?? "")-\(label ?? "")-\(episodes ?? 0)" }
+    let kind: String?
+    let label: String?
+    let episodes: Int?
+    let mins: Int?
+    let start: String?
+    let end: String?
+}
+
+struct StatsBiggestNight: Decodable, Sendable {
+    let date: String?
+    let count: Int?
+    let minutes: Int?
+    let items: [StatsNightItem]?
+}
+
+struct StatsNightItem: Decodable, Identifiable, Sendable {
+    var id: String { "\(kind ?? "")-\(mediaId ?? title ?? "")-\(watchedAt ?? "")" }
+    let kind: String?
+    let mediaId: String?
+    let title: String?
+    let subtitle: String?
+    let stillOrPoster: String?
+    let watchedAt: String?
+    let mins: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, mediaId = "id", title, subtitle, stillOrPoster, watchedAt, mins
+    }
+}
+
+struct StatsHotTake: Decodable, Identifiable, Sendable {
+    var id: String { "\(kind ?? "")-\(mediaId ?? title ?? UUID().uuidString)" }
+    let kind: String?
+    let mediaId: String?
+    let title: String?
+    let poster: String?
+    let userRating: Double?
+    let communityRating: Double?
+    let delta: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, mediaId = "id", title, poster, userRating, communityRating, delta
+    }
 }
 
 struct StatsLibrary: Decodable, Sendable{

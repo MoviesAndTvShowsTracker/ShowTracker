@@ -24,6 +24,17 @@ const {
   resolveTimeZone,
 } = require('./statsCalendar');
 const { dedupeFilms } = require('./filmDedupe');
+const {
+  buildHourRhythm,
+  buildLobbyType,
+  buildSeasonArcs,
+  buildBiggestNight,
+  buildHotTakes,
+  attachEpisodePosters,
+} = require('./lobbyDiaryStats');
+const { buildStatsRanges } = require('./statsRanges');
+const { topTvIdsByEpisodes } = require('./mediaMeta');
+const { getTvMetaBatch } = require('../lib/tmdb');
 
 function episodeRuntimeKey(tvId, seasonNumber, episodeNumber) {
   return `${tvId}:${seasonNumber}-${episodeNumber}`;
@@ -311,7 +322,7 @@ function buildInsight({ overview, activity, year, taste, funFacts, mostWatched }
 }
 
 /** Bump when the payload shape changes so cached snapshots rebuild. */
-const STATS_SCHEMA_VERSION = 7;
+const STATS_SCHEMA_VERSION = 10;
 
 async function buildUserStatsDashboard(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
@@ -530,6 +541,45 @@ async function buildUserStatsDashboard(userId, options = {}) {
     mostWatched,
   });
 
+  const libraryFull = {
+    ...library,
+    caughtUp: tracks.filter((t) => isCaughtUpWaiting(t)).length,
+    backlog: computeBacklog(tracks),
+    totalTracked: tracks.length,
+    completionRate: pct(library.finished, tracks.length),
+  };
+
+  const rhythm = buildHourRhythm(episodePlays, rawFilms, timeZone);
+  const lobbyType = buildLobbyType({
+    rhythm,
+    library: libraryFull,
+    overview,
+    episodeCount: episodes.length,
+    episodeRewatchPlays,
+    completionRate: libraryFull.completionRate,
+  });
+  const seasonArcs = buildSeasonArcs(tracks, episodes, rewatchEpisodes, 5);
+  const biggestNight = attachEpisodePosters(
+    buildBiggestNight(episodePlays, rawFilms, timeZone, dayMap),
+    tracks
+  );
+  const hotTakes = buildHotTakes(films, filmMetaMap, 6);
+
+  // Cache-only read: buildTasteProfile already fetched these show metas.
+  const { map: tvMetaMap } = await getTvMetaBatch(topTvIdsByEpisodes(episodePlays), {
+    maxFetches: 0,
+  });
+  const ranges = buildStatsRanges({
+    episodes,
+    episodePlays,
+    rawFilms,
+    tracks,
+    filmMetaMap,
+    tvMetaMap,
+    timeZone,
+    bounds,
+  });
+
   return {
     schemaVersion: STATS_SCHEMA_VERSION,
     memberSince: user?.createdAt || null,
@@ -542,13 +592,13 @@ async function buildUserStatsDashboard(userId, options = {}) {
     week,
     month,
     quality,
-    library: {
-      ...library,
-      caughtUp: tracks.filter((t) => isCaughtUpWaiting(t)).length,
-      backlog: computeBacklog(tracks),
-      totalTracked: tracks.length,
-      completionRate: pct(library.finished, tracks.length),
-    },
+    library: libraryFull,
+    rhythm,
+    lobbyType,
+    seasonArcs,
+    biggestNight,
+    hotTakes,
+    ranges,
     activity,
     films: {
       count: films.length,

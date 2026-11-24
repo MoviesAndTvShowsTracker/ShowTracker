@@ -2,11 +2,13 @@ import SwiftUI
 
 struct StatsView: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var stats: DashboardStats?
-    @State private var recap: WeekRecap?
     @State private var loading = true
     @State private var error: String?
+    @State private var rangeKey: StatsRangeKey = .week
     @State private var tasteRoom: TasteRoom = .tv
+    @State private var didPickInitialRange = false
 
     private enum TasteRoom: String, CaseIterable, Identifiable {
         case tv = "TV"
@@ -14,18 +16,13 @@ struct StatsView: View {
         var id: String { rawValue }
     }
 
+    private var range: StatsRange? { stats?.ranges?[rangeKey] }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 28) {
                 if loading && stats == nil {
-                    VStack(spacing: 14) {
-                        HStack(spacing: 10) {
-                            SkeletonBlock(height: 150, radius: 22)
-                            SkeletonBlock(height: 150, radius: 22)
-                        }
-                        SkeletonBlock(height: 180, radius: 20)
-                        SkeletonBlock(height: 140, radius: 20)
-                    }
+                    skeleton
                 } else if let error, stats == nil {
                     ErrorStateView(message: error) {
                         Task { await load(refresh: true) }
@@ -33,40 +30,181 @@ struct StatsView: View {
                 } else if isEmpty {
                     EmptyDiaryCard(
                         title: "The house lights are still up",
-                        message: "Mark a film or an episode and this page becomes two diaries — TV hours, film hours, badges, and the days you actually sat down.",
+                        message: "Mark a film or an episode and this page becomes your lobby diary: when you watch, what you rewatch, and the nights that stuck.",
                         cta: nil
                     )
                 } else {
-                    twinReels
-                    if let recap { weekStrip(recap) }
-                    if !weekdayPoints.isEmpty {
-                        WeekdayRhythmChart(days: weekdayPoints)
-                    }
-                    if !weekTrendPoints.isEmpty {
-                        TwelveWeekChart(points: weekTrendPoints)
-                    }
-                    spotlight
-                    tasteBlock
-                    libraryBlock
-                    BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
+                    MarqueeHero(
+                        rangeKey: rangeKey,
+                        range: range,
+                        dateLine: StatsDates.rangeLine(rangeKey, start: range?.start, end: range?.end)
+                    )
+                    .animation(reduceMotion ? nil : MarqueeMotion.standard, value: rangeKey)
+
+                    rangeSections
+                        .id(rangeKey)
+                        .transition(reduceMotion ? AnyTransition.opacity : AnyTransition(.blurReplace))
+
+                    allTimeSections
                 }
             }
-            .padding(20)
-            .padding(.bottom, 32)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 40)
         }
+        .scrollIndicators(.hidden)
         .marqueeCanvas()
         .navigationTitle("Stats")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await load(refresh: true) }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundStyle(theme.olive)
+        .navigationBarTitleDisplayMode(.large)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if stats != nil, !isEmpty {
+                StatsRangeSwitch(selection: $rangeKey)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+            }
+        }
+        .refreshable { await load(refresh: true) }
+        .task { await load(refresh: false) }
+    }
+
+    // MARK: Range-scoped
+
+    @ViewBuilder
+    private var rangeSections: some View {
+        if let range, !range.isQuiet {
+            VStack(alignment: .leading, spacing: 28) {
+                if let trend = range.trend, !(trend.buckets ?? []).isEmpty {
+                    RunChart(rangeKey: rangeKey, trend: trend)
+                        .stageIn(reduceMotion)
+                }
+
+                TicketStubRow(activity: stats?.activity, memberSince: stats?.memberSince)
+                    .stageIn(reduceMotion)
+
+                if let rhythm = range.rhythm, (rhythm.peakMins ?? 0) > 0 {
+                    HouseLightsDial(
+                        hours: paddedHours(rhythm.byHour),
+                        peakHour: rhythm.peakHour ?? 0,
+                        caption: rhythm.caption ?? "Your lobby hours"
+                    )
+                    .stageIn(reduceMotion)
+                }
+
+                if let shows = range.topShows, !shows.isEmpty {
+                    TopBillingList(shows: shows)
+                        .stageIn(reduceMotion)
+                }
+
+                if let films = range.films, !films.isEmpty {
+                    FilmsOnMarqueeRail(films: films, total: range.totals?.filmPlays ?? films.count)
+                }
+
+                if let night = range.biggestNight, (night.count ?? 0) > 1 {
+                    BiggestNightStrip(night: night)
+                }
+
+                tasteBlock(range.taste)
+                    .stageIn(reduceMotion)
+
+                if let takes = range.hotTakes, !takes.isEmpty {
+                    HotTakesBlock(takes: takes)
+                        .stageIn(reduceMotion)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 28) {
+                TicketStubRow(activity: stats?.activity, memberSince: stats?.memberSince)
+                if let last = stats?.activity?.lastWatchedAt, let day = StatsDates.shortDay(last) {
+                    Text("Last in the lobby on \(day). Switch the range to look back.")
+                        .font(.subheadline)
+                        .foregroundStyle(theme.inkMuted)
                 }
             }
         }
-        .task { await load(refresh: false) }
+    }
+
+    // MARK: All time
+
+    @ViewBuilder
+    private var allTimeSections: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            HStack(spacing: 10) {
+                Rectangle().fill(theme.border).frame(height: 1)
+                SectionKicker(text: "Across the diary")
+                    .fixedSize()
+                Rectangle().fill(theme.border).frame(height: 1)
+            }
+            .padding(.top, 8)
+            .accessibilityAddTraits(.isHeader)
+
+            if let lobby = stats?.lobbyType {
+                LobbyTypePlaque(lobby: lobby)
+                    .stageIn(reduceMotion)
+            }
+            if let library = stats?.library, (library.totalTracked ?? 0) > 0 {
+                ShelvesBlock(library: library)
+                    .stageIn(reduceMotion)
+            }
+            if let arcs = stats?.seasonArcs, !arcs.isEmpty {
+                SeasonArcRibbons(arcs: arcs)
+            }
+            BadgeCabinet(badges: BadgeCatalog.badges(from: stats))
+                .stageIn(reduceMotion)
+            if let since = memberSinceLine {
+                Text(since)
+                    .font(.caption)
+                    .foregroundStyle(theme.inkMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private var memberSinceLine: String? {
+        guard let raw = stats?.memberSince else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = iso.date(from: raw) ?? ISO8601DateFormatter().date(from: raw) else { return nil }
+        return "In the lobby since \(date.formatted(.dateTime.month(.wide).year()))"
+    }
+
+    // MARK: Taste
+
+    @ViewBuilder
+    private func tasteBlock(_ taste: StatsTaste?) -> some View {
+        let tvGenres = taste?.tv?.genreByEpisodes ?? []
+        let filmGenres = taste?.films?.genreByCount ?? []
+        if !tvGenres.isEmpty || !filmGenres.isEmpty {
+            let room: TasteRoom = tvGenres.isEmpty ? .films : (filmGenres.isEmpty ? .tv : tasteRoom)
+            VStack(alignment: .leading, spacing: 14) {
+                StatsSectionHeader(kicker: "Taste", title: "What filled the screen")
+                if !tvGenres.isEmpty && !filmGenres.isEmpty {
+                    Picker("Room", selection: $tasteRoom.animation(MarqueeMotion.standard)) {
+                        ForEach(TasteRoom.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                GenreMeterList(items: Array((room == .tv ? tvGenres : filmGenres).prefix(6)), tint: theme.olive)
+                    .id(room)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    // MARK: Loading
+
+    private var skeleton: some View {
+        VStack(spacing: 16) {
+            SkeletonBlock(height: 44, radius: 22)
+            SkeletonBlock(height: 280, radius: 28)
+            SkeletonBlock(height: 200, radius: 20)
+            HStack(spacing: 10) {
+                SkeletonBlock(height: 72, radius: 14)
+                SkeletonBlock(height: 72, radius: 14)
+                SkeletonBlock(height: 72, radius: 14)
+            }
+        }
+        .accessibilityLabel("Loading stats")
     }
 
     private var isEmpty: Bool {
@@ -75,394 +213,48 @@ struct StatsView: View {
             && (stats?.library?.totalTracked ?? 0) == 0
     }
 
-    private var twinReels: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let text = stats?.insight?.text, !text.isEmpty {
-                Text(text)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(theme.inkMuted)
-            }
-            HStack(alignment: .top, spacing: 10) {
-                ReelCard(
-                    kicker: "TV",
-                    time: StatsFormat.span(stats?.overview?.tvMins ?? stats?.year?.tvMins ?? 0),
-                    line: tvReelLine,
-                    tint: theme.olive,
-                    symbol: "tv.fill"
-                )
-                ReelCard(
-                    kicker: "Films",
-                    time: StatsFormat.span(stats?.overview?.filmMins ?? stats?.films?.filmMins ?? 0),
-                    line: filmReelLine,
-                    tint: theme.accent,
-                    symbol: "film.fill"
-                )
-            }
+    private func paddedHours(_ hours: [StatsHourBucket]?) -> [StatsHourBucket] {
+        var out = Array(repeating: StatsHourBucket(), count: 24)
+        guard let hours else { return out }
+        for (i, bucket) in hours.prefix(24).enumerated() {
+            out[i] = bucket
         }
-    }
-
-    private var tvReelLine: String {
-        let eps = stats?.overview?.episodeCount ?? 0
-        let shows = stats?.overview?.tvShowCount ?? 0
-        var parts: [String] = []
-        if eps > 0 { parts.append("\(eps) episodes") }
-        if shows > 0 { parts.append("\(shows) shows") }
-        return parts.isEmpty ? "No episodes yet" : parts.joined(separator: " · ")
-    }
-
-    private var filmReelLine: String {
-        let films = stats?.overview?.filmCount ?? stats?.films?.count ?? 0
-        if films == 0 { return "No films yet" }
-        if let avg = stats?.films?.avgRuntime, avg > 0 {
-            return "\(films) films · \(avg)m typical"
-        }
-        return "\(films) films"
-    }
-
-    private func weekStrip(_ recap: WeekRecap) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionKicker(text: "This week", accented: true)
-            HStack(spacing: 10) {
-                weekCell(
-                    "TV",
-                    recap.episodesThisWeek ?? 0,
-                    StatsFormat.minutes(recap.tvMinsThisWeek ?? stats?.activity?.tvMinsThisWeek ?? 0),
-                    theme.olive
-                )
-                weekCell(
-                    "Films",
-                    recap.filmsThisWeek ?? 0,
-                    StatsFormat.minutes(recap.filmMinsThisWeek ?? stats?.activity?.filmMinsThisWeek ?? 0),
-                    theme.accent
-                )
-            }
-        }
-    }
-
-    private func weekCell(_ kind: String, _ count: Int, _ time: String, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(kind)
-                .font(.caption2.weight(.bold))
-                .tracking(0.8)
-                .textCase(.uppercase)
-                .foregroundStyle(tint)
-            Text("\(count)")
-                .font(.title.weight(.bold))
-                .foregroundStyle(theme.ink)
-                .monospacedDigit()
-            Text(kind == "TV" ? "episodes" : "films")
-                .font(.caption)
-                .foregroundStyle(theme.inkMuted)
-            Text(time)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(theme.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var weekdayPoints: [WeekdayPoint] {
-        let names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        var tv = Array(repeating: 0, count: 7)
-        var films = Array(repeating: 0, count: 7)
-        for day in stats?.activity?.dailyActivity ?? [] {
-            guard let key = day.date, let idx = StatsFormat.weekdayIndex(for: key) else { continue }
-            let tvMins = day.tvMinutes ?? 0
-            let filmMins = day.filmMinutes ?? 0
-            if tvMins + filmMins > 0 {
-                tv[idx] += tvMins
-                films[idx] += filmMins
-            } else {
-                tv[idx] += (day.episodes ?? 0) * 42
-                films[idx] += (day.films ?? 0) * 110
-            }
-        }
-        return zip(labels, zip(names, zip(tv, films))).map { label, rest in
-            WeekdayPoint(label: label, fullName: rest.0, tvMins: rest.1.0, filmMins: rest.1.1)
-        }
-    }
-
-    private var weekTrendPoints: [TrendPoint] {
-        let weeks = stats?.activity?.weeklyTrend ?? []
-        return weeks.suffix(12).enumerated().flatMap { index, bucket -> [TrendPoint] in
-            let label = bucket.weekStart ?? "\(index)"
-            let tv = bucket.tvMinutes ?? max(0, (bucket.minutes ?? 0) - (bucket.filmMinutes ?? 0))
-            let films = bucket.filmMinutes ?? 0
-            return [
-                TrendPoint(id: "tv-\(label)", label: label, kind: "TV", minutes: tv),
-                TrendPoint(id: "film-\(label)", label: label, kind: "Films", minutes: films)
-            ]
-        }
-    }
-
-    @ViewBuilder
-    private var spotlight: some View {
-        let show = stats?.funFacts?.mostWatchedShow
-        let longest = stats?.films?.longest
-        let shortest = stats?.films?.shortest
-        if show != nil || longest != nil {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("On a loop")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                if let show, (show.episodeCount ?? 0) > 0 {
-                    HStack(spacing: 14) {
-                        CachedAsyncImage(url: AppConfig.posterURL(path: show.tvPosterImage))
-                            .frame(width: 56, height: 84)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        VStack(alignment: .leading, spacing: 4) {
-                            SectionKicker(text: "Most watched show")
-                            Text(show.tvTitle ?? "Show")
-                                .font(.headline)
-                                .foregroundStyle(theme.ink)
-                            Text("\(show.episodeCount ?? 0) episodes · \(StatsFormat.minutes(show.minutes ?? 0))")
-                                .font(.caption)
-                                .foregroundStyle(theme.olive)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(12)
-                    .background(theme.oliveSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                if longest != nil || shortest != nil {
-                    HStack(spacing: 10) {
-                        if let longest {
-                            filmFact("Longest film", longest.movieTitle ?? "Film", StatsFormat.minutes(longest.minutes ?? 0), theme.accent)
-                        }
-                        if let shortest, shortest.movieId != longest?.movieId {
-                            filmFact("Shortest film", shortest.movieTitle ?? "Film", StatsFormat.minutes(shortest.minutes ?? 0), theme.olive)
-                        }
-                    }
-                }
-                ratingsRow
-            }
-        }
-    }
-
-    private func filmFact(_ kicker: String, _ title: String, _ meta: String, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(kicker)
-                .font(.caption2.weight(.bold))
-                .tracking(0.7)
-                .textCase(.uppercase)
-                .foregroundStyle(tint)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(theme.ink)
-                .lineLimit(2)
-                .frame(minHeight: 36, alignment: .top)
-            Text(meta)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(tint)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var ratingsRow: some View {
-        let filmAvg = stats?.ratings?.films?.average ?? 0
-        let showAvg = stats?.ratings?.shows?.average ?? 0
-        if filmAvg > 0 || showAvg > 0 {
-            HStack(spacing: 10) {
-                if filmAvg > 0 {
-                    ratingCard("Film ratings", filmAvg, stats?.ratings?.films?.count ?? 0, theme.accent)
-                }
-                if showAvg > 0 {
-                    ratingCard("Show ratings", showAvg, stats?.ratings?.shows?.count ?? 0, theme.olive)
-                }
-            }
-        }
-    }
-
-    private func ratingCard(_ title: String, _ avg: Double, _ count: Int, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption2.weight(.bold))
-                .tracking(0.7)
-                .textCase(.uppercase)
-                .foregroundStyle(theme.inkMuted)
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .font(.caption)
-                    .foregroundStyle(tint)
-                Text(String(format: "%.1f", avg))
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(theme.ink)
-                    .monospacedDigit()
-            }
-            Text("\(count) rated")
-                .font(.caption)
-                .foregroundStyle(theme.inkMuted)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var tasteBlock: some View {
-        let tvGenres = stats?.taste?.tv?.genreByEpisodes ?? []
-        let filmGenres = stats?.taste?.films?.genreByCount ?? []
-        let tvDecades = stats?.taste?.tv?.decades ?? []
-        let filmDecades = stats?.taste?.films?.decades ?? []
-        if !tvGenres.isEmpty || !filmGenres.isEmpty || tvDecades.count > 1 || filmDecades.count > 1 {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text("Taste")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(theme.ink)
-                    Spacer()
-                    Picker("Taste", selection: $tasteRoom) {
-                        ForEach(TasteRoom.allCases) { room in
-                            Text(room.rawValue).tag(room)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 160)
-                }
-                if tasteRoom == .tv {
-                    if tvGenres.isEmpty {
-                        Text("Log more episodes to see TV taste.")
-                            .font(.caption)
-                            .foregroundStyle(theme.inkMuted)
-                    } else {
-                        GenreMeterList(items: tvGenres, tint: theme.olive)
-                    }
-                    if tvDecades.count > 1 {
-                        DecadeMeterList(title: "First-aired decades", decades: tvDecades, tint: theme.olive)
-                    }
-                } else {
-                    if filmGenres.isEmpty {
-                        Text("Log more films to see movie taste.")
-                            .font(.caption)
-                            .foregroundStyle(theme.inkMuted)
-                    } else {
-                        GenreMeterList(items: filmGenres, tint: theme.accent)
-                    }
-                    if filmDecades.count > 1 {
-                        DecadeMeterList(title: "Release decades", decades: filmDecades, tint: theme.accent)
-                    }
-                }
-            }
-            .padding(16)
-            .background(theme.surfaceElevated.opacity(0.86))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(theme.border, lineWidth: 1)
-            )
-        }
-    }
-
-    private var libraryBlock: some View {
-        let lib = stats?.library
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("The shelves")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(theme.ink)
-            HStack(spacing: 10) {
-                libTile("Watching", lib?.watching ?? 0)
-                libTile("Paused", lib?.pausedCount ?? 0)
-                libTile("Finished", lib?.finished ?? 0)
-            }
-            if let rate = lib?.completionRate, (lib?.totalTracked ?? 0) > 0 {
-                Text("\(rate)% of tracked shows finished")
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
-            }
-        }
-    }
-
-    private func libTile(_ title: String, _ count: Int) -> some View {
-        VStack(spacing: 6) {
-            Text("\(count)")
-                .font(.title.weight(.bold))
-                .foregroundStyle(theme.olive)
-                .monospacedDigit()
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(theme.inkMuted)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(theme.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        return out
     }
 
     private func load(refresh: Bool) async {
         if stats == nil { loading = true }
+        error = nil
+        defer { loading = false }
         do {
-            async let s = DiaryService.dashboardStats(refresh: refresh)
-            async let r = DiaryService.weekRecap()
-            let dash = try await s
-            let week = try? await r
-            stats = dash
-            recap = week
-            error = nil
-            loading = false
+            let fresh = try await DiaryService.dashboardStats(refresh: refresh)
+            stats = fresh
+            pickInitialRange(fresh)
+        } catch is CancellationError {
+            return
         } catch {
-            self.error = error.localizedDescription
-            loading = false
+            if stats == nil {
+                self.error = error.localizedDescription
+            }
         }
+    }
+
+    /// Open on the narrowest range that has something in it, so first look is never "0m".
+    private func pickInitialRange(_ stats: DashboardStats) {
+        guard !didPickInitialRange, let ranges = stats.ranges else { return }
+        didPickInitialRange = true
+        rangeKey = StatsRangeKey.allCases.first { ranges[$0]?.isQuiet == false } ?? .week
     }
 }
 
-private struct ReelCard: View {
-    @Environment(\.marqueeTheme) private var theme
-    let kicker: String
-    let time: String
-    let line: String
-    let tint: Color
-    let symbol: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: symbol)
-                    .font(.caption.weight(.bold))
-                Text(kicker)
-                    .font(.caption.weight(.bold))
-                    .tracking(1.1)
-                    .textCase(.uppercase)
-            }
-            .foregroundStyle(MarqueeColor.saltGrey.opacity(0.78))
-
-            Text(time)
-                .font(.system(size: 30, weight: .bold, design: .serif))
-                .foregroundStyle(MarqueeColor.saltGrey)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-
-            Text(line)
-                .font(.caption)
-                .foregroundStyle(MarqueeColor.saltGrey.opacity(0.78))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(tint)
+private extension View {
+    /// Cards settle in as they scroll into view: a small lift and fade.
+    func stageIn(_ reduceMotion: Bool) -> some View {
+        scrollTransition(.animated(MarqueeMotion.standard)) { content, phase in
+            content
+                .opacity(reduceMotion || phase.isIdentity ? 1 : 0.4)
+                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.97)
+                .offset(y: reduceMotion || phase.isIdentity ? 0 : (phase == .bottomTrailing ? 16 : 0))
         }
     }
 }
