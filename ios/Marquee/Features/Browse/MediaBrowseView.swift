@@ -48,7 +48,7 @@ struct MediaBrowseView: View {
     }
 
     private var title: String {
-        if let years { return "\(years.lowerBound)s films" }
+        if let years { return "\(years.lowerBound)s \(kind == .movie ? "films" : "TV")" }
         return kind == .movie ? "Browse films" : "Browse TV"
     }
 

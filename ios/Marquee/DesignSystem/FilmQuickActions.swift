@@ -49,10 +49,45 @@ struct FilmQuickActions: ViewModifier {
     }
 }
 
+/// Diary badge + long-press watchlist/share for any show poster.
+struct TVQuickActions: ViewModifier {
+    let item: MediaItem
+    private var index: TVDiaryIndex { .shared }
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .topTrailing) {
+                if let mark = index.mark(item.id) {
+                    DiaryStatusBadge(mark: mark, compact: true)
+                        .padding(6)
+                        .allowsHitTesting(false)
+                }
+            }
+            .contextMenu {
+                let queued = index.watchlist.contains(item.id)
+                Button {
+                    Task { @MainActor in
+                        do { try await index.toggleWatchlist(item); Haptics.success() } catch {
+                            Feedback.failed("Couldn't update your watchlist. Try again.")
+                        }
+                    }
+                } label: {
+                    Label(queued ? "Remove from watchlist" : "Add to watchlist",
+                          systemImage: queued ? "bookmark.slash" : "bookmark")
+                }
+                if let url = URL(string: "https://www.themoviedb.org/tv/\(item.id)") {
+                    ShareLink(item: url, subject: Text(item.displayTitle)) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+    }
+}
+
 extension View {
-    /// Applies only to films; TV shelves pass through unchanged.
+    /// Diary badge and long-press actions for catalogue posters.
     @ViewBuilder
-    func filmQuickActions(_ item: MediaItem, kind: MediaKind) -> some View {
-        if kind == .movie { modifier(FilmQuickActions(item: item)) } else { self }
+    func catalogQuickActions(_ item: MediaItem, kind: MediaKind) -> some View {
+        if kind == .movie { modifier(FilmQuickActions(item: item)) } else { modifier(TVQuickActions(item: item)) }
     }
 }

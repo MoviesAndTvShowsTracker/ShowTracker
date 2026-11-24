@@ -159,7 +159,7 @@ struct FilmsLandingView: View {
             )
         }
 
-        FilmBrowseCard(genres: CatalogMood.filmGenreChips())
+        MediaBrowseCard(kind: .movie, genres: CatalogMood.filmGenreChips())
 
         if let error {
             InlineErrorBanner(message: error) { Task { await load() } }

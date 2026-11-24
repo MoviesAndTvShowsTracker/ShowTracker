@@ -112,7 +112,7 @@ struct CatalogShelf: View {
                                     )
                                 }
                             }
-                            .filmQuickActions(item, kind: kind)
+                            .catalogQuickActions(item, kind: kind)
                         }
                     }
                     .padding(.horizontal, 20)

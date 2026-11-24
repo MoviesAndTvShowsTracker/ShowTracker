@@ -45,11 +45,20 @@ struct LazyShelf<Element: Codable & Sendable, Content: View>: View {
 struct ComingSoonSection: View {
     @Environment(\.marqueeTheme) private var theme
     let items: [MediaItem]
-    private var index: FilmDiaryIndex { .shared }
+    var kind: MediaKind = .movie
+    var title = "Coming soon"
+
+    private func queued(_ id: Int) -> Bool {
+        kind == .movie ? FilmDiaryIndex.shared.watchlist.contains(id) : TVDiaryIndex.shared.watchlist.contains(id)
+    }
+
+    private func toggle(_ item: MediaItem) async throws {
+        if kind == .movie { try await FilmDiaryIndex.shared.toggleWatchlist(item) } else { try await TVDiaryIndex.shared.toggleWatchlist(item) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            CatalogShelfHeader(title: "Coming soon")
+            CatalogShelfHeader(title: title)
             VStack(spacing: 0) {
                 ForEach(Array(items.prefix(6).enumerated()), id: \.element.id) { i, item in
                     if i > 0 { Divider().overlay(theme.border).padding(.leading, 86) }
@@ -64,10 +73,10 @@ struct ComingSoonSection: View {
     }
 
     private func row(_ item: MediaItem) -> some View {
-        let date = FilmDates.day(item.release_date)
-        let queued = index.watchlist.contains(item.id)
+        let date = FilmDates.day(item.release_date ?? item.first_air_date)
+        let queued = queued(item.id)
         return HStack(spacing: 12) {
-            MediaNavLink(id: item.id, kind: .movie) {
+            MediaNavLink(id: item.id, kind: kind) {
                 HStack(spacing: 12) {
                     VStack(spacing: 0) {
                         Text(date.map { $0.formatted(.dateTime.month(.abbreviated)) } ?? "")
@@ -98,7 +107,7 @@ struct ComingSoonSection: View {
 
             Button {
                 Task {
-                    do { try await index.toggleWatchlist(item); Haptics.light() } catch {
+                    do { try await toggle(item); Haptics.light() } catch {
                         Feedback.failed("Couldn't update your watchlist. Try again.")
                     }
                 }
@@ -159,17 +168,18 @@ struct FacesRail: View {
 // MARK: - Browse card (genres + decades)
 
 /// One quiet card at the end of the page: genres as a two-column list, decades underneath.
-struct FilmBrowseCard: View {
+struct MediaBrowseCard: View {
     @Environment(\.marqueeTheme) private var theme
+    let kind: MediaKind
     let genres: [BrowseGenre]
     private let decades = [1970, 1980, 1990, 2000, 2010, 2020]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             CatalogShelfHeader(
-                title: "Browse films",
+                title: kind == .movie ? "Browse films" : "Browse TV",
                 seeAll: AnyView(
-                    NavigationLink("All filters") { MediaBrowseView(kind: .movie) }
+                    NavigationLink("All filters") { MediaBrowseView(kind: kind) }
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(theme.olive)
                 )
@@ -196,7 +206,7 @@ struct FilmBrowseCard: View {
                 HStack(spacing: 0) {
                     ForEach(decades, id: \.self) { start in
                         NavigationLink {
-                            MediaBrowseView(kind: .movie, years: start...(start + 9))
+                            MediaBrowseView(kind: kind, years: start...(start + 9))
                         } label: {
                             Text("\(String(start).suffix(2))s")
                                 .font(.subheadline.weight(.semibold))
@@ -206,7 +216,7 @@ struct FilmBrowseCard: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Films from the \(start)s")
+                        .accessibilityLabel("\(kind == .movie ? "Films" : "Shows") from the \(start)s")
                     }
                 }
             }
@@ -219,7 +229,7 @@ struct FilmBrowseCard: View {
 
     private func genreCell(_ genre: BrowseGenre) -> some View {
         NavigationLink {
-            MediaBrowseView(kind: .movie, initialGenreId: genre.id)
+            MediaBrowseView(kind: kind, initialGenreId: genre.id)
         } label: {
             HStack {
                 Text(genre.name)

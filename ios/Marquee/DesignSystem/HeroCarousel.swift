@@ -20,10 +20,8 @@ struct HeroCarousel: View {
                         MediaNavLink(id: item.id, kind: kind) {
                             slide(item)
                         }
-                        if kind == .movie {
-                            TrailerButton(movieId: item.id, title: item.displayTitle)
-                                .padding(16)
-                        }
+                        TrailerButton(id: item.id, kind: kind, title: item.displayTitle)
+                            .padding(16)
                     }
                     .tag(index)
                 }
@@ -78,7 +76,7 @@ struct HeroCarousel: View {
                 }
             }
             .padding(18)
-            .padding(.trailing, kind == .movie ? 110 : 0)
+            .padding(.trailing, 110)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
@@ -90,7 +88,8 @@ struct HeroCarousel: View {
 private struct TrailerButton: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.openURL) private var openURL
-    let movieId: Int
+    let id: Int
+    let kind: MediaKind
     let title: String
     @State private var loading = false
 
@@ -99,9 +98,9 @@ private struct TrailerButton: View {
             guard !loading else { return }
             loading = true
             Task {
-                let url = await TMDBService.trailerURL(movieId: movieId)
+                let url = await TMDBService.trailerURL(id: id, kind: kind)
                 loading = false
-                if let url { openURL(url) } else { Feedback.failed("No trailer for this film yet.") }
+                if let url { openURL(url) } else { Feedback.failed(kind == .movie ? "No trailer for this film yet." : "No trailer for this show yet.") }
             }
         } label: {
             HStack(spacing: 6) {
