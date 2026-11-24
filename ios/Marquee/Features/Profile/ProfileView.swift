@@ -162,12 +162,15 @@ struct ProfileView: View {
             NavigationLink {
                 TVLibraryView()
             } label: {
-                GlassCard(padding: 12) {
-                    HStack(spacing: 8) {
+                GlassCard(padding: 0) {
+                    HStack(spacing: 0) {
                         libraryCell("Watching", w)
+                        Rectangle().fill(theme.border).frame(width: 1, height: 36)
                         libraryCell("Paused", p)
+                        Rectangle().fill(theme.border).frame(width: 1, height: 36)
                         libraryCell("Finished", f)
                     }
+                    .padding(.vertical, 14)
                 }
             }
             .buttonStyle(.plain)
@@ -175,18 +178,16 @@ struct ProfileView: View {
     }
 
     private func libraryCell(_ title: String, _ count: Int) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text("\(count)")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(theme.olive)
+                .font(.title2.weight(.bold).monospacedDigit())
+                .foregroundStyle(theme.ink)
             Text(title)
-                .font(.caption2.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(theme.inkMuted)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(theme.oliveSoft)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
     private var rails: some View {

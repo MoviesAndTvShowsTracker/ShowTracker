@@ -613,20 +613,20 @@ private struct MediaDetailTopChrome: View {
         .padding(.top, 10)
         .padding(.bottom, showCompactChrome ? 10 : 0)
         .safeAreaPadding(.top)
-        .background(alignment: .top) {
-            // Soft edge from marqueeDetailCanvas does the live blur. This is
-            // only a light progressive veil when compact — never an opaque slab.
+        .background {
+            // Covers the whole compact bar (status bar included) and fades out
+            // just below it, so body text never reads through the title.
             if showCompactChrome {
                 LinearGradient(
                     stops: [
-                        .init(color: theme.surface.opacity(0.72), location: 0),
-                        .init(color: theme.surface.opacity(0.32), location: 0.55),
+                        .init(color: theme.surface.opacity(0.97), location: 0),
+                        .init(color: theme.surface.opacity(0.92), location: 0.7),
                         .init(color: theme.surface.opacity(0), location: 1),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 96)
+                .padding(.bottom, -28)
                 .ignoresSafeArea(edges: .top)
                 .allowsHitTesting(false)
             }

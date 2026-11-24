@@ -177,14 +177,27 @@ struct PersonDetail: Decodable, Identifiable, Sendable {
         if let deathday, deathday.count >= 4 {
             return "\(birth)–\(String(deathday.prefix(4)))"
         }
-        return birth
+        return "Born \(birth)"
+    }
+
+    /// TMDB's department ("Acting") as a role people say ("Actor").
+    var roleLabel: String? {
+        guard let dept = known_for_department, !dept.isEmpty else { return nil }
+        switch dept {
+        case "Acting": return "Actor"
+        case "Directing": return "Director"
+        case "Writing": return "Writer"
+        case "Production": return "Producer"
+        case "Sound": return "Composer"
+        case "Camera": return "Cinematographer"
+        case "Editing": return "Editor"
+        default: return dept
+        }
     }
 
     var metaLine: String {
         var parts: [String] = []
-        if let known_for_department, !known_for_department.isEmpty {
-            parts.append(known_for_department)
-        }
+        if let roleLabel { parts.append(roleLabel) }
         if let lifespanLine { parts.append(lifespanLine) }
         return parts.joined(separator: " · ")
     }

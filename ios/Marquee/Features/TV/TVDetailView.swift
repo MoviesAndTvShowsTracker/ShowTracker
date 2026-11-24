@@ -449,13 +449,15 @@ struct TVDetailView: View {
                     Text(progress.episodeLine)
                         .font(.headline)
                         .foregroundStyle(theme.ink)
-                    Text(
-                        isRewatching
-                            ? (progress.next?.name ?? tracking.nextEpisodeName ?? "Next episode to rewatch")
-                            : (progress.next?.name ?? tracking.nextEpisodeName ?? "Up next")
-                    )
+                    if isRewatching || progress.fraction < 1 {
+                        Text(
+                            isRewatching
+                                ? (progress.next?.name ?? tracking.nextEpisodeName ?? "Next episode to rewatch")
+                                : (progress.next?.name ?? tracking.nextEpisodeName ?? "Up next")
+                        )
                         .font(.subheadline)
                         .foregroundStyle(theme.inkMuted)
+                    }
 
                     HStack {
                         ProgressTrack(
