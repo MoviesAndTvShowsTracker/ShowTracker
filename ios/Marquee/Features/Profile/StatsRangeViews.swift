@@ -403,7 +403,7 @@ struct RunChart: View {
                     y: .value("Minutes", bucket.tvMins ?? 0),
                     width: .ratio(barRatio)
                 )
-                .foregroundStyle(by: .value("Kind", "TV"))
+                .foregroundStyle(tvColor(bucket))
                 .opacity(opacity(for: bucket))
                 .clipShape(UnevenRoundedRectangle(cornerRadii: .init(bottomLeading: 3, bottomTrailing: 3)))
 
@@ -412,12 +412,10 @@ struct RunChart: View {
                     y: .value("Minutes", bucket.filmMins ?? 0),
                     width: .ratio(barRatio)
                 )
-                .foregroundStyle(by: .value("Kind", "Films"))
+                .foregroundStyle(filmColor(bucket))
                 .opacity(opacity(for: bucket))
                 .clipShape(UnevenRoundedRectangle(cornerRadii: .init(topLeading: 3, topTrailing: 3)))
             }
-            .chartForegroundStyleScale(["TV": theme.olive, "Films": theme.olive.opacity(0.4)])
-            .chartLegend(.hidden)
             .chartYAxis(.hidden)
             .chartXAxis {
                 AxisMarks(values: axisValues) { value in
@@ -443,6 +441,21 @@ struct RunChart: View {
         guard let selected else { return "Drag across the bars" }
         let when = longLabel(selected)
         return selected.totalMins > 0 ? "\(when) · \(StatsFormat.minutes(selected.totalMins))" : "\(when) · nothing logged"
+    }
+
+    /// The bar to look at: the one you're touching, else the busiest.
+    private var highlightKey: String? {
+        if let selectedKey { return selectedKey }
+        let peak = buckets.max { $0.totalMins < $1.totalMins }
+        return (peak?.totalMins ?? 0) > 0 ? peak?.key : nil
+    }
+
+    private func tvColor(_ bucket: StatsRangeBucket) -> Color {
+        bucket.key == highlightKey ? theme.accent : theme.olive
+    }
+
+    private func filmColor(_ bucket: StatsRangeBucket) -> Color {
+        bucket.key == highlightKey ? theme.accent.opacity(0.45) : theme.olive.opacity(0.4)
     }
 
     private func opacity(for bucket: StatsRangeBucket) -> Double {
@@ -685,7 +698,7 @@ struct FilmsOnMarqueeRail: View {
                 .lineLimit(1)
             HStack(spacing: 4) {
                 if let rating = film.rating {
-                    Image(systemName: "star.fill").imageScale(.small)
+                    Image(systemName: "star.fill").imageScale(.small).foregroundStyle(theme.accent)
                     Text(String(format: "%.1f", rating))
                 } else if let when = StatsDates.shortDay(film.watchedAt) {
                     Text(when)

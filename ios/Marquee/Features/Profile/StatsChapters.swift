@@ -116,6 +116,11 @@ struct ShowProgressBar: View {
         ].filter { $0.1 > 0 }
     }
 
+    /// Finished is the progress worth celebrating — the one pink segment.
+    private func segmentColor(_ seg: (String, Int, Double)) -> Color {
+        seg.0 == "Finished" ? theme.accent : theme.olive.opacity(seg.2 == 1.0 ? 0.85 : seg.2)
+    }
+
     var body: some View {
         let total = max(segments.reduce(0) { $0 + $1.1 }, 1)
         NavigationLink {
@@ -139,7 +144,7 @@ struct ShowProgressBar: View {
                         HStack(spacing: 3) {
                             ForEach(segments, id: \.0) { seg in
                                 Capsule(style: .continuous)
-                                    .fill(theme.olive.opacity(seg.2))
+                                    .fill(segmentColor(seg))
                                     .frame(width: max(6, (geo.size.width - CGFloat(segments.count - 1) * 3) * CGFloat(seg.1) / CGFloat(total)))
                             }
                         }
@@ -150,7 +155,7 @@ struct ShowProgressBar: View {
                     LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 8) {
                         ForEach(segments, id: \.0) { seg in
                             HStack(spacing: 6) {
-                                Circle().fill(theme.olive.opacity(seg.2)).frame(width: 8, height: 8)
+                                Circle().fill(segmentColor(seg)).frame(width: 8, height: 8)
                                 Text(seg.0).foregroundStyle(theme.inkMuted)
                                 Text("\(seg.1)").fontWeight(.semibold).foregroundStyle(theme.ink).monospacedDigit()
                             }
@@ -216,6 +221,7 @@ struct RatedPosterRail: View {
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill").imageScale(.small)
+                            .foregroundStyle(theme.accent)
                         Text(StarFormat.string(item.rating))
                     }
                     .font(.caption2.weight(.bold).monospacedDigit())
@@ -273,6 +279,7 @@ struct RatingHistogram: View {
                         VStack(alignment: .trailing, spacing: 0) {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill").imageScale(.small)
+                                    .foregroundStyle(theme.accent)
                                 Text(String(format: "%.1f", average))
                             }
                             .font(.title3.weight(.bold).monospacedDigit())
@@ -289,7 +296,7 @@ struct RatingHistogram: View {
                         y: .value("Films", bucket.count ?? 0),
                         width: .fixed(18)
                     )
-                    .foregroundStyle(theme.olive.opacity(barOpacity(bucket)))
+                    .foregroundStyle(isHighlighted(bucket) ? theme.accent : theme.olive.opacity(barOpacity(bucket)))
                     .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                 }
                 .chartXScale(domain: 0.25...5.25)
@@ -324,6 +331,11 @@ struct RatingHistogram: View {
             return "Mostly \(StarFormat.string(stars))-star nights · \(count ?? 0) rated"
         }
         return "Nothing rated yet"
+    }
+
+    private func isHighlighted(_ bucket: StatsRatingBucket) -> Bool {
+        if let selected { return bucket.stars == selected }
+        return bucket.stars == mode?.stars && (mode?.count ?? 0) > 0
     }
 
     private func barOpacity(_ bucket: StatsRatingBucket) -> Double {
@@ -457,15 +469,13 @@ struct WeekdayBars: View {
                 }
                 Chart(days) { day in
                     BarMark(x: .value("Day", day.label ?? ""), y: .value("TV", day.tvMins ?? 0), width: .ratio(0.55))
-                        .foregroundStyle(by: .value("Kind", "TV"))
+                        .foregroundStyle(day.label == focus?.label ? theme.accent : theme.olive)
                         .opacity(opacity(day))
                     BarMark(x: .value("Day", day.label ?? ""), y: .value("Films", day.filmMins ?? 0), width: .ratio(0.55))
-                        .foregroundStyle(by: .value("Kind", "Films"))
+                        .foregroundStyle(day.label == focus?.label ? theme.accent.opacity(0.45) : theme.olive.opacity(0.4))
                         .opacity(opacity(day))
                         .clipShape(UnevenRoundedRectangle(cornerRadii: .init(topLeading: 4, topTrailing: 4)))
                 }
-                .chartForegroundStyleScale(["TV": theme.olive, "Films": theme.olive.opacity(0.4)])
-                .chartLegend(.hidden)
                 .chartYAxis(.hidden)
                 .chartXAxis {
                     AxisMarks { value in
