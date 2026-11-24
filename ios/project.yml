@@ -99,6 +99,21 @@ targets:
         CFBundleDisplayName: Marquee Widgets
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  MarqueeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MarqueeTests
+    dependencies:
+      - target: Marquee
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jimil.marquee.tests
+        GENERATE_INFOPLIST_FILE: YES
+        DEVELOPMENT_TEAM: DWXW4WF2VQ
+        CODE_SIGN_STYLE: Automatic
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Marquee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Marquee
   MarqueeUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -131,4 +146,5 @@ schemes:
     test:
       config: Debug
       targets:
+        - MarqueeTests
         - MarqueeUITests
