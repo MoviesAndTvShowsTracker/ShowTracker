@@ -134,3 +134,5 @@ ios/**/*.xcuserstate
 *.ipa
 *.dSYM.zip
 *.dSYM
+# brainstorm mockups
+.superpowers/
