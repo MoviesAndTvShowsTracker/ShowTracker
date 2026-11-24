@@ -5,7 +5,7 @@ import SwiftUI
 struct StatsView: View {
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var stats: DashboardStats?
+    @State private var stats: DashboardStats? = DiaryService.cachedDashboardStats()
     @State private var loading = true
     @State private var error: String?
     @State private var rangeKey: StatsRangeKey = .week

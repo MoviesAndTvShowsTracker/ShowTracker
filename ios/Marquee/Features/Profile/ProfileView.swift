@@ -10,7 +10,7 @@ struct ProfileView: View {
     @State private var watchedFilms: [WatchMovieDoc] = []
     @State private var favoritesTV: [FavoriteTVDoc] = []
     @State private var watchedTV: [FavoriteTVDoc] = []
-    @State private var overview: StatsOverview?
+    @State private var overview: StatsOverview? = DiaryService.cachedDashboardStats()?.overview
     @State private var ready = false
     @State private var error: String?
     @State private var avatarItem: PhotosPickerItem?
@@ -285,13 +285,11 @@ struct ProfileView: View {
             async let wf = DiaryService.watchedMovies()
             async let ft = DiaryService.favoriteTV()
             async let wt = DiaryService.watchedTV()
-            async let stats = DiaryService.dashboardStats()
             let counts = try await sum.counts
             let favFilms = try await ff
             let watched = try await wf
             let favTV = try await ft
             let watchedShows = try await wt
-            let dash = try await stats
             var transaction = Transaction()
             transaction.disablesAnimations = !ready
             withTransaction(transaction) {
@@ -300,13 +298,16 @@ struct ProfileView: View {
                 watchedFilms = watched
                 favoritesTV = favTV
                 watchedTV = watchedShows
-                overview = dash.overview
                 ready = true
                 error = nil
             }
         } catch {
             self.error = error.localizedDescription
             ready = true
+        }
+        // Screen time never blocks the page: cached copy first, fresh one when it lands.
+        if let fresh = try? await DiaryService.dashboardStats() {
+            withAnimation(MarqueeMotion.standard) { overview = fresh.overview }
         }
     }
 }

@@ -300,10 +300,18 @@ enum DiaryService {
         )
     }
 
+    private static let dashboardCacheKey = "stats.dashboard.v1"
+
+    /// Last stats seen on this device — shown instantly while a fresh copy loads.
+    static func cachedDashboardStats() -> DashboardStats? {
+        ResponseCache.load(DashboardStats.self, key: dashboardCacheKey)
+    }
+
     static func dashboardStats(refresh: Bool = false) async throws -> DashboardStats {
         var query: [URLQueryItem] = []
         if refresh { query.append(URLQueryItem(name: "refresh", value: "1")) }
         let env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
+        if let stats = env.stats { ResponseCache.store(stats, key: dashboardCacheKey) }
         return env.stats ?? DashboardStats(
             insight: nil, overview: nil, library: nil, taste: nil, year: nil,
             week: nil, activity: nil, funFacts: nil, films: nil, ratings: nil, milestones: nil,

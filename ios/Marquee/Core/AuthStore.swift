@@ -251,6 +251,7 @@ final class AuthStore {
         KeychainStore.remove(Keys.email)
         KeychainStore.remove(Keys.firstName)
         KeychainStore.remove(Keys.username)
+        ResponseCache.clearAll()
     }
 
     #if DEBUG

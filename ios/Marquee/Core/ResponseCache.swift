@@ -16,6 +16,14 @@ enum ResponseCache {
         return try? JSONDecoder().decode(type, from: data)
     }
 
+    /// Wipes every cached response — on sign-out so the next account never sees them.
+    static func clearAll() {
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("marquee.cache.") {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
     static func clear(_ key: String) {
         defaults.removeObject(forKey: storageKey(key))
         defaults.removeObject(forKey: stampKey(key))

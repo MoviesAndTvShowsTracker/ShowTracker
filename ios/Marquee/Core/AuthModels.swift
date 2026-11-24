@@ -22,7 +22,7 @@ struct LoginResponse: Decodable, Sendable{
     }
 }
 
-enum FlexibleID: Decodable, Equatable, Hashable, Sendable{
+enum FlexibleID: Codable, Equatable, Hashable, Sendable{
     case string(String)
     case int(Int)
 
@@ -34,6 +34,14 @@ enum FlexibleID: Decodable, Equatable, Hashable, Sendable{
             self = .int(i)
         } else {
             throw DecodingError.typeMismatch(FlexibleID.self, .init(codingPath: decoder.codingPath, debugDescription: "Expected string or int id"))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .string(let s): try c.encode(s)
+        case .int(let i): try c.encode(i)
         }
     }
 
