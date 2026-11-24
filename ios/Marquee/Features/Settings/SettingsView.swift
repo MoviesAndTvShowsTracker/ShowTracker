@@ -208,7 +208,7 @@ struct SettingsView: View {
                 if let deleteError {
                     Text(deleteError)
                         .font(.footnote)
-                        .foregroundStyle(theme.accent)
+                        .foregroundStyle(theme.accentInk)
                 }
             }
         }

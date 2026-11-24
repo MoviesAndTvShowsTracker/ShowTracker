@@ -36,7 +36,9 @@ cd backend-server && npm run import-tvtime
 cd ios && xcodegen generate && open Marquee.xcodeproj
 ```
 
-After adding or removing Swift files, run `xcodegen generate` again. Don't hand-edit `project.pbxproj`.
+After adding or removing Swift files, run `xcodegen generate` again.
+
+Fast visual check (~30 s, no UI-test runner): `ios/scripts/shots.sh` builds, opens each screen via the DEBUG `-startTab=home|films|tv|search|you|stats` launch argument, and tiles screenshots into `/tmp/marquee-shots/sheet.png`. Options: `SCREENS="stats"`, `APPEARANCE=dark`, `API=http://localhost:5001`. Don't hand-edit `project.pbxproj`.
 
 Port 5001 is used because macOS reserves 5000 for AirPlay Receiver. Env templates: `backend-server/.env.example` (Mongo, JWT, TMDB, OMDb, Google/Apple auth, Resend, CORS) and `ios/.env.example`. A build script copies the iOS `.env` into the app bundle. The web client reads `REACT_APP_API_URL` from `main-folder/.env.development`.
 

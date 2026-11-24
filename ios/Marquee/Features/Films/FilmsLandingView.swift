@@ -57,11 +57,10 @@ struct FilmsLandingView: View {
 
                     // Ranked = only intentional “different” poster treatment.
                     CatalogShelf(
-                        title: "Top 10 trending",
+                        title: "Top 10 this week",
                         items: trending,
                         kind: .movie,
                         style: .ranked,
-                        eyebrow: "This week",
                         limit: 10
                     )
 

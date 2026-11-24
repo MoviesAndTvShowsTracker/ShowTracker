@@ -118,7 +118,7 @@ struct SearchView: View {
             Spacer(minLength: 0)
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(theme.accentInk)
         }
         .foregroundStyle(theme.olive)
         .padding(.horizontal, 14)

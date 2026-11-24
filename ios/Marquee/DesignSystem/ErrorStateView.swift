@@ -46,7 +46,7 @@ struct InlineErrorBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(theme.accentInk)
             Text(message)
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(theme.ink)

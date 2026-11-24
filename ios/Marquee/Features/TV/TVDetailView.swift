@@ -433,7 +433,7 @@ struct TVDetailView: View {
                         } else if tracking.status == "paused" {
                             Button("Resume") { Task { await resume() } }
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.accent)
+                                .foregroundStyle(theme.accentInk)
                         } else if tracking.status == "rewatching" {
                             Button("Cancel rewatch") { showCancelRewatchConfirm = true }
                                 .font(.caption.weight(.semibold))
@@ -441,7 +441,7 @@ struct TVDetailView: View {
                         } else if tracking.status == "completed" {
                             Button("Start rewatch") { showStartRewatchConfirm = true }
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.accent)
+                                .foregroundStyle(theme.accentInk)
                         }
                     }
 

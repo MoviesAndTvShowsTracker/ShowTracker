@@ -39,9 +39,26 @@ Deep Olive must be **visible** as brand green (chips, hero panels, kickers, avat
 | `accent` | `#FF4F8B` |
 | `onAccent` | `#FFFFFF` |
 
+## Design language (the three surfaces)
+
+| Surface | What lives there | Token |
+|---------|------------------|-------|
+| **Olive panel** | *Your* numbers — screen time, this week, stats hero | `OlivePanel` (Deep Olive light / `olivePanelDark` dark), Salt Grey text |
+| **Salt canvas + cards** | The catalogue and everything browsable | `surface`, `surfaceElevated`, `GlassCard` |
+| **Hibiscus** | What to tap or look at — CTAs, mark/rate, progress, the one highlighted bar | `accent` for fills, `accentInk` for pink text/icons on light |
+
+Never: pink section labels, pink as a plain data series, a kicker that repeats its title.
+
+## Contrast (measured, WCAG AA)
+
+- `inkMuted` light = Deep Olive @ 75% → 4.6:1 on Salt Grey (55% was 2.8:1).
+- Hibiscus `#FF4F8B` as text on Salt Grey is 2.5:1 → use `accentInk` `#B8205A` (4.9:1). Bright hibiscus is for fills.
+- White on hibiscus buttons is 3.1:1 → button labels stay semibold/bold.
+
 ## Typography
 
-- UI: **SF Pro** (system) only
+- UI: **SF Pro** (system) only — no Rounded
+- Uppercase labels: `.tracking(MarqueeType.labelTracking)`; big figures use `@ScaledMetric` so they follow Dynamic Type
 - Brand wordmark: logo asset moments only — no decorative display fonts in chrome
 
 ## Materials (Liquid Glass)

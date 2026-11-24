@@ -212,7 +212,7 @@ struct ServicesWatchBar: View {
         VStack(alignment: .leading, spacing: 12) {
             CatalogShelfHeader(
                 title: title,
-                eyebrow: preferences.preferredProviderIds.isEmpty ? "Choose below" : "My streaming"
+                eyebrow: nil
             )
             Text(subtitle)
                 .font(.caption)

@@ -6,7 +6,15 @@ enum AppTab: Hashable {
 
 struct MainTabView: View {
     @Environment(\.marqueeTheme) private var theme
-    @State private var tab: AppTab = .home
+    @State private var tab: AppTab = {
+        switch UITestingFixtures.startTab {
+        case "films": .films
+        case "tv": .tv
+        case "search": .search
+        case "you", "stats": .you
+        default: .home
+        }
+    }()
     @State private var searchFocusToken = 0
     @Namespace private var posterNamespace
 

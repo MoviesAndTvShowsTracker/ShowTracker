@@ -167,20 +167,21 @@ struct WeekPulseRow: View {
         NavigationLink {
             StatsView()
         } label: {
+            // Your numbers live on the olive panel (same surface as Stats / You).
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("This week")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(theme.olive)
+                        .foregroundStyle(MarqueeColor.saltGrey.opacity(0.7))
                         .textCase(.uppercase)
                         .tracking(MarqueeType.labelTracking)
                     Text(StatsFormat.minutes(minutes))
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(theme.ink)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(MarqueeColor.saltGrey)
                         .monospacedDigit()
                     Text(pulseSubtitle)
                         .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
+                        .foregroundStyle(MarqueeColor.saltGrey.opacity(0.7))
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
@@ -192,22 +193,18 @@ struct WeekPulseRow: View {
                             .font(.caption.weight(.bold))
                             .monospacedDigit()
                     }
-                    .foregroundStyle(theme.olive)
+                    .foregroundStyle(MarqueeColor.onAccent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(theme.oliveSoft, in: Capsule())
+                    .background(theme.accent, in: Capsule())
+                    .accessibilityLabel("\(streak)-day streak")
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(theme.olive)
+                    .foregroundStyle(MarqueeColor.saltGrey.opacity(0.7))
             }
             .padding(16)
-            .background(theme.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(theme.border, lineWidth: 1)
-            )
+            .background(OlivePanel(cornerRadius: 18))
         }
         .buttonStyle(PressablePosterStyle())
         .padding(.horizontal, 20)

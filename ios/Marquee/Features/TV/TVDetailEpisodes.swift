@@ -314,7 +314,7 @@ struct EpisodePlayMark: View {
             } else if plays == 1 {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(theme.accent)
+                    .foregroundStyle(theme.accentInk)
             } else {
                 Circle()
                     .fill(theme.accent)

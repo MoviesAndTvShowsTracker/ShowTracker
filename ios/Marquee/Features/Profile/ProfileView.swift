@@ -15,6 +15,7 @@ struct ProfileView: View {
     @State private var error: String?
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarImage: UIImage? = ProfileAvatarStore.load()
+    @State private var showStats = UITestingFixtures.startTab == "stats"
 
     private var displayName: String {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
@@ -81,6 +82,7 @@ struct ProfileView: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showStats) { StatsView() }
         .task { await load() }
         .refreshable { await load() }
     }

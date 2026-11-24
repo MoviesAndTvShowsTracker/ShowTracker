@@ -78,7 +78,7 @@ struct SignInView: View {
                 if let error {
                     Text(error)
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(theme.accent)
+                        .foregroundStyle(theme.accentInk)
                 }
 
                 Button {
@@ -193,7 +193,7 @@ struct SignUpView: View {
                 if let error {
                     Text(error)
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(theme.accent)
+                        .foregroundStyle(theme.accentInk)
                 }
 
                 Button {

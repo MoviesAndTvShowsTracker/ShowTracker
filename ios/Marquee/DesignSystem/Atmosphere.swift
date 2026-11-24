@@ -17,7 +17,7 @@ struct AmbientBlobs: View {
                     }
                 }
                 .blur(radius: 42)
-                .opacity(colorScheme == .dark ? 0.55 : 0.6)
+                .opacity(colorScheme == .dark ? 0.28 : 0.6)
                 .drawingGroup()
             }
         }

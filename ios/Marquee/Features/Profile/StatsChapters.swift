@@ -221,7 +221,7 @@ struct RatedPosterRail: View {
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill").imageScale(.small)
-                            .foregroundStyle(theme.accent)
+                            .foregroundStyle(theme.accentInk)
                         Text(StarFormat.string(item.rating))
                     }
                     .font(.caption2.weight(.bold).monospacedDigit())
@@ -279,7 +279,7 @@ struct RatingHistogram: View {
                         VStack(alignment: .trailing, spacing: 0) {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill").imageScale(.small)
-                                    .foregroundStyle(theme.accent)
+                                    .foregroundStyle(theme.accentInk)
                                 Text(String(format: "%.1f", average))
                             }
                             .font(.title3.weight(.bold).monospacedDigit())

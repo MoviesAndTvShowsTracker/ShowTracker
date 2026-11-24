@@ -52,11 +52,10 @@ struct TVLandingView: View {
                     ServicesWatchBar()
 
                     CatalogShelf(
-                        title: "Top 10 trending",
+                        title: "Top 10 this week",
                         items: trending,
                         kind: .tv,
                         style: .ranked,
-                        eyebrow: "This week",
                         limit: 10
                     )
 

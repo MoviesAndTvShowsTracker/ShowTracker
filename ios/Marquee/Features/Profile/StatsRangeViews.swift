@@ -60,7 +60,7 @@ struct ScreenTimeHero: View {
     private let bulbCount = 18
 
     private var ink: Color { MarqueeColor.saltGrey }
-    private var panel: Color { scheme == .dark ? MarqueeColor.surfaceElevatedDark : MarqueeColor.deepOlive }
+    private var panel: Color { scheme == .dark ? MarqueeColor.olivePanelDark : MarqueeColor.deepOlive }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -224,7 +224,7 @@ struct ScreenTimeStrip: View {
         }
         .padding(16)
         .background(
-            scheme == .dark ? MarqueeColor.surfaceElevatedDark : MarqueeColor.deepOlive,
+            scheme == .dark ? MarqueeColor.olivePanelDark : MarqueeColor.deepOlive,
             in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
         .accessibilityElement(children: .combine)
@@ -698,7 +698,7 @@ struct FilmsOnMarqueeRail: View {
                 .lineLimit(1)
             HStack(spacing: 4) {
                 if let rating = film.rating {
-                    Image(systemName: "star.fill").imageScale(.small).foregroundStyle(theme.accent)
+                    Image(systemName: "star.fill").imageScale(.small).foregroundStyle(theme.accentInk)
                     Text(String(format: "%.1f", rating))
                 } else if let when = StatsDates.shortDay(film.watchedAt) {
                     Text(when)

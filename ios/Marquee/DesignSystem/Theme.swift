@@ -14,6 +14,8 @@ enum MarqueeColor {
     static let surfaceElevatedDark = Color(hex: 0x2A281F)
     static let inkDark = Color(hex: 0xF3F2EA)
     static let onAccent = Color.white
+    /// Dark-mode "your numbers" panel: Olive Leaf pushed deep, so it still reads as brand green.
+    static let olivePanelDark = Color(hex: 0x2C3322)
 }
 
 extension Color {
@@ -34,6 +36,9 @@ struct MarqueeTheme {
     let ink: Color
     let inkMuted: Color
     let accent: Color
+    /// Hibiscus for text and icons on light surfaces — 4.9:1 on Salt Grey.
+    /// Bright `accent` stays for fills (buttons, progress, highlights).
+    let accentInk: Color
     let onAccent: Color
     /// Visible brand green for kickers, chips, progress, library
     let olive: Color
@@ -51,6 +56,7 @@ struct MarqueeTheme {
                 ink: MarqueeColor.inkDark,
                 inkMuted: MarqueeColor.inkDark.opacity(0.72),
                 accent: MarqueeColor.hibiscus,
+                accentInk: MarqueeColor.hibiscus,
                 onAccent: MarqueeColor.onAccent,
                 olive: Color(hex: 0xA3B389),
                 oliveSoft: MarqueeColor.oliveLeaf.opacity(0.28),
@@ -62,8 +68,10 @@ struct MarqueeTheme {
                 surface: MarqueeColor.saltGrey,
                 surfaceElevated: MarqueeColor.surfaceElevatedLight,
                 ink: MarqueeColor.deepOlive,
-                inkMuted: MarqueeColor.deepOlive.opacity(0.55),
+                // 0.75 → 4.6:1 on Salt Grey (0.55 measured 2.8:1, below AA).
+                inkMuted: MarqueeColor.deepOlive.opacity(0.75),
                 accent: MarqueeColor.hibiscus,
+                accentInk: Color(hex: 0xB8205A),
                 onAccent: MarqueeColor.onAccent,
                 olive: MarqueeColor.deepOlive,
                 oliveSoft: MarqueeColor.deepOlive.opacity(0.10),
@@ -194,6 +202,21 @@ struct SectionKicker: View {
             .tracking(MarqueeType.labelTracking)
             .textCase(.uppercase)
             .foregroundStyle(accented ? theme.ink : theme.olive)
+    }
+}
+
+/// The "your numbers" surface: Deep Olive in light, elevated dark in dark mode.
+struct OlivePanel: View {
+    @Environment(\.colorScheme) private var scheme
+    var cornerRadius: CGFloat = 22
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(scheme == .dark ? MarqueeColor.olivePanelDark : MarqueeColor.deepOlive)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(MarqueeColor.saltGrey.opacity(scheme == .dark ? 0.1 : 0), lineWidth: 1)
+            )
     }
 }
 
