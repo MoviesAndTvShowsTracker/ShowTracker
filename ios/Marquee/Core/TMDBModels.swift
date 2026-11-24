@@ -24,6 +24,9 @@ struct MediaItem: Codable, Identifiable, Hashable, Sendable{
     let vote_average: Double?
     let media_type: String?
     let genre_ids: [Int]?
+    /// Present on person results from search/multi and search/person.
+    var profile_path: String? = nil
+    var known_for_department: String? = nil
 
     var displayTitle: String { title ?? name ?? "Untitled" }
     var year: String? {

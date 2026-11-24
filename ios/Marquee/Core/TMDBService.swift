@@ -124,6 +124,7 @@ enum TMDBService {
         case .multi: path = "search/multi"
         case .movie: path = "search/movie"
         case .tv: path = "search/tv"
+        case .person: path = "search/person"
         }
         return try await APIClient.shared.get(
             "/api/tmdb/\(path)",
@@ -136,13 +137,14 @@ enum TMDBService {
     }
 
     enum SearchType: String, CaseIterable, Identifiable {
-        case multi, movie, tv
+        case multi, movie, tv, person
         var id: String { rawValue }
         var label: String {
             switch self {
             case .multi: return "All"
             case .movie: return "Films"
             case .tv: return "TV"
+            case .person: return "People"
             }
         }
     }

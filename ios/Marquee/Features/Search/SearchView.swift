@@ -6,9 +6,14 @@ struct SearchView: View {
     @Binding var focusToken: Int
 
     @State private var query = ""
+    @State private var scope: TMDBService.SearchType = .multi
     @State private var results: [MediaItem] = []
+    @State private var page = 1
+    @State private var totalPages = 1
+    @State private var loadingMore = false
     @State private var trending: [MediaItem] = []
     @State private var recent: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
+    @State private var viewed: [RecentlyViewed] = RecentlyViewed.load()
     @State private var searching = false
     @State private var error: String?
     @State private var debounceTask: Task<Void, Never>?
@@ -16,14 +21,24 @@ struct SearchView: View {
     @State private var searchGeneration = 0
     @State private var activeQuery = ""
 
-    @State private var watchedMovieIds: Set<Int> = []
-    @State private var watchedMovieCounts: [Int: Int] = [:]
-    @State private var watchlistMovieIds: Set<Int> = []
-    @State private var watchedTVIds: Set<Int> = []
-    @State private var watchlistTVIds: Set<Int> = []
-
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var titles: [MediaItem] { results.filter { !isPerson($0) } }
+    private var people: [MediaItem] {
+        let all = results.filter { isPerson($0) && $0.profile_path != nil }
+        if scope == .person { return all }
+        // In All, only strong matches: the top hit, or a name that starts with the query.
+        let q = activeQuery.lowercased()
+        return all.filter { $0.id == results.first?.id || $0.displayTitle.lowercased().hasPrefix(q) }
+    }
+
+    /// A wide card when the first title closely matches what was typed.
+    private var topResult: MediaItem? {
+        guard scope != .person, let first = titles.first, first.backdrop_path != nil else { return nil }
+        let q = activeQuery.lowercased()
+        return first.displayTitle.lowercased().hasPrefix(q) ? first : nil
     }
 
     var body: some View {
@@ -41,22 +56,29 @@ struct SearchView: View {
             text: $query,
             isPresented: $searchPresented,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Title, show, or franchise"
+            prompt: "Films, shows, people"
         )
+        .searchSuggestions {
+            if trimmedQuery.isEmpty {
+                ForEach(recent.prefix(5), id: \.self) { term in
+                    Label(term, systemImage: "clock.arrow.circlepath").searchCompletion(term)
+                }
+            }
+        }
+        .searchScopes($scope, activation: .onSearchPresentation) {
+            ForEach(TMDBService.SearchType.allCases) { Text($0.label).tag($0) }
+        }
         // Without this, an active search session on push ignores the detail's
-        // `.toolbar(.hidden)` and kills the soft scroll-edge blur (Films/TV
-        // path is fine because it has no searchable). iOS 18+ system bug.
+        // `.toolbar(.hidden)` and kills the soft scroll-edge blur. iOS 18+ system bug.
         .searchPresentationToolbarBehavior(.avoidHidingContent)
-        .onChange(of: query) { _, _ in
-            scheduleSearch()
-        }
-        .onChange(of: focusToken) { _, _ in
-            searchPresented = true
-        }
+        .onChange(of: query) { _, _ in scheduleSearch() }
+        .onChange(of: scope) { _, _ in scheduleSearch(immediate: true) }
+        .onChange(of: focusToken) { _, _ in searchPresented = true }
         .task {
             async let trend: Void = loadTrending()
-            async let diary: Void = loadDiaryMarks()
-            _ = await (trend, diary)
+            async let films: Void = FilmDiaryIndex.shared.refresh()
+            async let shows: Void = TVDiaryIndex.shared.refresh()
+            _ = await (trend, films, shows)
         }
     }
 
@@ -64,108 +86,36 @@ struct SearchView: View {
 
     private var idleState: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                browseShortcuts
-                    .padding(.horizontal, 20)
-
-                if !recent.isEmpty {
-                    recentSection
-                }
-
-                if !trending.isEmpty {
-                    trendingSection
-                }
+            VStack(alignment: .leading, spacing: 28) {
+                if !viewed.isEmpty { viewedSection }
+                if !trending.isEmpty { trendingSection }
+                browseTiles
             }
             .padding(.vertical, 12)
             .padding(.bottom, 28)
         }
+        .scrollDismissesKeyboard(.immediately)
     }
 
-    private var browseShortcuts: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Browse instead")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(theme.ink)
-            Text("Service and genre filters live on Films and TV — Search is for titles you already have in mind.")
-                .font(.subheadline)
-                .foregroundStyle(theme.inkMuted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 10) {
-                NavigationLink {
-                    MediaBrowseView(kind: .movie)
-                } label: {
-                    browseShortcutLabel(title: "Films", systemImage: "film")
-                }
-                .buttonStyle(PressablePosterStyle())
-
-                NavigationLink {
-                    MediaBrowseView(kind: .tv)
-                } label: {
-                    browseShortcutLabel(title: "TV", systemImage: "tv")
-                }
-                .buttonStyle(PressablePosterStyle())
-            }
-        }
-    }
-
-    private func browseShortcutLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Spacer(minLength: 0)
-            Image(systemName: "line.3.horizontal.decrease.circle")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(theme.accentInk)
-        }
-        .foregroundStyle(theme.olive)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity)
-        .background(theme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(theme.border, lineWidth: 1)
-        )
-    }
-
-    private var recentSection: some View {
+    private var viewedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                Spacer()
-                Button("Clear") {
-                    withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
-                        recent = []
+            CatalogShelfHeader(
+                title: "Recently viewed",
+                seeAll: AnyView(
+                    Button("Clear") {
+                        withAnimation(reduceMotion ? nil : MarqueeMotion.micro) { viewed = [] }
+                        RecentlyViewed.save([])
                     }
-                    UserDefaults.standard.set(recent, forKey: "recentSearches")
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(theme.olive)
-            }
-            .padding(.horizontal, 20)
-
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                )
+            )
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(recent, id: \.self) { term in
-                        Button {
-                            query = term
-                            searchPresented = true
-                            scheduleSearch(immediate: true)
-                        } label: {
-                            Label(term, systemImage: "clock")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(theme.olive)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(theme.oliveSoft, in: Capsule(style: .continuous))
+                LazyHStack(alignment: .top, spacing: 10) {
+                    ForEach(viewed) { entry in
+                        MediaNavLink(id: entry.id, kind: entry.mediaKind) {
+                            PosterTile(title: entry.title, posterPath: entry.poster, width: 84, captionLines: 1)
                         }
-                        .buttonStyle(PressablePosterStyle())
                     }
                 }
                 .padding(.horizontal, 20)
@@ -175,21 +125,18 @@ struct SearchView: View {
 
     private var trendingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Popular right now")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(theme.ink)
-                .padding(.horizontal, 20)
+            CatalogShelfHeader(title: "Trending today")
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
-                    ForEach(trending.prefix(12)) { item in
+                    ForEach(trending.prefix(14)) { item in
                         MediaNavLink(id: item.id, kind: kind(for: item)) {
                             PosterTile(
                                 title: item.displayTitle,
                                 posterPath: item.poster_path,
-                                year: item.year,
-                                diary: diaryMark(for: item)
+                                year: kind(for: item) == .tv ? "TV" : item.year
                             )
                         }
+                        .catalogQuickActions(item, kind: kind(for: item))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -197,21 +144,53 @@ struct SearchView: View {
         }
     }
 
+    private var browseTiles: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            CatalogShelfHeader(title: "Browse")
+            HStack(spacing: 10) {
+                browseTile("Films", systemImage: "film", kind: .movie)
+                browseTile("TV", systemImage: "tv", kind: .tv)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private func browseTile(_ title: String, systemImage: String, kind: MediaKind) -> some View {
+        NavigationLink {
+            MediaBrowseView(kind: kind)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.ink)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(theme.inkMuted)
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 52)
+            .background(theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(theme.border, lineWidth: 1))
+        }
+        .buttonStyle(PressablePosterStyle())
+        .accessibilityLabel("Browse \(kind == .movie ? "films" : "TV")")
+    }
+
     // MARK: - Results
 
-    private let resultColumns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-    ]
+    private let resultColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     private var resultsList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: 22) {
                 if searching && results.isEmpty {
                     VStack(spacing: 12) {
-                        ProgressView()
-                            .tint(theme.accent)
+                        ProgressView().tint(theme.accent)
                         Text("Searching…")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(theme.inkMuted)
@@ -219,84 +198,129 @@ struct SearchView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
                 } else if !searching, results.isEmpty, let error {
-                    ErrorStateView(message: error) {
-                        scheduleSearch(immediate: true)
-                    }
-                    .padding(.top, 12)
+                    ErrorStateView(message: error) { scheduleSearch(immediate: true) }
+                        .padding(.top, 12)
                 } else if !searching, results.isEmpty {
                     ContentUnavailableView.search(text: query)
                         .padding(.top, 24)
                 } else {
-                    if searching, !results.isEmpty, activeQuery != trimmedQuery {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(theme.accent)
-                            Text("Updating…")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.inkMuted)
-                            Spacer(minLength: 0)
+                    if let top = topResult {
+                        TopResultCard(item: top, kind: kind(for: top))
+                            .simultaneousGesture(TapGesture().onEnded { remember(top) })
+                    }
+
+                    if !people.isEmpty {
+                        if scope == .person {
+                            peopleGrid
+                        } else {
+                            FacesRail(people: people.prefix(12).map(asPerson), title: "People")
+                        }
+                    }
+
+                    let grid = titles.filter { $0.id != topResult?.id }
+                    if !grid.isEmpty {
+                        LazyVGrid(columns: resultColumns, spacing: 14) {
+                            ForEach(grid) { item in
+                                MediaNavLink(id: item.id, kind: kind(for: item)) {
+                                    PosterGridTile(
+                                        title: item.displayTitle,
+                                        posterPath: item.poster_path,
+                                        caption: resultCaption(for: item),
+                                        kindLabel: scope == .multi ? (kind(for: item) == .tv ? "TV" : "Film") : nil
+                                    )
+                                }
+                                .buttonStyle(PressablePosterStyle())
+                                .simultaneousGesture(TapGesture().onEnded { remember(item) })
+                                .catalogQuickActions(item, kind: kind(for: item))
+                                .onAppear {
+                                    if item.id == grid.last?.id { Task { await loadMore() } }
+                                }
+                            }
                         }
                         .padding(.horizontal, 20)
                     }
 
-                    LazyVGrid(columns: resultColumns, spacing: 14) {
-                        ForEach(results) { item in
-                            MediaNavLink(id: item.id, kind: kind(for: item)) {
-                                PosterGridTile(
-                                    title: item.displayTitle,
-                                    posterPath: item.poster_path,
-                                    caption: resultCaption(for: item),
-                                    diary: diaryMark(for: item),
-                                    kindLabel: kind(for: item) == .tv ? "TV" : "Film"
-                                )
-                            }
-                            .buttonStyle(PressablePosterStyle())
-                        }
+                    if loadingMore {
+                        ProgressView().tint(theme.accent).frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 28)
                 }
             }
             .padding(.vertical, 8)
+            .padding(.bottom, 28)
             .animation(reduceMotion ? nil : MarqueeMotion.micro, value: results.map(\.id))
         }
         .scrollDismissesKeyboard(.immediately)
     }
 
+    private var peopleGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 18) {
+            ForEach(people) { person in
+                NavigationLink { PersonView(personId: person.id) } label: {
+                    VStack(spacing: 6) {
+                        CachedAsyncImage(url: AppConfig.posterURL(path: person.profile_path, size: "w185"), contentMode: .fill)
+                            .frame(width: 84, height: 84)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(theme.border, lineWidth: 1))
+                        Text(person.displayTitle)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(theme.ink)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                        Text(role(person.known_for_department))
+                            .font(.caption2)
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                }
+                .buttonStyle(PressablePosterStyle())
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
     private func resultCaption(for item: MediaItem) -> String? {
         var parts: [String] = []
         if let year = item.year { parts.append(year) }
-        if let vote = item.vote_average, vote > 0 {
-            parts.append(String(format: "%.1f", vote))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        if let vote = item.vote_average, vote > 0 { parts.append(String(format: "★ %.1f", vote)) }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ")
     }
 
     // MARK: - Helpers
 
     private func kind(for item: MediaItem) -> MediaKind {
+        if scope == .movie { return .movie }
+        if scope == .tv { return .tv }
         let t = item.media_type ?? (item.title != nil ? "movie" : "tv")
         return t == "tv" ? .tv : .movie
     }
 
-    private func isFilmOrShow(_ item: MediaItem) -> Bool {
-        let kind = item.media_type
-        return kind == "movie" || kind == "tv" || kind == nil
+    private func isPerson(_ item: MediaItem) -> Bool {
+        scope == .person || item.media_type == "person"
     }
 
-    private func diaryMark(for item: MediaItem) -> DiaryStatusMark? {
-        switch kind(for: item) {
-        case .movie:
-            if watchedMovieIds.contains(item.id) {
-                return .watched(times: watchedMovieCounts[item.id] ?? 1)
-            }
-            if watchlistMovieIds.contains(item.id) { return .watchlist }
-        case .tv:
-            if watchedTVIds.contains(item.id) { return .watched(times: 1) }
-            if watchlistTVIds.contains(item.id) { return .watchlist }
+    private func role(_ department: String?) -> String {
+        switch department {
+        case "Directing": return "Director"
+        case "Writing": return "Writer"
+        case "Acting": return "Actor"
+        default: return department ?? ""
         }
-        return nil
+    }
+
+    private func asPerson(_ item: MediaItem) -> TrendingPerson {
+        TrendingPerson(id: item.id, name: item.displayTitle, profile_path: item.profile_path,
+                       known_for_department: item.known_for_department, known_for: nil)
+    }
+
+    private func remember(_ item: MediaItem) {
+        let entry = RecentlyViewed(id: item.id, kind: kind(for: item) == .tv ? "tv" : "movie",
+                                   title: item.displayTitle, poster: item.poster_path)
+        viewed = Array(([entry] + viewed.filter { $0 != entry }).prefix(12))
+        RecentlyViewed.save(viewed)
+    }
+
+    private func setRecent(_ terms: [String]) {
+        withAnimation(reduceMotion ? nil : MarqueeMotion.micro) { recent = terms }
+        UserDefaults.standard.set(terms, forKey: "recentSearches")
     }
 
     private func scheduleSearch(immediate: Bool = false) {
@@ -311,9 +335,7 @@ struct SearchView: View {
         }
         error = nil
         debounceTask = Task {
-            if !immediate {
-                try? await Task.sleep(nanoseconds: 320_000_000)
-            }
+            if !immediate { try? await Task.sleep(nanoseconds: 320_000_000) }
             guard !Task.isCancelled else { return }
             await runSearch(for: q)
         }
@@ -322,73 +344,47 @@ struct SearchView: View {
     private func runSearch(for q: String) async {
         searchGeneration += 1
         let generation = searchGeneration
+        let type = scope
         searching = true
-        defer {
-            if generation == searchGeneration {
-                searching = false
-            }
-        }
+        defer { if generation == searchGeneration { searching = false } }
 
         do {
-            async let pageTask = TMDBService.search(query: q, type: .multi)
-            async let diaryTask: Void = loadDiaryMarks()
-            let page = try await pageTask
-            _ = await diaryTask
-            guard !Task.isCancelled, generation == searchGeneration else { return }
-            guard trimmedQuery == q || immediateMatch(q) else { return }
-            results = page.results.filter { isFilmOrShow($0) }
+            let res = try await TMDBService.search(query: q, type: type)
+            guard !Task.isCancelled, generation == searchGeneration, trimmedQuery == q else { return }
+            results = res.results.filter(keep)
+            page = 1
+            totalPages = res.total_pages ?? 1
             activeQuery = q
             error = nil
-            if !recent.contains(q) {
-                recent.insert(q, at: 0)
-                recent = Array(recent.prefix(8))
-                UserDefaults.standard.set(recent, forKey: "recentSearches")
-            }
-        } catch is CancellationError {
-            return
-        } catch let urlError as URLError where urlError.code == .cancelled {
-            return
+            if !recent.contains(q) { setRecent(Array(([q] + recent).prefix(8))) }
         } catch {
-            guard !Task.isCancelled, generation == searchGeneration else { return }
-            if isCancellation(error) { return }
-            if results.isEmpty {
-                self.error = friendlyMessage(for: error)
-            }
+            guard !Task.isCancelled, generation == searchGeneration, !isCancellation(error) else { return }
+            if results.isEmpty { self.error = friendlyMessage(for: error) }
         }
+    }
+
+    private func loadMore() async {
+        guard !loadingMore, !searching, page < totalPages, page < 5, !activeQuery.isEmpty else { return }
+        loadingMore = true
+        defer { loadingMore = false }
+        let generation = searchGeneration
+        guard let res = try? await TMDBService.search(query: activeQuery, type: scope, page: page + 1),
+              generation == searchGeneration else { return }
+        let seen = Set(results.map(\.id))
+        results += res.results.filter { keep($0) && !seen.contains($0.id) }
+        page += 1
+    }
+
+    private func keep(_ item: MediaItem) -> Bool {
+        if scope == .person { return true }
+        let t = item.media_type
+        return t == nil || t == "movie" || t == "tv" || t == "person"
     }
 
     private func loadTrending() async {
         guard trending.isEmpty else { return }
-        trending = (try? await TMDBService.fetchPaged("trending/all/week"))?.results
-            .filter { isFilmOrShow($0) } ?? []
-    }
-
-    private func loadDiaryMarks() async {
-        async let films = DiaryService.watchedMovies()
-        async let filmList = DiaryService.movieWatchlist()
-        async let shows = DiaryService.watchedTV()
-        async let showList = DiaryService.tvWatchlist()
-
-        if let watched = try? await films {
-            watchedMovieIds = Set(watched.compactMap { Int($0.movieId) })
-            watchedMovieCounts = Dictionary(uniqueKeysWithValues: watched.compactMap { doc in
-                guard let id = Int(doc.movieId) else { return nil }
-                return (id, max(1, doc.watchCount ?? 1))
-            })
-        }
-        if let list = try? await filmList {
-            watchlistMovieIds = Set(list.compactMap { Int($0.movieId) })
-        }
-        if let watched = try? await shows {
-            watchedTVIds = Set(watched.compactMap { Int($0.tvId) })
-        }
-        if let list = try? await showList {
-            watchlistTVIds = Set(list.compactMap { Int($0.tvId) })
-        }
-    }
-
-    private func immediateMatch(_ q: String) -> Bool {
-        trimmedQuery == q
+        trending = (try? await TMDBService.fetchPaged("trending/all/day"))?.results
+            .filter { $0.media_type == "movie" || $0.media_type == "tv" } ?? []
     }
 
     private func isCancellation(_ error: Error) -> Bool {
@@ -419,3 +415,27 @@ struct SearchView: View {
     }
 }
 
+
+/// A title opened from Search, newest first.
+struct RecentlyViewed: Codable, Identifiable, Hashable {
+    let id: Int
+    let kind: String
+    let title: String
+    let poster: String?
+
+    var mediaKind: MediaKind { kind == "tv" ? .tv : .movie }
+
+    static func == (a: Self, b: Self) -> Bool { a.id == b.id && a.kind == b.kind }
+    func hash(into h: inout Hasher) { h.combine(id); h.combine(kind) }
+
+    private static let key = "search.recentlyViewed"
+
+    static func load() -> [RecentlyViewed] {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([RecentlyViewed].self, from: data)) ?? []
+    }
+
+    static func save(_ items: [RecentlyViewed]) {
+        UserDefaults.standard.set(try? JSONEncoder().encode(items), forKey: key)
+    }
+}

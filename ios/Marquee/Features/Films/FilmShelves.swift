@@ -132,10 +132,11 @@ struct ComingSoonSection: View {
 struct FacesRail: View {
     @Environment(\.marqueeTheme) private var theme
     let people: [TrendingPerson]
+    var title = "Faces this week"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            CatalogShelfHeader(title: "Faces this week")
+            CatalogShelfHeader(title: title)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 16) {
                     ForEach(people.prefix(16)) { person in
@@ -150,7 +151,7 @@ struct FacesRail: View {
                                     .foregroundStyle(theme.ink)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
-                                Text(person.known_for_department == "Directing" ? "Director" : "Actor")
+                                Text(person.known_for_department == "Directing" ? "Director" : person.known_for_department == "Writing" ? "Writer" : "Actor")
                                     .font(.caption2)
                                     .foregroundStyle(theme.inkMuted)
                             }
