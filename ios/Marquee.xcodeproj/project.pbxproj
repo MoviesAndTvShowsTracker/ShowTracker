@@ -25,6 +25,7 @@
 		403BE1B8D8181DFC4F55982F /* TVDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFBE1DABA67978CCFC74BD3 /* TVDetailPane.swift */; };
 		40CE8C396F9C7F5E147E3678 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D6A7B5C1976974BAD871910 /* APIClient.swift */; };
 		410D29321BECCAAD96294669 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84516D28A281EAA8D5B69914 /* SearchView.swift */; };
+		41378BD079D8A934DF16E931 /* LaunchSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4336475445748C38C8A1986 /* LaunchSplash.swift */; };
 		460D5781FC20B103A86EE496 /* TVLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5580EADE84F261177D26C /* TVLandingView.swift */; };
 		4A5EFB6F443E2A719A8DE513 /* MediaDetailShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E3BBD68ED2CD2A815AE163C /* MediaDetailShell.swift */; };
 		4F02FB4B185C5FA067A9733F /* SwipeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = E124EF284A5E5A27001E90C6 /* SwipeBack.swift */; };
@@ -61,6 +62,7 @@
 		9CBCDD367ADDD130F9514D36 /* HeroCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A7EFBC0F456A8329839FD6 /* HeroCarousel.swift */; };
 		A55F0043F11246BE6BD56792 /* DiaryActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE548A2874690602B4A3562 /* DiaryActivityView.swift */; };
 		A8634BB2C2D8046F7AF49F82 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 069DF1516D03B3473151F921 /* HomeView.swift */; };
+		AA00C8A263D7DDBA1A7A8474 /* LaunchSplashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C9671694D9633A5C110669 /* LaunchSplashTests.swift */; };
 		AA1FE325ABBBB9AC23F8BDCA /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */; };
 		B0D46860BEDB1205438ECDC7 /* TVDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AEFEDC3EE99990A8C67B6B /* TVDetailView.swift */; };
 		B23D94C5BB982D32C320BF32 /* ScreenWalkthroughTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039EFB2C8EA16F5DF59E16D1 /* ScreenWalkthroughTests.swift */; };
@@ -157,6 +159,7 @@
 		2EED6F55DAFA1EFB4CA67001 /* DiaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryModels.swift; sourceTree = "<group>"; };
 		2F4F2A01B742FFE5DBCD2855 /* TVLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVLibraryView.swift; sourceTree = "<group>"; };
 		37095F35B989872BBA4B99A9 /* ShowProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowProgress.swift; sourceTree = "<group>"; };
+		37C9671694D9633A5C110669 /* LaunchSplashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSplashTests.swift; sourceTree = "<group>"; };
 		387A689F9896F74998A07A37 /* StatsRangeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsRangeViews.swift; sourceTree = "<group>"; };
 		39F9290092A63D9094EE5450 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieDetailPolishUITests.swift; sourceTree = "<group>"; };
@@ -227,6 +230,7 @@
 		D984F8CC7D9C6B7020B812B5 /* PersonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonView.swift; sourceTree = "<group>"; };
 		D9ADB060330D18F40B2E24A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E124EF284A5E5A27001E90C6 /* SwipeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBack.swift; sourceTree = "<group>"; };
+		E4336475445748C38C8A1986 /* LaunchSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSplash.swift; sourceTree = "<group>"; };
 		E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeVisualUITests.swift; sourceTree = "<group>"; };
 		F34B7B1A0409179151349F83 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
 		F403992781B93F372C8B0F11 /* ErrorStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorStateView.swift; sourceTree = "<group>"; };
@@ -275,6 +279,7 @@
 			isa = PBXGroup;
 			children = (
 				4C785CDBD994AF0397DBED9E /* Info.plist */,
+				37C9671694D9633A5C110669 /* LaunchSplashTests.swift */,
 				988D34967043B51497143CFF /* LobbyShotTests.swift */,
 				E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */,
 				3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */,
@@ -460,6 +465,7 @@
 			isa = PBXGroup;
 			children = (
 				105A445C33145D47C5E4F219 /* AppDelegate.swift */,
+				E4336475445748C38C8A1986 /* LaunchSplash.swift */,
 				FBC159E29E1428B6204B55E2 /* LaunchTiming.swift */,
 				D3E1C91523079756EDFCC574 /* MainTabView.swift */,
 				6F039C6A2DF0CFE1D47F79D8 /* MarqueeApp.swift */,
@@ -705,6 +711,7 @@
 				A8634BB2C2D8046F7AF49F82 /* HomeView.swift in Sources */,
 				72A52E431FC8347D7D7AB38F /* ImageCache.swift in Sources */,
 				74CEACC5D759CB6F40397425 /* KeychainStore.swift in Sources */,
+				41378BD079D8A934DF16E931 /* LaunchSplash.swift in Sources */,
 				23276642CCA88BB75767DBED /* LaunchTiming.swift in Sources */,
 				9C69AE377FB87A97930853CA /* LobbyStatsVisuals.swift in Sources */,
 				528B462DC39BAAD11715776F /* MainTabView.swift in Sources */,
@@ -757,6 +764,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA00C8A263D7DDBA1A7A8474 /* LaunchSplashTests.swift in Sources */,
 				C256B0491D763F5B386536BC /* LobbyShotTests.swift in Sources */,
 				270FEE28BADE67EB6AA27795 /* MarqueeVisualUITests.swift in Sources */,
 				273676622AA62EEBEAF82BA8 /* MovieDetailPolishUITests.swift in Sources */,

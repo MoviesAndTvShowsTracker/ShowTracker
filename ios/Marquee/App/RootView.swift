@@ -11,38 +11,36 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            theme.surface.ignoresSafeArea()
+            // Static-frame colour stays outside the growing window until settled.
+            if !settled {
+                LaunchSplashBackground()
+            }
 
-            destination
-                .modifier(LaunchReveal(revealed: revealed, settled: settled))
-                .allowsHitTesting(revealed)
+            ZStack {
+                theme.surface.ignoresSafeArea()
+                destination
+                AmbientBlobs()
+                    .opacity(revealed ? 1 : 0)
+                    .allowsHitTesting(false)
+            }
+            .modifier(LaunchRevealMask(revealed: revealed, settled: settled))
+            .allowsHitTesting(revealed)
 
-            AmbientBlobs()
-                .opacity(revealed ? 1 : 0)
-                .allowsHitTesting(false)
-
-            launchSplash
-                .scaleEffect(revealed ? 1.48 : 1)
-                .opacity(revealed ? 0 : 1)
-                .blur(radius: revealed ? 6 : 0)
-                .allowsHitTesting(!revealed)
-                .accessibilityHidden(revealed)
+            if !settled {
+                LaunchSplashView(revealed: revealed)
+            }
         }
         .animation(reduceMotion ? nil : MarqueeMotion.standard, value: showWelcome)
         .respectReducedMotion()
-        .onChange(of: auth.isRestoring) { _, restoring in
-            if !restoring { Task { await playHandoff() } }
+        .onChange(of: auth.isRestoring) { _, _ in
+            Task { await scheduleReveal() }
         }
         .onChange(of: auth.isAuthenticated) { _, isAuth in
             if isAuth && !OnboardingStore.hasSeenWelcome {
                 showWelcome = true
             }
         }
-        .task {
-            if !auth.isRestoring {
-                await playHandoff()
-            }
-        }
+        .task { await scheduleReveal() }
     }
 
     @ViewBuilder
@@ -140,48 +138,29 @@ struct RootView: View {
         .onAppear { showWelcome = !OnboardingStore.hasSeenWelcome }
     }
 
-    private var launchSplash: some View {
-        VStack(spacing: 16) {
-            BrandMark(size: 128, lit: true)
-            Text("Marquee")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(theme.olive)
-            Text("your watch diary")
-                .font(.subheadline)
-                .foregroundStyle(theme.inkMuted)
+    /// Reveal once the session has restored and the minimum has passed, or at the cap.
+    @MainActor
+    private func scheduleReveal() async {
+        guard !revealed else { return }
+        let elapsed = Date().timeIntervalSince(bootStarted)
+        let wait = LaunchTiming.revealDelay(elapsed: elapsed, restored: !auth.isRestoring)
+            ?? (LaunchTiming.maximum - elapsed)
+        if wait > 0 {
+            try? await Task.sleep(for: .seconds(wait))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        reveal()
     }
 
     @MainActor
-    private func playHandoff() async {
+    private func reveal() {
         guard !revealed else { return }
-        let remaining = 0.75 - Date().timeIntervalSince(bootStarted)
-        if remaining > 0 {
-            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-        }
-        withAnimation(reduceMotion ? .easeOut(duration: 0.01) : MarqueeMotion.zoom) {
-            revealed = true
-        }
-        try? await Task.sleep(nanoseconds: 900_000_000)
-        settled = true
-    }
-}
-
-/// Applied only during launch. Dropped after settle so NavigationStack
-/// zoom/pop is not fighting a parent scaleEffect.
-private struct LaunchReveal: ViewModifier {
-    var revealed: Bool
-    var settled: Bool
-
-    func body(content: Content) -> some View {
-        if settled {
-            content
-        } else {
-            content
-                .scaleEffect(revealed ? 1 : 1.08)
-                .opacity(revealed ? 1 : 0)
-                .blur(radius: revealed ? 0 : 12)
+        let curve: Animation = reduceMotion
+            ? .easeOut(duration: 0.25)
+            : .spring(response: 0.65, dampingFraction: 1)
+        withAnimation(curve) { revealed = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(750))
+            settled = true
         }
     }
 }
