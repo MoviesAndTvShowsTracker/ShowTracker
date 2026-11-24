@@ -3,8 +3,11 @@ import XCTest
 final class ScreenWalkthroughTests: XCTestCase {
     func testWalkMainScreens() throws {
         let app = XCUIApplication()
-        app.launchEnvironment["MARQUEE_DEBUG_EMAIL"] = "marquee.sim@example.com"
-        app.launchEnvironment["MARQUEE_DEBUG_PASSWORD"] = "simtest123"
+        // Override with TEST_RUNNER_WALK_EMAIL / TEST_RUNNER_WALK_PASSWORD to walk a real account.
+        let env = ProcessInfo.processInfo.environment
+        app.launchEnvironment["MARQUEE_DEBUG_EMAIL"] = env["WALK_EMAIL"] ?? "marquee.sim@example.com"
+        app.launchEnvironment["MARQUEE_DEBUG_PASSWORD"] = env["WALK_PASSWORD"] ?? "simtest123"
+        if let api = env["WALK_API"] { app.launchArguments += ["-apiBaseURL", api] }
         app.launch()
 
         if app.buttons["Start your diary"].waitForExistence(timeout: 12) {
