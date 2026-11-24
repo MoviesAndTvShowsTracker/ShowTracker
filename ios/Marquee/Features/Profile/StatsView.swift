@@ -3,6 +3,7 @@ import SwiftUI
 /// All-time diary stats. One "Lately" card carries the week/month/year view;
 /// everything else is the whole diary: screen time, TV, films, habits, badges.
 struct StatsView: View {
+    @Environment(AuthStore.self) private var auth
     @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var stats: DashboardStats? = DiaryService.cachedDashboardStats()
@@ -11,6 +12,7 @@ struct StatsView: View {
     @State private var rangeKey: StatsRangeKey = .week
     @State private var decadeRoom: Room = .films
     @State private var didPickInitialRange = false
+    @State private var shareImage: Image?
 
     private enum Room: String, CaseIterable, Identifiable {
         case films = "Films"
@@ -36,8 +38,18 @@ struct StatsView: View {
                 } else if let stats {
                     ScreenTimeHero(overview: stats.overview, since: sinceLabel)
 
+                    if let type = stats.lobbyType, type.label?.isEmpty == false {
+                        ViewerTypeCard(type: type)
+                            .stageIn(reduceMotion)
+                    }
+
                     if let ranges = stats.ranges {
                         LatelyCard(ranges: ranges, rangeKey: $rangeKey)
+                            .stageIn(reduceMotion)
+                    }
+
+                    if let year = stats.year, let previous = stats.previousYear, (previous.totalMins ?? 0) > 0 {
+                        YearCompareCard(year: year, previous: previous)
                             .stageIn(reduceMotion)
                     }
 
@@ -61,8 +73,26 @@ struct StatsView: View {
         .marqueeCanvas()
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if let shareImage {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(
+                        item: shareImage,
+                        preview: SharePreview("My screen time on Marquee", image: shareImage)
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share my stats")
+                }
+            }
+        }
         .refreshable { await load(refresh: true) }
         .task { await load(refresh: false) }
+        .task(id: stats?.overview?.episodeCount ?? -1) {
+            guard let stats, !isEmpty else { return }
+            let name = auth.profile?.firstName ?? auth.session?.firstName ?? ""
+            shareImage = StatsShareCard.image(name: name, stats: stats)
+        }
     }
 
     // MARK: TV
@@ -153,6 +183,11 @@ struct StatsView: View {
                 .stageIn(reduceMotion)
             }
 
+            if let takes = stats.hotTakes, !takes.isEmpty {
+                HotTakesList(takes: takes)
+                    .stageIn(reduceMotion)
+            }
+
             if let genres = stats.taste?.films?.genreByCount, !genres.isEmpty {
                 GenreStack(kicker: "Film genres", genres: genres)
                     .stageIn(reduceMotion)
@@ -186,6 +221,11 @@ struct StatsView: View {
 
             if hasWeekday {
                 WeekdayBars(days: weekday)
+                    .stageIn(reduceMotion)
+            }
+
+            if let rhythm = stats.rhythm, (rhythm.byHour ?? []).contains(where: { ($0.mins ?? 0) > 0 }) {
+                HourBars(rhythm: rhythm)
                     .stageIn(reduceMotion)
             }
 

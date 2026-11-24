@@ -62,153 +62,109 @@ enum BadgeCatalog {
     }
 }
 
+/// A round medal: olive when earned, faint with a progress ring when not.
+struct BadgeMedal: View {
+    @Environment(\.marqueeTheme) private var theme
+    let badge: DiaryBadge
+    var size: CGFloat = 56
+
+    var body: some View {
+        ZStack {
+            Circle().fill(badge.earned ? theme.olive : theme.surfaceElevated)
+            if !badge.earned {
+                Circle().stroke(theme.border, lineWidth: 2)
+                Circle()
+                    .trim(from: 0, to: badge.progress)
+                    .stroke(theme.olive.opacity(0.55), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            Image(systemName: badge.symbol)
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(badge.earned ? MarqueeColor.saltGrey : theme.inkMuted.opacity(0.6))
+        }
+        .frame(width: size, height: size)
+        .overlay(Circle().stroke(theme.surfaceElevated, lineWidth: size < 48 ? 2 : 0))
+        .accessibilityHidden(true)
+    }
+}
+
+/// All badges as a medal grid, Apple Fitness style. Tap one for what it takes.
 struct BadgeCabinet: View {
     @Environment(\.marqueeTheme) private var theme
     let badges: [DiaryBadge]
-    @State private var expanded = false
+    @State private var selected: DiaryBadge?
 
     private var earnedCount: Int { badges.filter(\.earned).count }
-
-    private var visible: [DiaryBadge] {
-        if expanded { return badges }
-        let earned = badges.filter(\.earned)
-        let next = badges.filter { !$0.earned }.prefix(2)
-        let mix = earned + Array(next)
-        return Array(mix.prefix(6))
-    }
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Badges")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
                 Spacer()
                 Text("\(earnedCount) of \(badges.count)")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(theme.olive)
+                    .font(.subheadline)
+                    .foregroundStyle(theme.inkMuted)
                     .monospacedDigit()
             }
 
-            if expanded {
-                ForEach(DiaryBadge.Kind.allCases, id: \.rawValue) { kind in
-                    let group = badges.filter { $0.kind == kind }
-                    if !group.isEmpty {
-                        Text(kind.rawValue)
-                            .font(.caption.weight(.bold))
-                            .tracking(MarqueeType.labelTracking)
-                            .textCase(.uppercase)
-                            .foregroundStyle(kind == .film ? theme.olive.opacity(0.7) : theme.olive)
-                            .padding(.top, 4)
-                        VStack(spacing: 0) {
-                            ForEach(group) { badge in
-                                BadgeRow(badge: badge)
-                                if badge.id != group.last?.id {
-                                    Divider().overlay(theme.border)
-                                }
-                            }
+            LazyVGrid(columns: columns, spacing: 18) {
+                ForEach(badges.sorted { $0.earned && !$1.earned }) { badge in
+                    Button { selected = badge } label: {
+                        VStack(spacing: 6) {
+                            BadgeMedal(badge: badge)
+                            Text(badge.title)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(badge.earned ? theme.ink : theme.inkMuted)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
                         }
-                        .padding(.horizontal, 4)
-                        .background(theme.surfaceElevated.opacity(0.72))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                }
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(visible) { badge in
-                        BadgeRow(badge: badge)
-                        if badge.id != visible.last?.id {
-                            Divider().overlay(theme.border)
-                        }
-                    }
-                }
-                .padding(.horizontal, 4)
-                .background(theme.surfaceElevated.opacity(0.72))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-
-            if badges.count > 6 || expanded {
-                Button {
-                    withAnimation(MarqueeMotion.standard) { expanded.toggle() }
-                } label: {
-                    Text(expanded ? "Show less" : "Show all \(badges.count)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(theme.olive)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(PressablePosterStyle())
+                    .accessibilityLabel("\(badge.title). \(badge.detail). \(badge.earned ? "Earned" : "Not yet earned")")
                 }
-                .buttonStyle(PressablePosterStyle())
             }
+        }
+        .sheet(item: $selected) { badge in
+            BadgeDetailSheet(badge: badge)
+                .presentationDetents([.height(300)])
         }
     }
 }
 
-extension DiaryBadge.Kind: CaseIterable {}
-
-private struct BadgeRow: View {
+private struct BadgeDetailSheet: View {
     @Environment(\.marqueeTheme) private var theme
     let badge: DiaryBadge
 
-    private var ink: Color {
-        badge.kind == .film ? theme.olive.opacity(0.7) : theme.olive
-    }
-
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(badge.earned ? ink : ink.opacity(0.12))
-                    .frame(width: 36, height: 36)
-                Image(systemName: badge.symbol)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(badge.earned ? MarqueeColor.saltGrey : ink)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(badge.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-                Text(badge.earned ? badge.detail : remainingLine)
-                    .font(.caption)
-                    .foregroundStyle(theme.inkMuted)
-            }
-
-            Spacer(minLength: 8)
-
+        VStack(spacing: 14) {
+            BadgeMedal(badge: badge, size: 84)
+            Text(badge.title)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(theme.ink)
+            Text(badge.detail)
+                .font(.body)
+                .foregroundStyle(theme.inkMuted)
             if badge.earned {
-                Image(systemName: "checkmark")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(ink)
+                Label("Earned", systemImage: "checkmark.seal.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.olive)
             } else {
-                CircularProgress(progress: badge.progress, tint: ink)
-                    .frame(width: 22, height: 22)
+                VStack(spacing: 6) {
+                    ProgressTrack(progress: badge.progress)
+                        .frame(width: 180)
+                    Text("\(Int(badge.progress * 100))% of the way")
+                        .font(.subheadline)
+                        .foregroundStyle(theme.inkMuted)
+                        .monospacedDigit()
+                }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(badge.title). \(badge.earned ? "Earned. \(badge.detail)" : remainingLine)")
-    }
-
-    private var remainingLine: String {
-        if badge.id.contains("tv-") || badge.id.contains("film-24") || badge.id.contains("film-100h") {
-            return "\(StatsFormat.minutes(badge.current)) / \(StatsFormat.minutes(badge.target))"
-        }
-        return "\(badge.current) / \(badge.target)"
-    }
-}
-
-private struct CircularProgress: View {
-    let progress: Double
-    let tint: Color
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(tint.opacity(0.18), lineWidth: 2.5)
-            Circle()
-                .trim(from: 0, to: max(0.04, progress))
-                .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .marqueeCanvas()
     }
 }
