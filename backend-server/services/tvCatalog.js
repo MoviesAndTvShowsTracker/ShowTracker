@@ -104,9 +104,38 @@ function decideStatus({ status, count, total, aired, hasNext, resolved }) {
   return status;
 }
 
+function positive(n) {
+  const v = Number(n);
+  return Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+/**
+ * Status fields to save after a sync. `facts` are the values being written (TMDB's when
+ * `resolved`), `tracking` the stored row. An explicit null next in `facts` means "nothing next";
+ * only a missing key falls back to the stored next.
+ */
+function statusPatch({ tracking, facts, count, resolved }) {
+  const total = positive(facts.totalEpisodes) || positive(tracking.totalEpisodes);
+  const aired = positive(facts.airedEpisodeCount) || positive(tracking.airedEpisodeCount) || total;
+  const nextSeason = 'nextSeason' in facts ? facts.nextSeason : tracking.nextSeason;
+  const status = decideStatus({
+    status: tracking.status,
+    count,
+    total,
+    aired,
+    hasNext: positive(nextSeason) > 0,
+    resolved,
+  });
+  if (status !== 'completed') return { status };
+  const patch = { status, nextSeason: null, nextEpisode: null, nextEpisodeName: null };
+  if (!tracking.timesCompleted || tracking.timesCompleted < 1) patch.timesCompleted = 1;
+  return patch;
+}
+
 module.exports = {
   airedCount,
   decideStatus,
+  statusPatch,
   episodeAfter,
   episodeExists,
   loadCatalog,

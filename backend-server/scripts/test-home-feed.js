@@ -4,7 +4,7 @@
  */
 const assert = require('assert');
 const {
-  dayKey, addDays, upcomingFromSeason, firstReturnFromSeason, nextAirDateFor, mergeAgenda,
+  dayKey, addDays, upcomingFromSeason, firstReturnFromSeason, nextAirDateFor, nextEpisodeAirDate, mergeAgenda,
 } = require('../services/homeFeed');
 
 function test(name, fn) {
@@ -56,4 +56,12 @@ test('mergeAgenda drops returns for shows already airing and sorts', () => {
   const r1 = { tvId: 1, airDate: '2026-12-01', kind: 'returning' };
   const r2 = { tvId: 3, airDate: '2026-11-30', kind: 'returning' };
   assert.deepStrictEqual(mergeAgenda([a, b], [r1, r2]).map((e) => e.tvId), [2, 1, 3]);
+});
+
+test('nextEpisodeAirDate reads the next episode from its season, however far off', () => {
+  const season = { episodes: [{ episode_number: 5, air_date: '2026-12-20' }, { episode_number: 6, air_date: '' }] };
+  assert.strictEqual(nextEpisodeAirDate({ nextSeason: 2, nextEpisode: 5 }, season), '2026-12-20');
+  assert.strictEqual(nextEpisodeAirDate({ nextSeason: 2, nextEpisode: 6 }, season), null);
+  assert.strictEqual(nextEpisodeAirDate({ nextSeason: null, nextEpisode: null }, season), null);
+  assert.strictEqual(nextEpisodeAirDate({ nextSeason: 2, nextEpisode: 5 }, null), null);
 });

@@ -23,7 +23,7 @@ final class HomeTests: XCTestCase {
         XCTAssertEqual(HomeFeedLogic.trailing(for: item("1"), today: today, calendar: cal), .mark)
         XCTAssertEqual(HomeFeedLogic.trailing(for: item("1", air: "2026-11-24"), today: today, calendar: cal), .mark)
         XCTAssertEqual(HomeFeedLogic.trailing(for: item("1", air: "2026-11-25"), today: today, calendar: cal), .airs("Tomorrow"))
-        XCTAssertEqual(HomeFeedLogic.trailing(for: item("1", air: "2026-11-27"), today: today, calendar: cal), .airs("Fri"))
+        XCTAssertEqual(HomeFeedLogic.trailing(for: item("1", air: "2026-11-27"), today: today, calendar: cal), .airs("In 3 days"))
         XCTAssertEqual(HomeFeedLogic.trailing(for: item("1", status: "rewatching"), today: today, calendar: cal), .chevron)
     }
 
@@ -92,6 +92,21 @@ final class HomeTests: XCTestCase {
         // A new show still starts at S1E1.
         let fresh = TrackingRecord(tvId: "1", status: "watching")
         XCTAssertEqual(ShowProgress.from(track: fresh).next, EpisodePointer(season: 1, episode: 1))
+    }
+
+    func testCaughtUpOnAiringSeasonIsNotFinished() {
+        // Dexter: 14 aired and watched, 20 listed, S2E5 airs in 5 days.
+        let track = TrackingRecord(tvId: "1", status: "watching", nextSeason: 2, nextEpisode: 5,
+                                   lastSeason: 2, lastEpisode: 4, watchedEpisodeCount: 14,
+                                   totalEpisodes: 20, airedEpisodeCount: 14)
+        let progress = ShowProgress.from(track: track)
+        XCTAssertFalse(progress.isComplete)
+        XCTAssertEqual(progress.next, EpisodePointer(season: 2, episode: 5))
+        XCTAssertEqual(HomeFeedLogic.progressCaption(progress), "14 of 20")
+        let item = UpNextItem(track: track, nextAirDate: "2026-11-29")
+        XCTAssertEqual(HomeFeedLogic.trailing(for: item, today: today, calendar: cal), .airs("In 5 days"))
+        let far = UpNextItem(track: track, nextAirDate: "2026-12-10")
+        XCTAssertEqual(HomeFeedLogic.trailing(for: far, today: today, calendar: cal), .airs("Dec 10"))
     }
 
     func testNoMarkButtonWithoutNextEpisode() {

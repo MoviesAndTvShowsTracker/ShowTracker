@@ -138,10 +138,10 @@ enum HomeFeedLogic {
 
     private static func shortDay(_ air: Date, today: Date, calendar: Calendar, tonight: String) -> String {
         let diff = calendar.dateComponents([.day], from: today, to: air).day ?? 0
+        if diff <= 0 { return tonight }
         if diff == 1 { return "Tomorrow" }
-        let style = Date.FormatStyle(timeZone: calendar.timeZone)
-        if diff < 7 { return air.formatted(style.weekday(.abbreviated)) }
-        return air.formatted(style.month(.abbreviated).day())
+        if diff < 7 { return "In \(diff) days" }
+        return air.formatted(Date.FormatStyle(timeZone: calendar.timeZone).month(.abbreviated).day())
     }
 
     private static func relativeDay(_ date: Date, today: Date, calendar: Calendar) -> String {

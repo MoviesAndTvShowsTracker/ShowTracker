@@ -59,6 +59,13 @@ function nextAirDateFor(track, agenda) {
   return hit ? hit.airDate : null;
 }
 
+/** Air date of the track's next episode from its season list, so far-off episodes still show a date. */
+function nextEpisodeAirDate(track, seasonJson) {
+  if (!track.nextSeason || !track.nextEpisode) return null;
+  const ep = (seasonJson?.episodes || []).find((e) => e.episode_number === track.nextEpisode);
+  return ep && (ep.air_date || '').length >= 10 ? ep.air_date.slice(0, 10) : null;
+}
+
 function mergeAgenda(airing, returning) {
   const airingIds = new Set(airing.map((e) => e.tvId));
   const seen = new Set();
@@ -100,16 +107,21 @@ async function buildHomeFeed(userId, { timeZone }) {
     buildWeekRecap(userId, { timeZone }).catch(() => null),
   ]);
 
-  const [airingLists, returning] = await Promise.all([
-    Promise.all([...watching, ...paused].slice(0, 16).map(async (t) =>
-      upcomingFromSeason(t, await getTvSeason(t.tvId, t.nextSeason || 1), todayKey))),
+  const scheduled = [...watching, ...paused].slice(0, 16);
+  const [seasons, returning] = await Promise.all([
+    Promise.all(scheduled.map((t) => getTvSeason(t.tvId, t.nextSeason || 1))),
     Promise.all([...paused, ...finished].slice(0, 12).map((t) => returningFor(t, todayKey))),
   ]);
+  const airingLists = scheduled.map((t, i) => upcomingFromSeason(t, seasons[i], todayKey));
+  const seasonByTrack = new Map(scheduled.map((t, i) => [t, seasons[i]]));
 
   const thisWeek = mergeAgenda(airingLists.flat(), returning.filter(Boolean));
 
   return {
-    upNext: watching.map((track) => ({ track, nextAirDate: nextAirDateFor(track, thisWeek) })),
+    upNext: watching.map((track) => ({
+      track,
+      nextAirDate: nextAirDateFor(track, thisWeek) || nextEpisodeAirDate(track, seasonByTrack.get(track)),
+    })),
     pausedCount: paused.length,
     thisWeek,
     recent,
@@ -124,6 +136,7 @@ module.exports = {
   upcomingFromSeason,
   firstReturnFromSeason,
   nextAirDateFor,
+  nextEpisodeAirDate,
   mergeAgenda,
   buildHomeFeed,
 };

@@ -51,7 +51,8 @@ struct ShowProgress {
         let aired = positive(track?.airedEpisodeCount)
         let listed = positive(track?.totalEpisodes)
         let catalog = positive(catalogTotal)
-        let total = aired ?? listed ?? catalog ?? 0
+        // Full listed total, so "caught up on what's aired" (14 of 20) never reads as finished.
+        let total = listed ?? catalog ?? aired ?? 0
         let complete = !rewatching && (
             track?.status == "completed" || (total > 0 && watched >= total)
         )

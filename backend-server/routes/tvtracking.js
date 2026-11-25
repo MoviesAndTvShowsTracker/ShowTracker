@@ -17,7 +17,7 @@ const {
   STALE_DAYS,
 } = require('../services/tvTrackingMaintenance');
 const { normalizeRating } = require('../services/ratings');
-const { decideStatus, resolveProgress } = require('../services/tvCatalog');
+const { resolveProgress, statusPatch } = require('../services/tvCatalog');
 const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
@@ -57,35 +57,12 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
   }
 
   if (!rewatching) {
-    const total = positive(facts.totalEpisodes) || positive(tracking.totalEpisodes);
-    const aired = positive(facts.airedEpisodeCount) || positive(tracking.airedEpisodeCount) || total;
-    const hasNext = facts.nextSeason != null ? facts.nextSeason > 0 : tracking.nextSeason > 0;
-    patch.status = decideStatus({
-      status: tracking.status,
-      count,
-      total,
-      aired,
-      hasNext,
-      resolved: Boolean(truth),
-    });
-    if (patch.status === 'completed') {
-      patch.nextSeason = null;
-      patch.nextEpisode = null;
-      patch.nextEpisodeName = null;
-      if (!tracking.timesCompleted || tracking.timesCompleted < 1) {
-        patch.timesCompleted = 1;
-      }
-    }
+    Object.assign(patch, statusPatch({ tracking, facts, count, resolved: Boolean(truth) }));
   }
 
   Object.assign(tracking, patch);
   await tracking.save();
   return tracking;
-}
-
-function positive(n) {
-  const v = Number(n);
-  return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
 router.post('/start', authenticate.verifyUser, async (req, res, next) => {

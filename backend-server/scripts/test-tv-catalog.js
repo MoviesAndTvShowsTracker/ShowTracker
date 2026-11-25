@@ -3,6 +3,7 @@ const assert = require('assert');
 const {
   airedCount,
   decideStatus,
+  statusPatch,
   episodeAfter,
   episodeExists,
   loadCatalog,
@@ -115,6 +116,29 @@ const tmdb = fakeTmdb(
   // Without TMDB: fall back to counts; an unknown total never completes.
   assert.strictEqual(decideStatus({ status: 'watching', resolved: false, count: 8, total: 8, aired: 8, hasNext: true }), 'completed');
   assert.strictEqual(decideStatus({ status: 'watching', resolved: false, count: 30, total: 0, aired: 0, hasNext: true }), 'watching');
+
+  // Sync wiring: TMDB says nothing is next, but the stored row still points at the finale.
+  // The stale stored next must not keep the show open (WandaVision after E9).
+  const finaleRow = { status: 'watching', nextSeason: 1, nextEpisode: 9, totalEpisodes: 9, airedEpisodeCount: 9 };
+  const vqTruth = await resolveProgress('vq', { season: 1, episode: 8 }, tmdb);
+  assert.deepStrictEqual(
+    statusPatch({ tracking: finaleRow, facts: vqTruth, count: 8, resolved: true }),
+    { status: 'completed', nextSeason: null, nextEpisode: null, nextEpisodeName: null, timesCompleted: 1 }
+  );
+  // Caught up on an airing season (Dexter): stays open with the upcoming episode.
+  const airingRow = { status: 'watching', nextSeason: 2, nextEpisode: 4, totalEpisodes: 18, airedEpisodeCount: 14 };
+  const airingTruth = await resolveProgress('multi', { season: 2, episode: 4 }, tmdb);
+  assert.deepStrictEqual(statusPatch({ tracking: airingRow, facts: airingTruth, count: 14, resolved: true }), { status: 'watching' });
+  // TMDB down and no next sent: the stored next still counts.
+  assert.deepStrictEqual(
+    statusPatch({ tracking: { ...airingRow, totalEpisodes: 18 }, facts: {}, count: 14, resolved: false }),
+    { status: 'watching' }
+  );
+  // Already completed once: timesCompleted isn't reset.
+  assert.strictEqual(
+    statusPatch({ tracking: { ...finaleRow, timesCompleted: 2 }, facts: vqTruth, count: 8, resolved: true }).timesCompleted,
+    undefined
+  );
 
   console.log('tv catalog: all passed');
 })().catch((err) => {

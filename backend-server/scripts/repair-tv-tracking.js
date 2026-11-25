@@ -17,7 +17,7 @@ const keys = require('../config/keys');
 const User = require('../models/user');
 const TvShowTracking = require('../models/tvShowTracking');
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
-const { episodeExists, loadCatalog, resolveProgress } = require('../services/tvCatalog');
+const { episodeExists, loadCatalog, resolveProgress, statusPatch } = require('../services/tvCatalog');
 const { syncTrackingCounts } = require('../routes/tvtracking');
 const { invalidateUserStats } = require('../services/statsCache');
 
@@ -89,14 +89,18 @@ async function main() {
       furthest ? { season: furthest.seasonNumber, episode: furthest.episodeNumber } : null
     );
 
+    const status = truth && real.length
+      ? statusPatch({ tracking: track, facts: truth, count: real.length, resolved: true }).status
+      : track.status;
     const before = `${track.status} · next ${code(track.nextSeason, track.nextEpisode)} · total ${track.totalEpisodes || 0}`;
     const after = truth
-      ? `next ${code(truth.nextSeason, truth.nextEpisode)} · total ${truth.totalEpisodes}`
+      ? `${status} · next ${code(truth.nextSeason, truth.nextEpisode)} · total ${truth.totalEpisodes}`
       : 'unchanged';
     const nextChanged = truth && (
       (track.nextSeason || null) !== truth.nextSeason
       || (track.nextEpisode || null) !== truth.nextEpisode
       || (track.totalEpisodes || 0) !== truth.totalEpisodes
+      || status !== track.status
     );
     if (!phantoms.length && !nextChanged) continue;
 
