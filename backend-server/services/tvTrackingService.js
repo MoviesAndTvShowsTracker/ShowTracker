@@ -9,17 +9,27 @@ function findTrackingInList(rows, tvId) {
   return rows.find((row) => normTvId(row.tvId) === target) || null;
 }
 
+// Indexed lookup first. The full scan only runs on a miss, for legacy rows whose tvId was saved with stray whitespace.
 async function findTracking(userId, tvId) {
+  const target = normTvId(tvId);
+  if (!target) return null;
+  const exact = await TvShowTracking.findOne({ userFrom: userId, tvId: target });
+  if (exact) return exact;
   const rows = await TvShowTracking.find({ userFrom: userId });
   return findTrackingInList(rows, tvId);
 }
 
+function byEpisode(a, b) {
+  return a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber;
+}
+
 async function getWatchedEpisodesForShow(userId, tvId) {
   const target = normTvId(tvId);
+  if (!target) return [];
+  const exact = await TvEpisodeWatch.find({ userFrom: userId, tvId: target });
+  if (exact.length) return exact.sort(byEpisode);
   const rows = await TvEpisodeWatch.find({ userFrom: userId });
-  return rows
-    .filter((row) => normTvId(row.tvId) === target)
-    .sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
+  return rows.filter((row) => normTvId(row.tvId) === target).sort(byEpisode);
 }
 
 async function deleteWatchedEpisode(userId, tvId, seasonNumber, episodeNumber) {

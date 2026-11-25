@@ -115,22 +115,23 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    await clearWatchlistForShow(userId, tvId);
-
-    const tracking = await syncTrackingCounts(userId, tvId, {
-      nextSeason,
-      nextEpisode,
-      nextEpisodeName,
-      totalEpisodes,
-      airedEpisodeCount,
-    });
+    const [tracking] = await Promise.all([
+      syncTrackingCounts(userId, tvId, {
+        nextSeason,
+        nextEpisode,
+        nextEpisodeName,
+        totalEpisodes,
+        airedEpisodeCount,
+      }),
+      clearWatchlistForShow(userId, tvId),
+      invalidateUserStats(userId),
+    ]);
 
     const episodes = await TvEpisodeWatch.find({ userFrom: userId, tvId }).sort({
       seasonNumber: 1,
       episodeNumber: 1,
     });
 
-    await invalidateUserStats(userId);
     res.status(200).json({ success: true, tracking, episodes });
   } catch (err) {
     next(err);
