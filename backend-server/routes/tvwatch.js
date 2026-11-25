@@ -19,7 +19,7 @@ router.post('/watched', authenticate.verifyUser, async (req, res, next) => {
   }
 });
 
-router.post('/getWatchTv', authenticate.verifyUser, async (req, res, next) => {
+async function getWatchTv(req, res, next) {
   try {
     const tracks = await TvShowTracking.find({
       userFrom: req.user._id,
@@ -42,7 +42,11 @@ router.post('/getWatchTv', authenticate.verifyUser, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
+
+// Read with GET (cacheable, safe to retry); POST kept for older app builds.
+router.get('/getWatchTv', authenticate.verifyUser, getWatchTv);
+router.post('/getWatchTv', authenticate.verifyUser, getWatchTv);
 
 router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next) => {
   try {

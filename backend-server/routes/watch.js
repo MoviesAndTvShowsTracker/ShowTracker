@@ -139,7 +139,7 @@ router.post('/removeFromWatched', authenticate.verifyUser, async (req, res, next
 });
 
 /** Unique films for library rails (one tile per movieId + watchCount). */
-router.post('/getWatchMovie', authenticate.verifyUser, async (req, res, next) => {
+async function getWatchMovie(req, res, next) {
   try {
     const plays = await Watch.find({ userFrom: req.user._id })
       .sort({ watchedAt: -1, updatedAt: -1, createdAt: -1 })
@@ -149,6 +149,10 @@ router.post('/getWatchMovie', authenticate.verifyUser, async (req, res, next) =>
   } catch (err) {
     next(err);
   }
-});
+}
+
+// Read with GET (cacheable, safe to retry); POST kept for older app builds.
+router.get('/getWatchMovie', authenticate.verifyUser, getWatchMovie);
+router.post('/getWatchMovie', authenticate.verifyUser, getWatchMovie);
 
 module.exports = router;

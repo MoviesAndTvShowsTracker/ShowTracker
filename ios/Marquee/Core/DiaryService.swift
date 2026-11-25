@@ -3,6 +3,11 @@ import Foundation
 enum DiaryService {
     // MARK: Movies
 
+    /// Catalogue badge data. Revalidated with ETag, so an unchanged diary costs a 304.
+    static func diaryIndex() async throws -> DiaryIndexResponse {
+        try await APIClient.shared.get("/api/diary/index")
+    }
+
     /// One request for the show page; older servers (404) get the five separate calls.
     static func tvState(id: String) async throws -> TVUserState {
         do {

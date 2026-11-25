@@ -291,6 +291,38 @@ struct RewatchSessionDoc: Decodable, Identifiable, Sendable {
     private var fallbackId: String { "session-\(sessionNumber ?? 0)" }
 }
 
+/// GET /api/diary/index — catalogue badge data: [movieId, plays] pairs, watchlist ids, the loved film.
+struct DiaryIndexResponse: Decodable, Sendable {
+    struct Loved: Decodable, Sendable { let id: String; let title: String }
+
+    let watchCounts: [Int: Int]
+    let watchlistIds: Set<Int>
+    let loved: Loved?
+
+    private enum CodingKeys: String, CodingKey { case films, filmWatchlist, loved }
+
+    private struct Pair: Decodable {
+        let id: String
+        let plays: Int
+        init(from decoder: Decoder) throws {
+            var c = try decoder.unkeyedContainer()
+            id = try c.decode(String.self)
+            plays = try c.decode(Int.self)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let films = try c.decodeIfPresent([Pair].self, forKey: .films) ?? []
+        watchCounts = Dictionary(
+            films.compactMap { p in Int(p.id).map { ($0, max(1, p.plays)) } },
+            uniquingKeysWith: { a, _ in a }
+        )
+        watchlistIds = Set((try c.decodeIfPresent([String].self, forKey: .filmWatchlist) ?? []).compactMap(Int.init))
+        loved = try c.decodeIfPresent(Loved.self, forKey: .loved)
+    }
+}
+
 /// GET /api/me/tv/:id — everything the show page knows about the user, in one call.
 struct TVUserState: Decodable, Sendable {
     var favorited: Bool?

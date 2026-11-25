@@ -62,7 +62,7 @@ router.post('/removeFromFavorite', authenticate.verifyUser, async (req, res, nex
   }
 });
 
-router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next) => {
+async function getFavoriteMovie(req, res, next) {
   try {
     const favorites = await FavoriteTv.find({ userFrom: req.user._id })
       .sort({
@@ -95,6 +95,10 @@ router.post('/getFavoriteMovie', authenticate.verifyUser, async (req, res, next)
   } catch (err) {
     next(err);
   }
-});
+}
+
+// Read with GET (cacheable, safe to retry); POST kept for older app builds.
+router.get('/getFavoriteMovie', authenticate.verifyUser, getFavoriteMovie);
+router.post('/getFavoriteMovie', authenticate.verifyUser, getFavoriteMovie);
 
 module.exports = router;
