@@ -5,23 +5,8 @@ const router = express.Router();
 const TMDB_BASE = 'https://api.themoviedb.org/3/';
 const OMDB_BASE = 'https://www.omdbapi.com/';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-/** @type {Map<string, { expires: number, payload: object }>} */
-const cache = new Map();
-
-function cacheGet(key) {
-  const hit = cache.get(key);
-  if (!hit) return null;
-  if (Date.now() > hit.expires) {
-    cache.delete(key);
-    return null;
-  }
-  return hit.payload;
-}
-
-function cacheSet(key, payload) {
-  cache.set(key, { expires: Date.now() + CACHE_TTL_MS, payload });
-}
+const RatingsCache = require('../models/ratingsCache');
+const { createRatingsStore } = require('../services/ratingsStore');
 
 function parseOmdbRatings(body) {
   const out = {
@@ -71,7 +56,7 @@ async function fetchTmdbExternal(kind, id, apiKey) {
   url.searchParams.set('api_key', apiKey);
   url.searchParams.set('append_to_response', 'external_ids');
   url.searchParams.set('language', 'en-US');
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`TMDB ${res.status}`);
   return res.json();
 }
@@ -88,7 +73,7 @@ async function fetchOmdb(imdbId, apiKey) {
   url.searchParams.set('apikey', apiKey);
   url.searchParams.set('i', imdbId);
   url.searchParams.set('tomatoes', 'true');
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`OMDb ${res.status}`);
   return res.json();
 }
@@ -159,11 +144,6 @@ async function buildRatings(kind, id) {
     throw err;
   }
 
-  // v2: RT JSON-LD fallback — bust prior caches that stored null Tomatometer.
-  const cacheKey = `v2:${kind}:${id}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
-
   const detail = await fetchTmdbExternal(kind, id, tmdbKey);
   const tmdbScore =
     typeof detail.vote_average === 'number' && detail.vote_average > 0
@@ -209,13 +189,26 @@ async function buildRatings(kind, id) {
     rottenTomatoes: omdb.rottenTomatoes,
     metacritic: omdb.metacritic,
   };
-  cacheSet(cacheKey, payload);
   return payload;
 }
 
+// Memory, then MongoDB (24 h TTL, survives deploys), then one shared build per title.
+const ratingsStore = createRatingsStore({
+  build: buildRatings,
+  ttlMs: CACHE_TTL_MS,
+  persist: {
+    get: async (key) => (await RatingsCache.findOne({ key, expiresAt: { $gt: new Date() } }).lean())?.payload || null,
+    set: (key, payload) => RatingsCache.updateOne(
+      { key },
+      { $set: { payload, expiresAt: new Date(Date.now() + CACHE_TTL_MS) } },
+      { upsert: true }
+    ),
+  },
+});
+
 router.get('/movie/:id', async (req, res) => {
   try {
-    const payload = await buildRatings('movie', req.params.id);
+    const payload = await ratingsStore.get('movie', String(req.params.id));
     res.json(payload);
   } catch (err) {
     res.status(err.status || 500).json({ success: false, message: err.message || 'Ratings failed.' });
@@ -224,7 +217,7 @@ router.get('/movie/:id', async (req, res) => {
 
 router.get('/tv/:id', async (req, res) => {
   try {
-    const payload = await buildRatings('tv', req.params.id);
+    const payload = await ratingsStore.get('tv', String(req.params.id));
     res.json(payload);
   } catch (err) {
     res.status(err.status || 500).json({ success: false, message: err.message || 'Ratings failed.' });
