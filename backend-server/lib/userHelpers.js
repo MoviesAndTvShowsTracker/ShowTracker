@@ -31,4 +31,17 @@ async function uniqueUsername(base) {
   return candidate;
 }
 
-module.exports = { uniqueUsername, normalizeEmail, findUserByEmail };
+/** Another account using this email, ignoring case. */
+function emailTakenFilter(rawEmail, userId) {
+  const email = normalizeEmail(rawEmail);
+  return { email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') }, _id: { $ne: userId } };
+}
+
+/** Fields to save when a profile edit sets `rawEmail`; a different address is no longer proven. */
+function profileEmailUpdate(user, rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (email === normalizeEmail(user.email)) return { email };
+  return { email, emailVerified: false };
+}
+
+module.exports = { uniqueUsername, normalizeEmail, findUserByEmail, emailTakenFilter, profileEmailUpdate };

@@ -6,7 +6,13 @@ var passport = require('passport');
 var authenticate = require('../authenticate');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
 const { verifyAppleIdentityToken, findOrCreateAppleUser } = require('../lib/appleAuth');
-const { uniqueUsername, normalizeEmail, findUserByEmail } = require('../lib/userHelpers');
+const {
+  uniqueUsername,
+  normalizeEmail,
+  findUserByEmail,
+  emailTakenFilter,
+  profileEmailUpdate,
+} = require('../lib/userHelpers');
 const { sendPasswordResetEmail } = require('../lib/mail');
 const {
   RESET_GENERIC_MESSAGE,
@@ -222,10 +228,8 @@ router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) =>
       return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
-    const emailTaken = await User.findOne({
-      email: email.trim(),
-      _id: { $ne: req.user._id },
-    });
+    // Unique regardless of case, so nobody can hold "Victim@x.com" beside "victim@x.com".
+    const emailTaken = await User.findOne(emailTakenFilter(email, req.user._id));
     if (emailTaken) {
       return res.status(400).json({ success: false, message: 'That email is already in use.' });
     }
@@ -238,9 +242,10 @@ router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) =>
     const updated = await User.findByIdAndUpdate(
       req.user._id,
       {
-        firstName: firstName?.trim() || '',
-        lastName: lastName?.trim() || '',
-        email: email.trim(),
+        firstName: String(firstName ?? '').trim(),
+        lastName: String(lastName ?? '').trim(),
+        // Stored lowercase; a new address is unproven until a reset link or a provider confirms it.
+        ...profileEmailUpdate(req.user, email),
         phonenumber: phone || '',
       },
       { new: true }
@@ -266,11 +271,15 @@ router.post('/changePassword', authenticate.verifyUser, (req, res) => {
     return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
   }
 
-  req.user.changePassword(currentPassword, newPassword, (err) => {
+  req.user.changePassword(currentPassword, newPassword, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
     }
-    return res.status(200).json({ success: true, message: 'Password updated.' });
+    // Sessions on other devices end; this device gets a fresh token.
+    req.user.passwordChangedAt = new Date();
+    await req.user.save();
+    const token = authenticate.getToken({ _id: req.user._id });
+    return res.status(200).json({ success: true, message: 'Password updated.', token });
   });
 });
 
@@ -387,6 +396,9 @@ router.post('/reset-password', async (req, res, next) => {
     await setPassword(user, newPassword);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    // The emailed link proves the address; every older session ends.
+    user.emailVerified = true;
+    user.passwordChangedAt = new Date();
     await user.save();
 
     return res.status(200).json({ success: true, message: 'Password updated. You can sign in now.' });

@@ -47,6 +47,17 @@ var User = new Schema({
     admin: {
         type: Boolean,
         default: false
+    },
+    // True once the owner proved the address: signed up through Google/Apple with a verified
+    // email, or reset the password from an emailed link. Changing the email clears it.
+    emailVerified: {
+        type: Boolean,
+        default: false
+    },
+    // Tokens issued before this moment are rejected (password changed, reset or account claimed).
+    passwordChangedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

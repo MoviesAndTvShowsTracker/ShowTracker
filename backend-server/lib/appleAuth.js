@@ -1,7 +1,9 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const { uniqueUsername, normalizeEmail, findUserByEmail } = require('./userHelpers');
+const { normalizeEmail } = require('./userHelpers');
+const { resolveSocialUser } = require('./socialAccounts');
+const { providerEmailVerified } = require('./socialLink');
 
 const APPLE_ISSUER = 'https://appleid.apple.com';
 const APPLE_KEYS_URL = 'https://appleid.apple.com/auth/keys';
@@ -9,15 +11,6 @@ const APPLE_KEYS_URL = 'https://appleid.apple.com/auth/keys';
 /** @type {{ keys: object[], fetchedAt: number } | null} */
 let appleKeysCache = null;
 const KEYS_TTL_MS = 60 * 60 * 1000;
-
-function registerUser(user, password) {
-  return new Promise((resolve, reject) => {
-    User.register(user, password, (err, registered) => {
-      if (err) reject(err);
-      else resolve(registered);
-    });
-  });
-}
 
 function appleClientId() {
   return (process.env.APPLE_CLIENT_ID || 'com.jimil.marquee').trim();
@@ -136,51 +129,22 @@ function verifyWithKey(identityToken, rawNonce, audience, jwk) {
 async function findOrCreateAppleUser(payload, fullName = null) {
   const appleId = payload.sub;
   const email = payload.email ? normalizeEmail(payload.email) : null;
-  const given = fullName?.givenName || '';
-  const family = fullName?.familyName || '';
-
-  let user = await User.findOne({ appleId });
-  if (!user && email) {
-    user = await findUserByEmail(email);
-  }
-
-  if (user) {
-    let dirty = false;
-    if (!user.appleId) {
-      user.appleId = appleId;
-      dirty = true;
-    }
-    if (!user.firstName && given) {
-      user.firstName = given;
-      dirty = true;
-    }
-    if (!user.lastName && family) {
-      user.lastName = family;
-      dirty = true;
-    }
-    if (dirty) await user.save();
-    return user;
-  }
-
-  if (!email) {
+  const byAppleId = await User.findOne({ appleId });
+  if (!byAppleId && !email) {
     const err = new Error(
       'Apple did not share an email for this account. In Settings → Apple Account → Sign in with Apple, stop using Marquee, then try again and share your email.'
     );
     err.status = 400;
     throw err;
   }
-
-  const username = await uniqueUsername(email.split('@')[0] || 'marquee');
-  return registerUser(
-    new User({
-      username,
-      email,
-      appleId,
-      firstName: given,
-      lastName: family,
-    }),
-    crypto.randomBytes(32).toString('hex')
-  );
+  return resolveSocialUser({
+    idField: 'appleId',
+    providerId: appleId,
+    email,
+    emailVerified: providerEmailVerified('apple', payload),
+    names: { firstName: fullName?.givenName || '', lastName: fullName?.familyName || '' },
+    providerLabel: 'Apple',
+  });
 }
 
 module.exports = {
