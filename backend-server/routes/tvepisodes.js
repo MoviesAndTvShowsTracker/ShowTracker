@@ -12,6 +12,7 @@ const {
 } = require('../services/tvTrackingService');
 const { invalidateUserStats } = require('../services/statsCache');
 const { normalizeRating } = require('../services/ratings');
+const { parseWatchedAt, parseNote } = require('../lib/diaryInput');
 const { mergeEpisodePlaysForTime } = require('../services/userStatsDashboard');
 const { episodeExists, loadCatalog } = require('../services/tvCatalog');
 
@@ -95,8 +96,12 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
     } = req.body;
 
     let rating;
+    let watchedAt;
+    let note;
     try {
       rating = normalizeRating(req.body.rating);
+      watchedAt = parseWatchedAt(req.body.watchedAt);
+      note = parseNote(req.body.note);
     } catch (err) {
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -109,9 +114,10 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
       tmdbEpisodeId,
       episodeName,
       runtimeMinutes: runtimeMinutes || 0,
-      watchedAt: new Date(),
+      watchedAt,
     };
     if (req.body.rating !== undefined) epSet.rating = rating;
+    if (note !== undefined) epSet.note = note;
 
     const [missing] = await unknownEpisodes(tvId, [{ seasonNumber, episodeNumber }]);
     if (missing) return notListed(res, missing);
@@ -277,6 +283,39 @@ router.post('/unmark-batch', authenticate.verifyUser, async (req, res, next) => 
 
     await invalidateUserStats(userId);
     res.status(200).json({ success: true, tracking, episodes: allEpisodes });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Change the date and/or note of an episode you logged. */
+router.post('/update', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const tvId = String(req.body.tvId);
+    const seasonNumber = Number(req.body.seasonNumber);
+    const episodeNumber = Number(req.body.episodeNumber);
+    if (!Number.isInteger(seasonNumber) || !Number.isInteger(episodeNumber)) {
+      return res.status(400).json({ success: false, message: 'Unknown episode.' });
+    }
+    const set = {};
+    try {
+      if (req.body.watchedAt !== undefined) set.watchedAt = parseWatchedAt(req.body.watchedAt);
+      const note = parseNote(req.body.note);
+      if (note !== undefined) set.note = note;
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    const episode = await TvEpisodeWatch.findOneAndUpdate(
+      { userFrom: userId, tvId, seasonNumber, episodeNumber },
+      { $set: set },
+      { new: true }
+    );
+    if (!episode) {
+      return res.status(404).json({ success: false, message: 'Log this episode first.' });
+    }
+    await invalidateUserStats(userId);
+    res.status(200).json({ success: true, episode });
   } catch (err) {
     next(err);
   }

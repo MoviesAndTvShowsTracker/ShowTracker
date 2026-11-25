@@ -28,6 +28,12 @@ var Watch = new Schema({
     watchedAt: {
         type: Date
     },
+    /** The user's note about this watch (up to 500 characters). */
+    note: {
+        type: String,
+        maxlength: 500,
+        default: ''
+    },
     /** True when this play is not the user's first log of the film. */
     isRewatch: {
         type: Boolean,
