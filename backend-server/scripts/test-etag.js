@@ -1,4 +1,6 @@
 /* Diary index payload + ETag revalidation. No DB. */
+// Render runs in UTC; Date#toString ordering bugs only show in some zones, so pin it.
+process.env.TZ = 'UTC';
 const assert = require('assert');
 const { sendWithEtag, etagFor } = require('../lib/etag');
 const { diaryIndexFromFilms } = require('../services/diaryIndex');
@@ -51,5 +53,16 @@ assert.deepStrictEqual(index.films, [['1', 3], ['2', 1], ['3', 1], ['4', 2]]);
 assert.deepStrictEqual(index.filmWatchlist, ['9', '8']);
 assert.deepStrictEqual(index.loved, { id: '2', title: 'New love' });
 assert.strictEqual(diaryIndexFromFilms([], []).loved, null);
+
+// MongoDB returns Date objects: the newest by time wins (Fri Nov 20 beats Sun Nov 1), missing dates lose.
+const byDate = diaryIndexFromFilms(
+  [
+    { movieId: 'a', watchCount: 1, rating: 5, watchedAt: new Date('2026-11-01T00:00:00Z'), movieTitle: 'Sunday' },
+    { movieId: 'b', watchCount: 1, rating: 5, watchedAt: new Date('2026-11-20T00:00:00Z'), movieTitle: 'Friday' },
+    { movieId: 'c', watchCount: 1, rating: 5, watchedAt: null, movieTitle: 'Undated' },
+  ],
+  []
+);
+assert.deepStrictEqual(byDate.loved, { id: 'b', title: 'Friday' });
 
 console.log('etag: all passed');

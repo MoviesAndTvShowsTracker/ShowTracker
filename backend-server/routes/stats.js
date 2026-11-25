@@ -62,8 +62,8 @@ router.get('/dashboard', authenticate.verifyUser, async (req, res, next) => {
     });
 
     if (decision !== 'build') {
-      const stale = decision === 'serve-and-rebuild';
-      if (stale) {
+      const stale = decision !== 'serve';
+      if (decision === 'serve-and-rebuild') {
         lastRebuildAt.set(key, new Date());
         if (lastRebuildAt.size > 5000) lastRebuildAt.delete(lastRebuildAt.keys().next().value);
         rebuildStats(userId, timeZone).catch((err) => console.error('[stats] rebuild failed', err.message));

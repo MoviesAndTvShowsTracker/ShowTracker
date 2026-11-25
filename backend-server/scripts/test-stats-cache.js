@@ -21,8 +21,8 @@ const decide = (c, extra = {}) => statsCacheDecision({ cached: c, timeZone: tz, 
   const stale = cached({ staleAt: at(5) });
   assert.ok(isStale(stale));
   assert.strictEqual(decide(stale), 'serve-and-rebuild');
-  // Rebuilt less than a minute ago: just serve.
-  assert.strictEqual(decide(stale, { lastRebuildAt: at(-30) }), 'serve');
+  // Rebuilt less than a minute ago: serve without starting another build, but still say it's stale.
+  assert.strictEqual(decide(stale, { lastRebuildAt: at(-30) }), 'serve-stale');
   assert.strictEqual(decide(stale, { lastRebuildAt: at(-61) }), 'serve-and-rebuild');
   // A mark before the build started is already included.
   assert.ok(!isStale(cached({ staleAt: at(-5) })));

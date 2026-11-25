@@ -24,6 +24,7 @@ function isStale(cached) {
 
 /**
  * 'serve' (fresh) · 'serve-and-rebuild' (stale: answer now, rebuild behind, at most once a minute)
+ * · 'serve-stale' (stale, a rebuild started under a minute ago: answer now, flagged stale)
  * · 'build' (missing, other timezone or payload version, or a forced refresh).
  */
 function statsCacheDecision({ cached, timeZone, schemaVersion, forceRefresh, now = new Date(), lastRebuildAt = null }) {
@@ -31,7 +32,7 @@ function statsCacheDecision({ cached, timeZone, schemaVersion, forceRefresh, now
   if (!cached?.stats) return 'build';
   if (cached.stats.timeZone !== timeZone || cached.stats.schemaVersion !== schemaVersion) return 'build';
   if (!isStale(cached)) return 'serve';
-  if (lastRebuildAt && now - lastRebuildAt < REBUILD_EVERY_MS) return 'serve';
+  if (lastRebuildAt && now - lastRebuildAt < REBUILD_EVERY_MS) return 'serve-stale';
   return 'serve-and-rebuild';
 }
 

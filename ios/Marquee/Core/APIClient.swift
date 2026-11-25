@@ -20,7 +20,7 @@ actor APIClient {
         let status: Int
     }
 
-    private let session: URLSession
+    private nonisolated let session: URLSession
     private let encoder = JSONEncoder()
     /// Waits before each GET retry; GETs retry on brief failures (Render restarts, a dropped connection).
     private let retryDelays: [Duration]
@@ -33,6 +33,11 @@ actor APIClient {
     init(session: URLSession = .shared, retryDelays: [Duration] = [.milliseconds(400), .milliseconds(1200)]) {
         self.session = session
         self.retryDelays = retryDelays
+    }
+
+    /// Removes every cached API response (on sign-out, account deletion or an expired session).
+    nonisolated func clearCachedResponses() {
+        session.configuration.urlCache?.removeAllCachedResponses()
     }
 
     func configure(

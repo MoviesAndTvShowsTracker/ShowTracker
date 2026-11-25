@@ -13,9 +13,10 @@ function stars(rating) {
  * newest film rated 4+ stars ("Because you loved"). A few KB instead of every film record.
  */
 function diaryIndexFromFilms(films, watchlist) {
+  const time = (f) => (f.watchedAt ? new Date(f.watchedAt).getTime() || 0 : 0);
   const loved = films
     .filter((f) => stars(f.rating) >= 4)
-    .reduce((best, f) => (!best || String(f.watchedAt || '') > String(best.watchedAt || '') ? f : best), null);
+    .reduce((best, f) => (!best || time(f) > time(best) ? f : best), null);
   return {
     films: films.map((f) => [String(f.movieId), Math.max(1, f.watchCount || 1)]),
     filmWatchlist: watchlist.map((w) => String(w.movieId)),

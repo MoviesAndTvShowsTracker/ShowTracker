@@ -36,13 +36,18 @@ async function tmdbRequest(endpoint) {
   return fetchTmdb(endpoint, DAY_SECONDS);
 }
 
+/** Cache key per path AND lifetime, so a 24 h lookup never pins data a 6 h lookup needs fresh. */
+function libCacheKey(endpoint, ttlSeconds) {
+  return `lib:${ttlSeconds}:${endpoint.replace(/^\//, '')}`;
+}
+
 /** TMDB JSON through the shared client (cache, coalescing, timeout, concurrency cap); null on failure. */
 async function fetchTmdb(endpoint, ttlSeconds = DAY_SECONDS) {
   const key = apiKey();
   if (!key) return null;
   const path = endpoint.replace(/^\//, '');
   const url = `${TMDB_BASE}${path}?api_key=${key}&language=en-US`;
-  return tmdbClient().getJson(url, { cacheKey: `lib:${path}`, ttlSeconds });
+  return tmdbClient().getJson(url, { cacheKey: libCacheKey(path, ttlSeconds), ttlSeconds });
 }
 
 function normalizeMovieMeta(data) {
@@ -187,6 +192,7 @@ async function getTvShow(tvId) {
 }
 
 module.exports = {
+  libCacheKey,
   getTvSeason,
   getTvShow,
   getMovieMeta,

@@ -78,6 +78,21 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.count, 1)
     }
 
+    func testClearingCachedResponsesEmptiesTheHTTPCache() async throws {
+        let cache = URLCache(memoryCapacity: 1_000_000, diskCapacity: 0)
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = cache
+        let api = APIClient(session: URLSession(configuration: config))
+        let request = URLRequest(url: URL(string: "https://example.com/api/home")!)
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        cache.storeCachedResponse(CachedURLResponse(response: response, data: Data("{}".utf8)), for: request)
+        XCTAssertNotNil(cache.cachedResponse(for: request))
+
+        api.clearCachedResponses()
+
+        XCTAssertNil(cache.cachedResponse(for: request), "signing out leaves no API responses behind")
+    }
+
     func testClientErrorsAreNotRetried() async {
         StubURLProtocol.handler = { _ in (404, Data(#"{"message":"nope"}"#.utf8), 0) }
         do {
