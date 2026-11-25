@@ -6,6 +6,7 @@ var path = require('path');
 var logger = require('morgan');
 const { requestTimer, startLoopMonitor } = require('./lib/metrics');
 const { createRateLimiter } = require('./lib/rateLimit');
+const { errorResponse } = require('./lib/errors');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -36,6 +37,15 @@ mongoose
 var app = express();
 // Render terminates TLS in front of us; trust its one hop for req.ip.
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// Baseline security headers for a JSON API (no HTML pages to frame or sniff).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 var cors = require('cors');
 
@@ -107,11 +117,9 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (err, req, res, next) {
-  res.status(err.status || 500);
-  if (req.path.startsWith('/users') || req.path.startsWith('/api')) {
-    return res.json({ success: false, message: err.message });
-  }
-  res.json({ success: false, message: err.message });
+  const { status, body } = errorResponse(err);
+  if (status >= 500) console.error(`[error] ${req.method} ${req.path}`, err.stack || err.message);
+  res.status(status).json(body);
 });
 
 module.exports = app;

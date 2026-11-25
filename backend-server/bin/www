@@ -30,6 +30,20 @@ server.on('error', onError);
 server.on('listening', onListening);
 
 /**
+ * Graceful shutdown: Render sends SIGTERM on deploy. Stop taking connections, let open
+ * requests finish, close MongoDB, then exit (forced after 10 s).
+ */
+function shutdown(signal) {
+  console.log(`${signal}: closing`);
+  setTimeout(() => process.exit(1), 10000).unref();
+  server.close(() => {
+    require('mongoose').disconnect().finally(() => process.exit(0));
+  });
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+/**
  * Normalize a port into a number, string, or false.
  */
 

@@ -17,7 +17,7 @@
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^17.4.2",
-    "express": "~4.16.1",
+    "express": "^4.22.3",
     "express-session": "^1.17.1",
     "google-auth-library": "^10.9.0",
     "http-errors": "~1.6.3",
