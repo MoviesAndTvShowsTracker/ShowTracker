@@ -62,13 +62,11 @@ router.post('/signup', async (req, res, next) => {
           return res.json({ success: false, err: signupErrorMessage(err) });
         }
 
-        passport.authenticate('local')(req, res, () => {
-          res.setHeader('Content-Type', 'application/json');
-          res.status(200).json({
-            status: 200,
-            success: true,
-            message: 'Registration Successful!',
-          });
+        // No server session: the app signs in with /users/login next.
+        return res.status(200).json({
+          status: 200,
+          success: true,
+          message: 'Registration Successful!',
         });
       }
     );
@@ -194,8 +192,8 @@ router.get('/getUser/:id', authenticate.verifyUser, (req, res) => {
   return res.status(200).json({ success: true, found: publicProfile(req.user) });
 });
 
+// Tokens are stateless: signing out means the client discards its token.
 router.get('/logout', (req, res) => {
-  req.logout();
   res.status(200).json({ success: true, message: 'Successfully logged out' });
 });
 
