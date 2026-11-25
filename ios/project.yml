@@ -52,7 +52,7 @@ targets:
         INFOPLIST_KEY_UIBackgroundModes: remote-notification
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "9"
       configs:
         Debug:
           CODE_SIGN_ENTITLEMENTS: Marquee/Marquee.entitlements
@@ -89,7 +89,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "9"
         INFOPLIST_KEY_CFBundleDisplayName: Marquee Widgets
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_NAME: MarqueeWidgets
