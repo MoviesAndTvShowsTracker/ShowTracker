@@ -211,6 +211,7 @@ struct ProfileView: View {
                             MediaNavLink(id: Int(item.id) ?? 0, kind: isTV ? .tv : .movie) {
                                 PosterTile(title: item.title, posterPath: item.poster, width: 104)
                             }
+                            .diaryQuickActions(id: item.id, title: item.title, posterPath: item.poster, kind: isTV ? .tv : .movie)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -426,6 +427,7 @@ struct ProfileListView: View {
                             MediaNavLink(id: Int(item.id) ?? 0, kind: isTV ? .tv : .movie) {
                                 PosterTile(title: item.title, posterPath: item.poster, width: tileWidth)
                             }
+                            .diaryQuickActions(id: item.id, title: item.title, posterPath: item.poster, kind: isTV ? .tv : .movie)
                         }
                     }
                     .padding(20)

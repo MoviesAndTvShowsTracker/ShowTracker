@@ -90,4 +90,14 @@ extension View {
     func catalogQuickActions(_ item: MediaItem, kind: MediaKind) -> some View {
         if kind == .movie { modifier(FilmQuickActions(item: item)) } else { modifier(TVQuickActions(item: item)) }
     }
+
+    /// The same long-press actions for diary rows (You tab rails and lists).
+    @ViewBuilder
+    func diaryQuickActions(id: String, title: String, posterPath: String?, kind: MediaKind) -> some View {
+        if let item = MediaItem.diary(id: id, title: title, posterPath: posterPath, kind: kind) {
+            catalogQuickActions(item, kind: kind)
+        } else {
+            self
+        }
+    }
 }

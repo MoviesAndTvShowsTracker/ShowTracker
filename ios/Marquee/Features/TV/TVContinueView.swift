@@ -11,6 +11,7 @@ struct TVContinueView: View {
     @State private var episode: TVEpisode?
     @State private var catalog: Int?
     @State private var marking = false
+    @State private var showLogSheet = false
     @State private var error: String?
 
     private var idString: String { String(tvId) }
@@ -39,6 +40,21 @@ struct TVContinueView: View {
         .navigationTitle("Continue")
         .navigationBarTitleDisplayMode(.inline)
         .task { await hydrate() }
+        .sheet(isPresented: $showLogSheet) {
+            if let next = progress.next {
+                LogDetailsSheet(
+                    subject: LogDetailsSubject(
+                        title: seed?.tvTitle ?? tracking?.tvTitle ?? "Episode",
+                        subtitle: "S\(next.season) · E\(next.episode)  \(episodeName.trimmingCharacters(in: .whitespaces))",
+                        posterPath: seed?.posterPath ?? tracking?.posterPath
+                    ),
+                    mode: .new,
+                    ratesFilm: false
+                ) { draft in
+                    try await markNext(watchedAt: draft.day.date(), note: draft.note.isEmpty ? nil : draft.note)
+                }
+            }
+        }
     }
 
     private var poster: some View {
@@ -149,6 +165,20 @@ struct TVContinueView: View {
             .buttonStyle(PrimaryButtonStyle())
             .disabled(marking || progress.next == nil)
 
+            // Watched it earlier, or want to say something about it.
+            Button {
+                showLogSheet = true
+            } label: {
+                Label("Log with date & note", systemImage: "calendar.badge.plus")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(theme.oliveSoft, in: Capsule(style: .continuous))
+            }
+            .buttonStyle(PressablePosterStyle())
+            .disabled(marking || progress.next == nil)
+
             NavigationLink {
                 TVDetailView(tvId: tvId)
             } label: {
@@ -223,24 +253,30 @@ struct TVContinueView: View {
     }
 
     private func markNext() async {
-        guard let track = tracking ?? seed, progress.next != nil else {
-            error = "No next episode."
-            return
-        }
-        marking = true
-        defer { marking = false }
         do {
-            let result = try await EpisodeMarker.markNext(
-                track: track,
-                catalogTotal: catalog ?? catalogTotal,
-                runtime: episode?.runtime,
-                episodeName: episode?.name
-            )
+            try await markNext(watchedAt: nil, note: nil)
             Haptics.success()
-            tracking = result.updated ?? tracking
-            episode = await fetchEpisode(for: tracking)
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    /// Marks the next episode (now, or on a date, with an optional note); throws for the sheet to show.
+    private func markNext(watchedAt: Date?, note: String?) async throws {
+        guard let track = tracking ?? seed, progress.next != nil else {
+            throw EpisodeMarker.MarkError.noNextEpisode
+        }
+        marking = true
+        defer { marking = false }
+        let result = try await EpisodeMarker.markNext(
+            track: track,
+            catalogTotal: catalog ?? catalogTotal,
+            runtime: episode?.runtime,
+            episodeName: episode?.name,
+            watchedAt: watchedAt,
+            note: note
+        )
+        tracking = result.updated ?? tracking
+        episode = await fetchEpisode(for: tracking)
     }
 }

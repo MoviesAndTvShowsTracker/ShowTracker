@@ -29,7 +29,9 @@ enum EpisodeMarker {
         track: TrackingRecord,
         catalogTotal: Int?,
         runtime: Int?,
-        episodeName: String?
+        episodeName: String?,
+        watchedAt: Date? = nil,
+        note: String? = nil
     ) async throws -> Result {
         guard let tvId = Int(track.tvId),
               let next = ShowProgress.from(track: track, catalogTotal: catalogTotal).next
@@ -42,7 +44,7 @@ enum EpisodeMarker {
         }
         let later = laterInSeason(after: next, seasonEpisodes: episodes)
 
-        let body = MarkEpisodeBody(
+        var body = MarkEpisodeBody(
             tvId: track.tvId,
             seasonNumber: next.season,
             episodeNumber: next.episode,
@@ -54,6 +56,8 @@ enum EpisodeMarker {
             nextEpisode: later?.episode,
             nextEpisodeName: later?.name
         )
+        body.watchedAt = watchedAt.map(ISODate.string)
+        body.note = note
         let updated = try await DiaryService.markEpisode(body)
         return Result(body: body, updated: updated)
     }

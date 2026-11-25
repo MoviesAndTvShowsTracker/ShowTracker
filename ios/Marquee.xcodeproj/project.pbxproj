@@ -71,6 +71,7 @@
 		728022D3A62FB07327155954 /* ProfileEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C986C7DB378FCBD8C5C40C9A /* ProfileEditTests.swift */; };
 		72A52E431FC8347D7D7AB38F /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB3011284050A06E0E42FA0F /* ImageCache.swift */; };
 		738FCFC073CE7E4BB989B010 /* EpisodeOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89B9CCDF91AD5B361BAAF94 /* EpisodeOrderTests.swift */; };
+		73921470CEF7BFB79605F90D /* MediaItem+Diary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408D35079AACF92E284E528B /* MediaItem+Diary.swift */; };
 		74CEACC5D759CB6F40397425 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D05D2846E8942BC732FCB8 /* KeychainStore.swift */; };
 		76769D15B6E78F11F2FE6C87 /* PersonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D984F8CC7D9C6B7020B812B5 /* PersonView.swift */; };
 		773D7B00B93D774856B3BFFF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E5682D970346C9AFB989EC /* RootView.swift */; };
@@ -227,6 +228,7 @@
 		3FD52AE55BFF26EEBD3A9CF3 /* WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotStore.swift; sourceTree = "<group>"; };
 		4008A22CC8C03698DEEBF42E /* Marquee.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Marquee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		40095993909287866C995224 /* DiaryChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryChrome.swift; sourceTree = "<group>"; };
+		408D35079AACF92E284E528B /* MediaItem+Diary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MediaItem+Diary.swift"; sourceTree = "<group>"; };
 		46F3520357F261A9CD27D5FB /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		4A354714057269A94D9717B3 /* RatingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsService.swift; sourceTree = "<group>"; };
 		4C785CDBD994AF0397DBED9E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -599,6 +601,7 @@
 				FB3011284050A06E0E42FA0F /* ImageCache.swift */,
 				9FDACB452E04ACBC534833C0 /* ISODate.swift */,
 				D5D05D2846E8942BC732FCB8 /* KeychainStore.swift */,
+				408D35079AACF92E284E528B /* MediaItem+Diary.swift */,
 				9161D694DA72BE71392815B8 /* ProfileAvatarStore.swift */,
 				25DDA0433BAFB62BE73F1880 /* ProfileEdit.swift */,
 				8295177EE8127903BC7705BA /* PushRegistration.swift */,
@@ -909,6 +912,7 @@
 				F6C28AB9869FA4CCE6D76695 /* MarqueeApp.swift in Sources */,
 				77D0F2F5594311D8D5698FD4 /* MediaBrowseView.swift in Sources */,
 				4A5EFB6F443E2A719A8DE513 /* MediaDetailShell.swift in Sources */,
+				73921470CEF7BFB79605F90D /* MediaItem+Diary.swift in Sources */,
 				14258A0C6F4FD9A782703A7D /* MovieDetailView.swift in Sources */,
 				E4155DFEF9F9E266FA5A2AD4 /* PersonCreditsProcessor.swift in Sources */,
 				76769D15B6E78F11F2FE6C87 /* PersonView.swift in Sources */,
