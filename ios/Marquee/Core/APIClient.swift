@@ -1,17 +1,38 @@
 import Foundation
 
 actor APIClient {
-    static let shared = APIClient()
+    static let shared = APIClient(session: APIClient.makeSession())
+
+    /// The app's session: a real response cache (ETag revalidation, `Cache-Control`), a request
+    /// timeout suited to a phone, and waiting briefly for a connection instead of failing at once.
+    static func makeSession() -> URLSession {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 40
+        config.waitsForConnectivity = true
+        config.requestCachePolicy = .useProtocolCachePolicy
+        config.urlCache = URLCache(memoryCapacity: 20 * 1024 * 1024, diskCapacity: 100 * 1024 * 1024)
+        return URLSession(configuration: config)
+    }
+
+    private struct Raw: Sendable {
+        let data: Data
+        let status: Int
+    }
 
     private let session: URLSession
-    private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+    /// Waits before each GET retry; GETs retry on brief failures (Render restarts, a dropped connection).
+    private let retryDelays: [Duration]
+    /// Identical GETs in flight share one request.
+    private var inFlight: [String: Task<Raw, Error>] = [:]
 
     private var tokenProvider: (@Sendable () -> String?)?
     private var onUnauthorized: (@Sendable () -> Void)?
 
-    init(session: URLSession = .shared) {
+    init(session: URLSession = .shared, retryDelays: [Duration] = [.milliseconds(400), .milliseconds(1200)]) {
         self.session = session
+        self.retryDelays = retryDelays
     }
 
     func configure(
@@ -22,16 +43,19 @@ actor APIClient {
         self.onUnauthorized = onUnauthorized
     }
 
-    func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], auth: Bool = true) async throws -> T {
-        try await request(path, method: "GET", query: query, body: Optional<EmptyBody>.none, auth: auth)
+    nonisolated func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], auth: Bool = true) async throws -> T {
+        let raw = try await sharedGet(path: path, query: query, auth: auth)
+        return try Self.decode(raw)
     }
 
-    func post<Body: Encodable & Sendable, T: Decodable & Sendable>(_ path: String, body: Body, auth: Bool = true) async throws -> T {
-        try await request(path, method: "POST", query: [], body: body, auth: auth)
+    nonisolated func post<Body: Encodable & Sendable, T: Decodable & Sendable>(_ path: String, body: Body, auth: Bool = true) async throws -> T {
+        let raw = try await send(path: path, method: "POST", body: body, auth: auth)
+        return try Self.decode(raw)
     }
 
-    func delete<T: Decodable & Sendable>(_ path: String, auth: Bool = true) async throws -> T {
-        try await request(path, method: "DELETE", query: [], body: Optional<EmptyBody>.none, auth: auth)
+    nonisolated func delete<T: Decodable & Sendable>(_ path: String, auth: Bool = true) async throws -> T {
+        let raw = try await send(path: path, method: "DELETE", body: Optional<EmptyBody>.none, auth: auth)
+        return try Self.decode(raw)
     }
 
     func upload<T: Decodable & Sendable>(_ path: String, fileURL: URL, fieldName: String = "file", auth: Bool = true) async throws -> T {
@@ -48,24 +72,55 @@ actor APIClient {
         body.append(fileData)
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
         urlRequest.httpBody = body
-        return try await perform(urlRequest)
+        return try Self.decode(try await perform(urlRequest))
     }
 
     private struct EmptyBody: Encodable, Sendable {}
 
-    private func request<Body: Encodable & Sendable, T: Decodable & Sendable>(
-        _ path: String,
-        method: String,
-        query: [URLQueryItem],
-        body: Body?,
-        auth: Bool
-    ) async throws -> T {
-        var urlRequest = try makeURLRequest(path: path, method: method, query: query, auth: auth)
+    // MARK: Requests
+
+    private func sharedGet(path: String, query: [URLQueryItem], auth: Bool) async throws -> Raw {
+        let request = try makeURLRequest(path: path, method: "GET", query: query, auth: auth)
+        let key = (request.url?.absoluteString ?? path) + "|" + (request.value(forHTTPHeaderField: "Authorization") ?? "")
+        if let running = inFlight[key] { return try await running.value }
+        let task = Task { try await self.performWithRetry(request) }
+        inFlight[key] = task
+        defer { inFlight[key] = nil }
+        return try await task.value
+    }
+
+    private func send<Body: Encodable & Sendable>(path: String, method: String, body: Body?, auth: Bool) async throws -> Raw {
+        var request = try makeURLRequest(path: path, method: method, query: [], auth: auth)
         if let body {
-            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = try encoder.encode(body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try encoder.encode(body)
         }
-        return try await perform(urlRequest)
+        return try await perform(request)
+    }
+
+    private func performWithRetry(_ request: URLRequest) async throws -> Raw {
+        var attempt = 0
+        while true {
+            do {
+                return try await perform(request)
+            } catch where attempt < retryDelays.count && Self.isRetryable(error) {
+                try await Task.sleep(for: retryDelays[attempt])
+                attempt += 1
+            }
+        }
+    }
+
+    /// Brief failures worth one more try on a read: a gateway error or a dropped connection.
+    static func isRetryable(_ error: Error) -> Bool {
+        switch error {
+        case APIError.server(_, let status):
+            return status == 502 || status == 503 || status == 504
+        case APIError.transport(let underlying):
+            let code = (underlying as? URLError)?.code
+            return code == .timedOut || code == .networkConnectionLost || code == .cannotConnectToHost
+        default:
+            return false
+        }
     }
 
     private func makeURLRequest(path: String, method: String, query: [URLQueryItem], auth: Bool) throws -> URLRequest {
@@ -89,38 +144,43 @@ actor APIClient {
         return request
     }
 
-    private func perform<T: Decodable & Sendable>(_ request: URLRequest) async throws -> T {
+    private func perform(_ request: URLRequest) async throws -> Raw {
+        let data: Data
+        let response: URLResponse
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else { throw APIError.empty }
-            if http.statusCode == 401 {
-                onUnauthorized?()
-                throw APIError.unauthorized
-            }
-            if !(200..<300).contains(http.statusCode) {
-                if let err = try? decoder.decode(APIMessage.self, from: data) {
-                    throw APIError.server(message: err.bestMessage, status: http.statusCode)
-                }
-                throw APIError.server(message: "Request failed (\(http.statusCode))", status: http.statusCode)
-            }
-            if Freshness.invalidates(method: request.httpMethod ?? "GET", path: request.url?.path ?? "") {
-                Freshness.shared.invalidateAll()
-            }
-            if T.self == EmptyResponse.self {
-                return EmptyResponse() as! T
-            }
-            if data.isEmpty, T.self == SuccessMessage.self {
-                return SuccessMessage(success: true, message: nil) as! T
-            }
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                throw APIError.decoding(error)
-            }
-        } catch let error as APIError {
-            throw error
+            (data, response) = try await session.data(for: request)
         } catch {
             throw APIError.transport(error)
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIError.empty }
+        if http.statusCode == 401 {
+            onUnauthorized?()
+            throw APIError.unauthorized
+        }
+        if !(200..<300).contains(http.statusCode) {
+            if let err = try? JSONDecoder().decode(APIMessage.self, from: data) {
+                throw APIError.server(message: err.bestMessage, status: http.statusCode)
+            }
+            throw APIError.server(message: "Request failed (\(http.statusCode))", status: http.statusCode)
+        }
+        if Freshness.invalidates(method: request.httpMethod ?? "GET", path: request.url?.path ?? "") {
+            Freshness.shared.invalidateAll()
+        }
+        return Raw(data: data, status: http.statusCode)
+    }
+
+    /// Decoding runs on the caller's task, not inside the actor, so responses don't queue behind each other.
+    private static func decode<T: Decodable>(_ raw: Raw) throws -> T {
+        if T.self == EmptyResponse.self {
+            return EmptyResponse() as! T
+        }
+        if raw.data.isEmpty, T.self == SuccessMessage.self {
+            return SuccessMessage(success: true, message: nil) as! T
+        }
+        do {
+            return try JSONDecoder().decode(T.self, from: raw.data)
+        } catch {
+            throw APIError.decoding(error)
         }
     }
 }
