@@ -1,7 +1,7 @@
 const TvEpisodeWatch = require('../models/tvEpisodeWatch');
 const TvRewatchEpisode = require('../models/tvRewatchEpisode');
 const Watch = require('../models/watch');
-const { getCachedUserStats } = require('./statsCache');
+const { getCachedUserStats, isStale } = require('./statsCache');
 const { filmRuntimeMinutes } = require('./mediaMeta');
 const { mergeEpisodePlaysForTime } = require('./userStatsDashboard');
 const {
@@ -35,7 +35,7 @@ async function buildWeekRecap(userId, options = {}) {
 
   // Prefer dashboard cache when it was built for the same timezone contract.
   // Never reuse the dashboard year insight here — Lobby’s card is “this week.”
-  if (cached?.stats?.activity && cached.stats.timeZone === timeZone) {
+  if (cached?.stats?.activity && cached.stats.timeZone === timeZone && !isStale(cached)) {
     const { activity, films, week } = cached.stats;
     const episodesThisWeek = week?.episodeCount ?? activity.episodesThisWeek ?? 0;
     const filmsThisWeek = week?.filmCount ?? films?.thisWeek ?? 0;

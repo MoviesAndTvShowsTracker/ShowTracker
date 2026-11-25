@@ -23,6 +23,8 @@ struct WeekRecap: Codable, Sendable{
 struct DashboardStatsEnvelope: Codable, Sendable{
     let success: Bool?
     let stats: DashboardStats?
+    /// The server answered from a stale cache and is rebuilding it now.
+    var stale: Bool? = nil
 }
 
 struct DashboardStats: Codable, Sendable{

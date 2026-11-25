@@ -321,7 +321,15 @@ enum DiaryService {
     static func dashboardStats(refresh: Bool = false) async throws -> DashboardStats {
         var query: [URLQueryItem] = []
         if refresh { query.append(URLQueryItem(name: "refresh", value: "1")) }
-        let env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
+        var env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
+        // Stale answer: the server is rebuilding in the background; ask once more shortly.
+        // Callers already show the device's copy, so this wait isn't visible.
+        if env.stale == true {
+            try? await Task.sleep(for: .milliseconds(1500))
+            if let fresh: DashboardStatsEnvelope = try? await APIClient.shared.get("/api/stats/dashboard") {
+                env = fresh
+            }
+        }
         if let stats = env.stats { ResponseCache.store(stats, key: dashboardCacheKey) }
         return env.stats ?? DashboardStats(
             insight: nil, overview: nil, library: nil, taste: nil, year: nil,
