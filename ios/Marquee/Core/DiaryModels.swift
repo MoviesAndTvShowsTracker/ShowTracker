@@ -148,6 +148,8 @@ struct MarkEpisodeBody: Encodable, Sendable{
     /// When it was watched (default: now) and an optional note.
     var watchedAt: String? = nil
     var note: String? = nil
+    /// Stars (0.5–5); the server stores them doubled.
+    var rating: Double? = nil
 }
 
 struct BatchEpisodesBody: Encodable, Sendable{
@@ -195,6 +197,7 @@ struct WatchedEpisodeDoc: Codable, Hashable, Sendable{
     let rating: Double?
     var watchedAt: String? = nil
     var note: String? = nil
+    var episodeName: String? = nil
 }
 
 struct EpisodeLogUpdateResponse: Decodable, Sendable {

@@ -226,17 +226,19 @@ enum DiaryService {
     }
 
     /// Changes the date and/or note of an episode you logged.
-    static func updateEpisodeLog(tvId: String, season: Int, episode: Int, watchedAt: Date?, note: String?) async throws -> WatchedEpisodeDoc? {
+    /// `rating`: stars (0 clears); nil leaves it.
+    static func updateEpisodeLog(tvId: String, season: Int, episode: Int, watchedAt: Date?, note: String?, rating: Double? = nil) async throws -> WatchedEpisodeDoc? {
         struct Body: Encodable {
             let tvId: String
             let seasonNumber: Int
             let episodeNumber: Int
             let watchedAt: String?
             let note: String?
+            let rating: Double?
         }
         let res: EpisodeLogUpdateResponse = try await APIClient.shared.post(
             "/api/tv/episodes/update",
-            body: Body(tvId: tvId, seasonNumber: season, episodeNumber: episode, watchedAt: watchedAt.map(ISODate.string), note: note)
+            body: Body(tvId: tvId, seasonNumber: season, episodeNumber: episode, watchedAt: watchedAt.map(ISODate.string), note: note, rating: rating)
         )
         return res.episode
     }

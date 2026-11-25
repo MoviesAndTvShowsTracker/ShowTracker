@@ -303,6 +303,10 @@ router.post('/update', authenticate.verifyUser, async (req, res, next) => {
       if (req.body.watchedAt !== undefined) set.watchedAt = parseWatchedAt(req.body.watchedAt);
       const note = parseNote(req.body.note);
       if (note !== undefined) set.note = note;
+      if (req.body.rating !== undefined) {
+        // 0 or null clears; otherwise a half-star value (0.5–5).
+        set.rating = req.body.rating === null || Number(req.body.rating) === 0 ? null : normalizeRating(req.body.rating);
+      }
     } catch (err) {
       return res.status(400).json({ success: false, message: err.message });
     }

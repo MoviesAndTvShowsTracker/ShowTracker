@@ -289,7 +289,7 @@ struct MovieDetailView: View {
         let subject = LogDetailsSubject(title: detail.displayTitle, subtitle: detail.year, posterPath: detail.poster_path)
         switch target {
         case .new:
-            LogDetailsSheet(subject: subject, mode: .new, ratesFilm: true) { draft in
+            LogDetailsSheet(subject: subject, mode: .new, showsRating: true) { draft in
                 try await logWithDetails(draft, detail: detail)
             }
         case .edit(let play):
@@ -301,7 +301,7 @@ struct MovieDetailView: View {
                     rating: play.stars > 0 ? play.stars : nil,
                     note: play.noteText ?? ""
                 ),
-                ratesFilm: true
+                showsRating: true
             ) { draft in
                 try await saveEdit(draft, play: play)
             }

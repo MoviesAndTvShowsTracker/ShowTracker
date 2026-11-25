@@ -9,12 +9,22 @@ extension TVDetailView {
         let seasonComplete = !airedSeason.isEmpty && unwatchedAiredSeason.isEmpty
         let seasonFraction = airedSeason.isEmpty ? 0 : Double(watchedAiredSeason.count) / Double(airedSeason.count)
 
+        let ratingsSummary = EpisodeRatingsSummary(ratings: episodeRatings, names: episodeNames)
+
         return VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 SectionKicker(text: "Episodes")
                 Text("Mark as you go")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
+            }
+
+            if ratingsSummary.hasBest, !isRewatching {
+                BestEpisodesCard(entries: ratingsSummary.best()) { entry in
+                    guard entry.season != selectedSeason else { return }
+                    selectedSeason = entry.season
+                    Task { await loadSeason() }
+                }
             }
 
             if seasons.count > 1 {
@@ -55,6 +65,18 @@ extension TVDetailView {
                                     .monospacedDigit()
                             }
                             ProgressTrack(progress: seasonFraction, completed: seasonComplete)
+                            if let average = ratingsSummary.average(season: selectedSeason) {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "star.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(theme.accentInk)
+                                    Text("Your average \(average.formatted(.number.precision(.fractionLength(1))))")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(theme.inkMuted)
+                                        .monospacedDigit()
+                                }
+                                .accessibilityElement(children: .combine)
+                            }
 
                             HStack(spacing: 8) {
                                 if seasonComplete {
@@ -244,17 +266,6 @@ extension TVDetailView {
             .buttonStyle(.plain)
             .disabled(batching)
 
-            if marked {
-                Button("Rate") {
-                    episodePendingRate = ep
-                    episodeRating = (episodeRatings[key] ?? 0) / 2
-                    showEpisodeRatingSheet = true
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(theme.olive)
-                .buttonStyle(.plain)
-                .padding(.top, 2)
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -266,14 +277,9 @@ extension TVDetailView {
             if !isRewatching {
                 if marked || plays > 0 {
                     if marked {
-                        Button("Edit date & note…", systemImage: "calendar.badge.clock") {
+                        Button("Edit date, rating & note…", systemImage: "calendar.badge.clock") {
                             episodeLogTarget = .edit(ep)
                         }
-                    }
-                    Button("Rate", systemImage: "star") {
-                        episodePendingRate = ep
-                        episodeRating = (episodeRatings[key] ?? 0) / 2
-                        showEpisodeRatingSheet = true
                     }
                 } else {
                     Button("Mark watched", systemImage: "checkmark.circle") {
@@ -290,57 +296,6 @@ extension TVDetailView {
         }
         .sensoryFeedback(.success, trigger: marked)
     }
-
-    var episodeRatingSheet: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text(episodePendingRate.map { "E\($0.episode_number) · \($0.name ?? "Episode")" } ?? "Episode")
-                    .font(.title3.weight(.bold))
-                Text("How was it?")
-                    .foregroundStyle(theme.inkMuted)
-                StarRatingView(rating: $episodeRating, size: .largeTitle)
-                    .frame(maxWidth: .infinity)
-                Spacer()
-                Button("Save rating") {
-                    Task { await saveEpisodeRating() }
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(episodeRating <= 0)
-            }
-            .padding(24)
-            .marqueeCanvas()
-            .navigationTitle("Rate episode")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { showEpisodeRatingSheet = false }
-                }
-            }
-        }
-    }
-
-    func saveEpisodeRating() async {
-        guard let ep = episodePendingRate else { return }
-        let season = ep.season_number ?? selectedSeason
-        // Half-star value; the server stores it doubled.
-        let apiRating = episodeRating
-        do {
-            try await DiaryService.rateEpisode(
-                RateEpisodeBody(
-                    tvId: idString,
-                    seasonNumber: season,
-                    episodeNumber: ep.episode_number,
-                    rating: apiRating
-                )
-            )
-            episodeRatings[ep.diaryKey] = apiRating * 2
-            showEpisodeRatingSheet = false
-            Haptics.success()
-        } catch {
-            // Keep sheet open; banner surfaces elsewhere on next load.
-        }
-    }
-
 }
 
 /// Empty → check (1st watch) → count in the mark (2×, 3×…) so rewatches aren't a

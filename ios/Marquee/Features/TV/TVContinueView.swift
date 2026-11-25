@@ -49,9 +49,9 @@ struct TVContinueView: View {
                         posterPath: seed?.posterPath ?? tracking?.posterPath
                     ),
                     mode: .new,
-                    ratesFilm: false
+                    showsRating: true
                 ) { draft in
-                    try await markNext(watchedAt: draft.day.date(), note: draft.note.isEmpty ? nil : draft.note)
+                    try await markNext(watchedAt: draft.day.date(), note: draft.note.isEmpty ? nil : draft.note, rating: draft.rating)
                 }
             }
         }
@@ -254,7 +254,7 @@ struct TVContinueView: View {
 
     private func markNext() async {
         do {
-            try await markNext(watchedAt: nil, note: nil)
+            try await markNext(watchedAt: nil, note: nil, rating: nil)
             Haptics.success()
         } catch {
             self.error = error.localizedDescription
@@ -262,7 +262,7 @@ struct TVContinueView: View {
     }
 
     /// Marks the next episode (now, or on a date, with an optional note); throws for the sheet to show.
-    private func markNext(watchedAt: Date?, note: String?) async throws {
+    private func markNext(watchedAt: Date?, note: String?, rating: Double?) async throws {
         guard let track = tracking ?? seed, progress.next != nil else {
             throw EpisodeMarker.MarkError.noNextEpisode
         }
@@ -274,7 +274,8 @@ struct TVContinueView: View {
             runtime: episode?.runtime,
             episodeName: episode?.name,
             watchedAt: watchedAt,
-            note: note
+            note: note,
+            rating: rating
         )
         tracking = result.updated ?? tracking
         episode = await fetchEpisode(for: tracking)

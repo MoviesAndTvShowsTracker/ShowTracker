@@ -21,7 +21,7 @@ struct LogSheetPreviewHost: View {
                 subject: LogDetailsSubject(title: "Breaking Bad", subtitle: "S1 · E3  …And the Bag's in the River", posterPath: "/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg"),
                 mode: .new,
                 initial: LogDetailsDraft(day: .yesterday),
-                ratesFilm: false
+                showsRating: true
             ) { _ in }
         case "edit":
             LogDetailsSheet(
@@ -32,21 +32,21 @@ struct LogSheetPreviewHost: View {
                     rating: 4.5,
                     note: "First time, with Mom. The hallway fight still holds up."
                 ),
-                ratesFilm: true
+                showsRating: true
             ) { _ in }
         case "calendar":
             LogDetailsSheet(
                 subject: LogDetailsSubject(title: "Inception", subtitle: "2010", posterPath: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg"),
                 mode: .new,
                 initial: LogDetailsDraft(day: .custom(Calendar.current.date(byAdding: .day, value: -9, to: .now)!)),
-                ratesFilm: true,
+                showsRating: true,
                 calendarOpen: true
             ) { _ in }
         default:
             LogDetailsSheet(
                 subject: LogDetailsSubject(title: "Inception", subtitle: "2010", posterPath: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg"),
                 mode: .new,
-                ratesFilm: true
+                showsRating: true
             ) { _ in }
         }
     }

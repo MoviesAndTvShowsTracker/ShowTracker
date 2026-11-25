@@ -11,7 +11,7 @@ struct LogDetailsSheet: View {
 
     let subject: LogDetailsSubject
     let mode: Mode
-    let ratesFilm: Bool
+    let showsRating: Bool
     let onSave: (LogDetailsDraft) async throws -> Void
 
     @State private var draft: LogDetailsDraft
@@ -27,16 +27,16 @@ struct LogDetailsSheet: View {
         subject: LogDetailsSubject,
         mode: Mode,
         initial: LogDetailsDraft = LogDetailsDraft(),
-        ratesFilm: Bool,
+        showsRating: Bool,
         calendarOpen: Bool = false,
         onSave: @escaping (LogDetailsDraft) async throws -> Void
     ) {
         self.subject = subject
         self.mode = mode
-        self.ratesFilm = ratesFilm
+        self.showsRating = showsRating
         self.onSave = onSave
         _calendarOpen = State(initialValue: calendarOpen)
-        _detent = State(initialValue: calendarOpen ? .large : Self.compactDetent(ratesFilm: ratesFilm))
+        _detent = State(initialValue: calendarOpen ? .large : Self.compactDetent(showsRating: showsRating))
         _draft = State(initialValue: initial)
         _stars = State(initialValue: initial.rating ?? 0)
         let start: Date
@@ -51,8 +51,8 @@ struct LogDetailsSheet: View {
     private var motion: Animation? { reduceMotion ? nil : MarqueeMotion.standard }
 
     /// Tall enough to show the whole form (films also have a rating row) without dragging.
-    private static func compactDetent(ratesFilm: Bool) -> PresentationDetent {
-        .fraction(ratesFilm ? 0.8 : 0.7)
+    private static func compactDetent(showsRating: Bool) -> PresentationDetent {
+        .fraction(showsRating ? 0.8 : 0.7)
     }
 
     var body: some View {
@@ -61,7 +61,7 @@ struct LogDetailsSheet: View {
                 VStack(alignment: .leading, spacing: 26) {
                     header
                     whenSection
-                    if ratesFilm { ratingSection }
+                    if showsRating { ratingSection }
                     noteSection
                 }
                 .padding(.horizontal, 20)
@@ -81,7 +81,7 @@ struct LogDetailsSheet: View {
                 }
             }
         }
-        .presentationDetents([Self.compactDetent(ratesFilm: ratesFilm), .large], selection: $detent)
+        .presentationDetents([Self.compactDetent(showsRating: showsRating), .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(saving)
         // Room for the calendar or the keyboard: grow to full height when either opens.
