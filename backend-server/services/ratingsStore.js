@@ -16,7 +16,8 @@ function createRatingsStore({ build, persist, memoryMax = 2000, ttlMs = DAY_MS, 
   }
 
   async function get(kind, id) {
-    const key = `v2:${kind}:${id}`;
+    // v3: scores only from TMDB and OMDb's API (older cached copies may hold scraped values).
+    const key = `v3:${kind}:${id}`;
     const hit = memory.get(key);
     if (hit && hit.expires > now()) {
       memory.delete(key);

@@ -112,6 +112,12 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(box.signedOut, 1)
     }
 
+    func testRawDownloadsReturnTheBodyAsIs() async throws {
+        StubURLProtocol.handler = { _ in (200, Data("\u{FEFF}Date,Type\r\n".utf8), 0) }
+        let data = try await client().getData("/api/diary/export", query: [URLQueryItem(name: "format", value: "csv")])
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), "\u{FEFF}Date,Type\r\n")
+    }
+
     func testClientErrorsAreNotRetried() async {
         StubURLProtocol.handler = { _ in (404, Data(#"{"message":"nope"}"#.utf8), 0) }
         do {

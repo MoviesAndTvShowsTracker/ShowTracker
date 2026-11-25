@@ -1,7 +1,9 @@
 var express = require('express');
 const bodyParser = require('body-parser');
 var router = express.Router();
+const mongoose = require('mongoose');
 var Watch = require('../models/watch');
+const { parseWatchedAt, parseNote } = require('../lib/diaryInput');
 const moviewatchlist = require('../models/moviewatchlist');
 var authenticate = require('../authenticate');
 const { ensureMovieRuntime } = require('../services/mediaMeta');
@@ -14,6 +16,7 @@ const {
   removeAllPlays,
   rateLatestPlay,
   libraryFilmsFromPlays,
+  updatePlay,
 } = require('../services/filmWatchService');
 
 router.use(bodyParser.json());
@@ -33,6 +36,8 @@ router.post('/watched', authenticate.verifyUser, async (req, res, next) => {
       rating: summary.rating,
       isRewatch: summary.isRewatch,
       latestPlayId: summary.latestPlayId,
+      note: summary.note,
+      plays: summary.plays,
     });
   } catch (err) {
     next(err);
@@ -54,8 +59,12 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
     const movieRuntime = runtime > 0 ? String(runtime) : req.body.movieRuntime || '';
 
     let rating;
+    let watchedAt;
+    let note;
     try {
       rating = normalizeRating(req.body.rating);
+      watchedAt = parseWatchedAt(req.body.watchedAt);
+      note = parseNote(req.body.note);
     } catch (err) {
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -66,7 +75,8 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
       movieImage: req.body.movieImage,
       moviePosterImage: req.body.moviePosterImage,
       movieRuntime,
-      watchedAt: req.body.watchedAt || new Date(),
+      watchedAt,
+      note,
     };
     if (req.body.rating !== undefined) fields.rating = rating;
 
@@ -79,9 +89,52 @@ router.post('/addToWatch', authenticate.verifyUser, async (req, res, next) => {
       watchCount: summary.watchCount,
       isRewatch: Boolean(play.isRewatch),
       playId: play._id ? String(play._id) : null,
+      plays: summary.plays,
     });
   } catch (err) {
     res.status(400).json({ success: false, err });
+  }
+});
+
+/** Change the date and/or note of one of your film logs. */
+router.post('/play/update', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.body.playId)) {
+      return res.status(400).json({ success: false, message: 'Unknown log.' });
+    }
+    let watchedAt;
+    let note;
+    let rating;
+    try {
+      watchedAt = req.body.watchedAt === undefined ? undefined : parseWatchedAt(req.body.watchedAt);
+      note = parseNote(req.body.note);
+      if (req.body.rating !== undefined) {
+        // 0 or null clears; otherwise a half-star value (0.5–5).
+        rating = req.body.rating === null || Number(req.body.rating) === 0 ? null : normalizeRating(req.body.rating);
+      }
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    if (watchedAt === undefined && note === undefined && rating === undefined) {
+      return res.status(400).json({ success: false, message: 'Nothing to change.' });
+    }
+    const result = await updatePlay(req.user._id, req.body.playId, { watchedAt, note, rating });
+    if (!result) return res.status(404).json({ success: false, message: 'Log not found.' });
+    await invalidateUserStats(req.user._id);
+    const { summary } = result;
+    res.status(200).json({
+      success: true,
+      watched: summary.watched,
+      watchCount: summary.watchCount,
+      watchedAt: summary.watchedAt,
+      rating: summary.rating,
+      isRewatch: summary.isRewatch,
+      latestPlayId: summary.latestPlayId,
+      note: summary.note,
+      plays: summary.plays,
+    });
+  } catch (err) {
+    next(err);
   }
 });
 

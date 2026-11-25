@@ -38,6 +38,9 @@ struct WatchedResponse: Decodable, Sendable{
     let rating: Double?
     let isRewatch: Bool?
     let latestPlayId: String?
+    var note: String? = nil
+    /// Every dated watch, newest first (newer servers).
+    var plays: [FilmPlay]? = nil
 }
 
 struct FilmWatchMutationResponse: Decodable, Sendable {
@@ -50,6 +53,7 @@ struct FilmWatchMutationResponse: Decodable, Sendable {
     let watched: Bool?
     let mode: String?
     let deletedCount: Int?
+    var plays: [FilmPlay]? = nil
 }
 
 struct WatchlistedResponse: Decodable, Sendable{
@@ -141,6 +145,9 @@ struct MarkEpisodeBody: Encodable, Sendable{
     var nextSeason: Int? = nil
     var nextEpisode: Int? = nil
     var nextEpisodeName: String? = nil
+    /// When it was watched (default: now) and an optional note.
+    var watchedAt: String? = nil
+    var note: String? = nil
 }
 
 struct BatchEpisodesBody: Encodable, Sendable{
@@ -186,6 +193,13 @@ struct WatchedEpisodeDoc: Codable, Hashable, Sendable{
     let seasonNumber: Int?
     let episodeNumber: Int?
     let rating: Double?
+    var watchedAt: String? = nil
+    var note: String? = nil
+}
+
+struct EpisodeLogUpdateResponse: Decodable, Sendable {
+    let success: Bool?
+    let episode: WatchedEpisodeDoc?
 }
 
 struct TrackingStartBody: Encodable, Sendable{

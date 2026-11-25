@@ -6,7 +6,6 @@ const TMDB_BASE = 'https://api.themoviedb.org/3/';
 const OMDB_BASE = 'https://www.omdbapi.com/';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const RatingsCache = require('../models/ratingsCache');
-const { isRottenTomatoesUrl } = require('../lib/urls');
 const { createRatingsStore } = require('../services/ratingsStore');
 
 function parseOmdbRatings(body) {
@@ -79,63 +78,6 @@ async function fetchOmdb(imdbId, apiKey) {
   return res.json();
 }
 
-function findTomatometer(node) {
-  if (!node || typeof node !== 'object') return null;
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      const hit = findTomatometer(item);
-      if (hit != null) return hit;
-    }
-    return null;
-  }
-  if (node.name === 'Tomatometer' && node.ratingValue != null) {
-    const n = Number.parseInt(String(node.ratingValue), 10);
-    if (!Number.isNaN(n)) return n;
-  }
-  if (node.aggregateRating) {
-    const hit = findTomatometer(node.aggregateRating);
-    if (hit != null) return hit;
-  }
-  for (const value of Object.values(node)) {
-    const hit = findTomatometer(value);
-    if (hit != null) return hit;
-  }
-  return null;
-}
-
-function parseTomatoMeterFromHtml(html) {
-  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  let match;
-  while ((match = re.exec(html))) {
-    try {
-      const score = findTomatometer(JSON.parse(match[1]));
-      if (score != null) return score;
-    } catch {
-      // ignore malformed JSON-LD blocks
-    }
-  }
-  return null;
-}
-
-/** OMDb often omits RT even when tomatoURL is present — fill from RT JSON-LD. */
-async function fetchRottenTomatoesScore(tomatoUrl) {
-  if (!isRottenTomatoesUrl(tomatoUrl)) {
-    return null;
-  }
-  const res = await fetch(tomatoUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; MarqueeBot/1.0)',
-      Accept: 'text/html',
-    },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`RT ${res.status}`);
-  const html = await res.text();
-  const score = parseTomatoMeterFromHtml(html);
-  if (score == null) return null;
-  return { value: score, scale: 100 };
-}
-
 async function buildRatings(kind, id) {
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
@@ -156,13 +98,11 @@ async function buildRatings(kind, id) {
       : null;
 
   let omdb = { imdb: null, rottenTomatoes: null, metacritic: null };
-  let tomatoUrl = null;
   const imdbId = imdbIdFromTmdb(kind, detail);
   if (omdbKey && imdbId) {
     try {
       const body = await fetchOmdb(imdbId, omdbKey);
       omdb = parseOmdbRatings(body);
-      tomatoUrl = body.tomatoURL && body.tomatoURL !== 'N/A' ? body.tomatoURL : null;
       // Also accept tomatoMeter when OMDb fills it.
       if (!omdb.rottenTomatoes && body.tomatoMeter && body.tomatoMeter !== 'N/A') {
         const value = Number.parseInt(String(body.tomatoMeter).replace('%', ''), 10);
@@ -173,13 +113,6 @@ async function buildRatings(kind, id) {
     }
   }
 
-  if (!omdb.rottenTomatoes && tomatoUrl) {
-    try {
-      omdb.rottenTomatoes = await fetchRottenTomatoesScore(tomatoUrl);
-    } catch (err) {
-      console.warn('RT fallback failed', err.message);
-    }
-  }
 
   const payload = {
     id: Number(id),
@@ -226,3 +159,5 @@ router.get('/tv/:id', async (req, res) => {
 });
 
 module.exports = router;
+// For tests.
+module.exports.parseOmdbRatings = parseOmdbRatings;

@@ -22,7 +22,7 @@ function fakePersist() {
   const results = await Promise.all([store.get('movie', '1'), store.get('movie', '1'), store.get('movie', '1')]);
   assert.strictEqual(builds, 1);
   assert.deepStrictEqual(results[0], { kind: 'movie', id: 1 });
-  assert.deepStrictEqual(persist.rows.get('v2:movie:1'), { kind: 'movie', id: 1 });
+  assert.deepStrictEqual(persist.rows.get('v3:movie:1'), { kind: 'movie', id: 1 });
 
   // Memory hit: no persisted read, no build.
   const reads = persist.reads;

@@ -3,6 +3,17 @@ import Foundation
 enum DiaryService {
     // MARK: Movies
 
+    /// Downloads the diary export and saves it to a temporary file ready to share (URL and size).
+    static func exportDiary(_ format: DiaryExportFormat) async throws -> (url: URL, bytes: Int) {
+        let data = try await APIClient.shared.getData(
+            "/api/diary/export",
+            query: [URLQueryItem(name: "format", value: format.query)]
+        )
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(format.fileName())
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        return (url, data.count)
+    }
+
     /// Catalogue badge data. Revalidated with ETag, so an unchanged diary costs a 304.
     static func diaryIndex() async throws -> DiaryIndexResponse {
         try await APIClient.shared.get("/api/diary/index")
@@ -58,13 +69,21 @@ enum DiaryService {
     }
 
     @discardableResult
-    static func addMovieWatched(_ body: MovieIdBody, rating: Double? = nil) async throws -> FilmWatchMutationResponse {
+    /// Logs a watch: now by default, or on `watchedAt`, with an optional note.
+    static func addMovieWatched(
+        _ body: MovieIdBody,
+        rating: Double? = nil,
+        watchedAt: Date? = nil,
+        note: String? = nil
+    ) async throws -> FilmWatchMutationResponse {
         struct Body: Encodable {
             let movieId: String
             let movieTitle: String?
             let moviePosterImage: String?
             let movieRuntime: String?
             let rating: Double?
+            let watchedAt: String?
+            let note: String?
         }
         return try await APIClient.shared.post(
             "/api/watch/addToWatch",
@@ -73,8 +92,25 @@ enum DiaryService {
                 movieTitle: body.movieTitle,
                 moviePosterImage: body.moviePosterImage,
                 movieRuntime: body.movieRuntime,
-                rating: rating
+                rating: rating,
+                watchedAt: watchedAt.map(ISODate.string),
+                note: note
             )
+        )
+    }
+
+    /// Changes the date and/or note of one film log; returns the film's updated summary.
+    /// `rating`: stars for this watch (0 clears); nil leaves it.
+    static func updateFilmPlay(playId: String, watchedAt: Date?, note: String?, rating: Double? = nil) async throws -> WatchedResponse {
+        struct Body: Encodable {
+            let playId: String
+            let watchedAt: String?
+            let note: String?
+            let rating: Double?
+        }
+        return try await APIClient.shared.post(
+            "/api/watch/play/update",
+            body: Body(playId: playId, watchedAt: watchedAt.map(ISODate.string), note: note, rating: rating)
         )
     }
 
@@ -187,6 +223,22 @@ enum DiaryService {
     static func markEpisode(_ body: MarkEpisodeBody) async throws -> TrackingRecord? {
         let res: TrackingShowResponse = try await APIClient.shared.post("/api/tv/episodes/mark", body: body)
         return res.tracking
+    }
+
+    /// Changes the date and/or note of an episode you logged.
+    static func updateEpisodeLog(tvId: String, season: Int, episode: Int, watchedAt: Date?, note: String?) async throws -> WatchedEpisodeDoc? {
+        struct Body: Encodable {
+            let tvId: String
+            let seasonNumber: Int
+            let episodeNumber: Int
+            let watchedAt: String?
+            let note: String?
+        }
+        let res: EpisodeLogUpdateResponse = try await APIClient.shared.post(
+            "/api/tv/episodes/update",
+            body: Body(tvId: tvId, seasonNumber: season, episodeNumber: episode, watchedAt: watchedAt.map(ISODate.string), note: note)
+        )
+        return res.episode
     }
 
     static func unmarkEpisode(_ body: MarkEpisodeBody) async throws {

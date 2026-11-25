@@ -28,6 +28,13 @@ var Watch = new Schema({
     watchedAt: {
         type: Date
     },
+    /** The user's note about this watch (up to 500 characters). */
+    note: {
+        type: String,
+        // The 500-character rule (in visible characters) is enforced by lib/diaryInput.js.
+        maxlength: 4000,
+        default: ''
+    },
     /** True when this play is not the user's first log of the film. */
     isRewatch: {
         type: Boolean,

@@ -50,16 +50,25 @@ struct TVDetailView: View {
     @State var episodePlayDates: [String: [String]] = [:]
     @State var rewatchPlayTotal: Int = 0
 
+    /// Notes on logged episodes, by "season-episode".
+    @State var episodeNotes: [String: String] = [:]
+    /// When each episode was first logged (the canonical watch, not rewatches).
+    @State var episodeWatchedAt: [String: Date] = [:]
+    /// The log sheet for an episode: log with a date and note, or edit one.
+    @State var episodeLogTarget: EpisodeLogTarget?
+
     enum BatchAction: Equatable {
         case markSeason(season: Int, count: Int)
         case unmarkSeason(season: Int, count: Int)
         case markShow(count: Int)
+        case markUpTo(season: Int, episode: Int, count: Int)
 
         var title: String {
             switch self {
             case .markSeason: return "Mark this season?"
             case .unmarkSeason: return "Unmark this season?"
             case .markShow: return "Mark the whole show?"
+            case .markUpTo: return "Mark watched up to here?"
             }
         }
 
@@ -71,13 +80,15 @@ struct TVDetailView: View {
                 return "\(count) episode\(count == 1 ? "" : "s") in this season will be unmarked."
             case .markShow(let count):
                 return "\(count) released episode\(count == 1 ? "" : "s") across every season will be marked watched."
+            case .markUpTo(let season, let episode, let count):
+                return "\(count) released episode\(count == 1 ? "" : "s") through S\(season) · E\(episode) will be marked watched."
             }
         }
 
         var confirmLabel: String {
             switch self {
             case .unmarkSeason: return "Unmark season"
-            case .markSeason, .markShow: return "Mark watched"
+            case .markSeason, .markShow, .markUpTo: return "Mark watched"
             }
         }
 
@@ -94,7 +105,7 @@ struct TVDetailView: View {
         return status == "watching" || status == "paused" || status == "completed" || status == "rewatching"
     }
 
-    private var isRewatching: Bool { tracking?.status == "rewatching" }
+    var isRewatching: Bool { tracking?.status == "rewatching" }
 
     private var episodeAlertTitle: String {
         guard let ep = episodePendingUnmark else { return "Watched" }
@@ -183,6 +194,9 @@ struct TVDetailView: View {
             Button("Watch again") {
                 Task { await performLogRewatch(ep) }
             }
+            if !isRewatching && watchedKeys.contains(ep.diaryKey) {
+                Button("Edit date & note…") { episodeLogTarget = .edit(ep) }
+            }
             Button(episodeRemoveLabel(for: ep), role: .destructive) {
                 Task { await performUnmark(ep) }
             }
@@ -209,6 +223,7 @@ struct TVDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $episodeLogTarget) { target in episodeLogSheet(target) }
         .sheet(isPresented: $showEpisodeRatingSheet) {
             episodeRatingSheet
                 .presentationDetents([.medium])
@@ -642,7 +657,7 @@ struct TVDetailView: View {
                 Button("Save rating") {
                     Task {
                         do {
-                            try await DiaryService.rateShow(tvId: idString, rating: max(1, showRating * 2))
+                            try await DiaryService.rateShow(tvId: idString, rating: showRating)
                             showRatingSheet = false
                             Haptics.success()
                         } catch {
@@ -791,6 +806,15 @@ struct TVDetailView: View {
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber, let rating = doc.rating else { return nil }
                 return ("\(s)-\(e)", rating)
             })
+            episodeWatchedAt = Dictionary(uniqueKeysWithValues: docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber, let at = ISODate.parse(doc.watchedAt) else { return nil }
+                return ("\(s)-\(e)", at)
+            })
+            episodeNotes = Dictionary(uniqueKeysWithValues: docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber,
+                      let note = doc.note.map(DiaryNote.trimmed), !note.isEmpty else { return nil }
+                return ("\(s)-\(e)", note)
+            })
 
             providers = loadedProviders.providers
             providerRegion = loadedProviders.region
@@ -897,6 +921,8 @@ struct TVDetailView: View {
                 episodePlayCounts[key] = playsAfter > 0 ? playsAfter : nil
                 if playsAfter <= 0 {
                     watchedKeys.remove(key)
+                    episodeNotes[key] = nil
+                    episodeWatchedAt[key] = nil
                 }
                 if let track = res.tracking {
                     tracking = track
@@ -1031,6 +1057,99 @@ struct TVDetailView: View {
         }
     }
 
+    /// "Mark watched up to here": everything aired before this episode, plus it, that isn't watched.
+    func requestMarkUpTo(_ ep: TVEpisode) async {
+        guard !batching, let detail else { return }
+        if episodeIndex.isEmpty {
+            batching = true
+            episodeIndex = await fetchEpisodeIndex(from: detail)
+            batching = false
+        }
+        let season = ep.season_number ?? selectedSeason
+        let catalog = episodeIndex.isEmpty ? episodes : episodeIndex
+        let count = EpisodeOrder.upTo(season: season, episode: ep.episode_number, catalog: catalog, watched: watchedKeys).count
+        guard count > 0 else { return }
+        if count == 1 {
+            await performMark(ep)
+            return
+        }
+        pendingBatch = .markUpTo(season: season, episode: ep.episode_number, count: count)
+        showBatchConfirm = true
+    }
+
+    // MARK: Log details
+
+    @ViewBuilder
+    func episodeLogSheet(_ target: EpisodeLogTarget) -> some View {
+        let ep = target.episode
+        let season = ep.season_number ?? selectedSeason
+        let subject = LogDetailsSubject(
+            title: detail?.displayTitle ?? "Episode",
+            subtitle: "S\(season) · E\(ep.episode_number)  \(ep.name ?? "")",
+            posterPath: detail?.poster_path
+        )
+        switch target {
+        case .new:
+            LogDetailsSheet(subject: subject, mode: .new, ratesFilm: false) { draft in
+                try await logEpisodeWithDetails(ep, draft: draft)
+            }
+        case .edit:
+            let firstDate = episodeWatchedAt[ep.diaryKey]
+            LogDetailsSheet(
+                subject: subject,
+                mode: .edit,
+                initial: LogDetailsDraft(
+                    day: firstDate.map { WatchDay.from($0) } ?? .today,
+                    note: episodeNotes[ep.diaryKey] ?? ""
+                ),
+                ratesFilm: false
+            ) { draft in
+                try await editEpisodeLog(ep, draft: draft)
+            }
+        }
+    }
+
+    private func logEpisodeWithDetails(_ ep: TVEpisode, draft: LogDetailsDraft) async throws {
+        let key = ep.diaryKey
+        let date = draft.day.date()
+        var body = markBody(for: ep, afterMark: true)
+        body.watchedAt = ISODate.string(date)
+        body.note = draft.note.isEmpty ? nil : draft.note
+        watchedKeys.insert(key)
+        do {
+            if let updated = try await DiaryService.markEpisode(body) { tracking = updated }
+        } catch {
+            watchedKeys.remove(key)
+            throw error
+        }
+        (episodePlayCounts, episodePlayDates) = EpisodePlays.afterFirstWatch(
+            counts: episodePlayCounts, dates: episodePlayDates, key: key, at: date
+        )
+        episodeWatchedAt[key] = date
+        if draft.note.isEmpty { episodeNotes[key] = nil } else { episodeNotes[key] = draft.note }
+    }
+
+    private func editEpisodeLog(_ ep: TVEpisode, draft: LogDetailsDraft) async throws {
+        let key = ep.diaryKey
+        let original = episodeWatchedAt[key]
+        // Only a changed day is sent, keeping the log's own time of day.
+        let initialDay = original.map { WatchDay.from($0) } ?? .today
+        let newDate = draft.day == initialDay ? nil : draft.day.date(timeOf: original)
+        _ = try await DiaryService.updateEpisodeLog(
+            tvId: idString,
+            season: ep.season_number ?? selectedSeason,
+            episode: ep.episode_number,
+            watchedAt: newDate,
+            note: draft.note
+        )
+        if let newDate { episodeWatchedAt[key] = newDate }
+        if draft.note.isEmpty { episodeNotes[key] = nil } else { episodeNotes[key] = draft.note }
+        // Dates for this episode (first watch and any rewatches) come back in date order.
+        if let state = try? await DiaryService.rewatchState(tvId: idString) {
+            episodePlayDates = state.playDates ?? episodePlayDates
+        }
+    }
+
     func confirmMarkShow() async {
         guard !batching else { return }
         if episodeIndex.isEmpty, let detail {
@@ -1062,6 +1181,9 @@ struct TVDetailView: View {
             marking = false
         case .markShow:
             targets = catalog.filter { $0.hasAired && !watchedKeys.contains($0.diaryKey) }
+            marking = true
+        case .markUpTo(let season, let episode, _):
+            targets = EpisodeOrder.upTo(season: season, episode: episode, catalog: catalog, watched: watchedKeys)
             marking = true
         }
         guard !targets.isEmpty else { return }

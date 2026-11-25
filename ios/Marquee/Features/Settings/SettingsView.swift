@@ -71,6 +71,11 @@ struct SettingsView: View {
                 } label: {
                     SettingsLabel("Import from TV Time", systemImage: "square.and.arrow.down")
                 }
+                NavigationLink {
+                    ExportDiaryView()
+                } label: {
+                    SettingsLabel("Export your diary", systemImage: "square.and.arrow.up")
+                }
                 Button {
                     preferences.clearSearchHistory()
                     Haptics.success()
@@ -120,7 +125,16 @@ struct SettingsView: View {
                     SettingsLabel("Terms of Service", systemImage: "doc.text")
                 }
                 Link(destination: AppConfig.tmdbAttributionURL) {
-                    SettingsLabel("Data from TMDB", systemImage: "film.stack")
+                    HStack {
+                        SettingsLabel("Data from TMDB", systemImage: "film.stack")
+                        Spacer(minLength: 12)
+                        // TMDB's terms ask apps to credit them with their logo.
+                        Image("TMDBLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 11)
+                            .accessibilityHidden(true)
+                    }
                 }
                 LabeledContent("Version") {
                     Text(appVersion).foregroundStyle(theme.inkMuted).monospacedDigit()

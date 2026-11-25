@@ -3,6 +3,8 @@ const authenticate = require('../authenticate');
 const { buildActivity } = require('../services/diaryActivity');
 const { buildDiaryIndex } = require('../services/diaryIndex');
 const { sendWithEtag } = require('../lib/etag');
+const { buildExport, toCsv } = require('../services/diaryExport');
+const { resolveTimeZone } = require('../services/statsCalendar');
 
 const router = express.Router();
 
@@ -21,6 +23,27 @@ router.get('/index', authenticate.verifyUser, async (req, res, next) => {
   try {
     const index = await buildDiaryIndex(req.user._id);
     sendWithEtag(req, res, { success: true, ...index });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Your whole diary as a file: ?format=csv (one row per watch) or json (everything). */
+router.get('/export', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const format = req.query.format === 'json' ? 'json' : 'csv';
+    const timeZone = resolveTimeZone(req.query.tz || req.headers['x-timezone']);
+    const { rows, json } = await buildExport(req.user._id, timeZone);
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Disposition', `attachment; filename="marquee-diary-${stamp}.${format}"`);
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.status(200).send(JSON.stringify(json, null, 2));
+    }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    // The byte-order mark makes Excel read accents and emoji as UTF-8.
+    return res.status(200).send(`\uFEFF${toCsv(rows)}\r\n`);
   } catch (err) {
     next(err);
   }

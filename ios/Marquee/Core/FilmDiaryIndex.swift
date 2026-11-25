@@ -91,6 +91,6 @@ final class FilmDiaryIndex {
     /// Ratings are out of 5; older 10-point values are halved.
     static func stars(_ rating: Double?) -> Double {
         guard let rating, rating > 0 else { return 0 }
-        return rating > 5 ? rating / 2 : rating
+        return rating / 2
     }
 }

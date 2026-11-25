@@ -49,7 +49,9 @@ struct RootView: View {
         } else if UITestingFixtures.isEnabled {
             #if DEBUG
             // Fake session path for offline UI tests only.
-            if let movieId = UITestingFixtures.previewMovieId {
+            if let kind = UITestingFixtures.previewLogSheet {
+                LogSheetPreviewHost(kind: kind)
+            } else if let movieId = UITestingFixtures.previewMovieId {
                 previewDetailStack { MovieDetailView(movieId: movieId) }
             } else if let tvId = UITestingFixtures.previewTVId {
                 previewDetailStack { TVDetailView(tvId: tvId) }
@@ -67,7 +69,9 @@ struct RootView: View {
     @ViewBuilder
     private var authenticatedDestination: some View {
         #if DEBUG
-        if let movieId = UITestingFixtures.previewMovieId {
+        if let kind = UITestingFixtures.previewLogSheet {
+            LogSheetPreviewHost(kind: kind)
+        } else if let movieId = UITestingFixtures.previewMovieId {
             previewDetailStack { MovieDetailView(movieId: movieId) }
         } else if let tvId = UITestingFixtures.previewTVId {
             previewDetailStack { TVDetailView(tvId: tvId) }

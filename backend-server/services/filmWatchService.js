@@ -11,6 +11,23 @@ function sortPlaysNewestFirst(plays) {
   });
 }
 
+/** First watch = the earliest date, whatever order the plays were logged in. */
+function rewatchFlags(plays) {
+  return [...plays]
+    .sort((a, b) => new Date(a.watchedAt || 0) - new Date(b.watchedAt || 0) || String(a._id).localeCompare(String(b._id)))
+    .map((p, i) => ({ id: String(p._id), isRewatch: i > 0 }));
+}
+
+/** Rewrites isRewatch for every play of a film so it follows the dates. */
+async function syncRewatchFlags(userId, movieId) {
+  const plays = await Watch.find({ userFrom: userId, movieId: String(movieId) }).select('_id watchedAt isRewatch').lean();
+  const current = new Map(plays.map((p) => [String(p._id), Boolean(p.isRewatch)]));
+  const ops = rewatchFlags(plays)
+    .filter((f) => current.get(f.id) !== f.isRewatch)
+    .map((f) => ({ updateOne: { filter: { _id: f.id, userFrom: userId }, update: { $set: { isRewatch: f.isRewatch } } } }));
+  if (ops.length) await Watch.bulkWrite(ops);
+}
+
 async function listPlaysForMovie(userId, movieId) {
   const plays = await Watch.find({ userFrom: userId, movieId: String(movieId) }).lean();
   return sortPlaysNewestFirst(plays);
@@ -26,6 +43,15 @@ function summarizePlays(plays) {
     rating: latest?.rating ?? null,
     isRewatch: sorted.length > 1,
     latestPlayId: latest?._id ? String(latest._id) : null,
+    note: latest?.note || '',
+    // Every dated watch, newest first, for the film's diary list.
+    plays: sorted.slice(0, 100).map((p) => ({
+      id: String(p._id),
+      watchedAt: p.watchedAt || null,
+      note: p.note || '',
+      rating: p.rating ?? null,
+      isRewatch: Boolean(p.isRewatch),
+    })),
   };
 }
 
@@ -76,10 +102,28 @@ async function addFilmPlay(userId, fields) {
     isRewatch: existingCount > 0,
   };
   if (fields.rating !== undefined) doc.rating = fields.rating;
+  if (fields.note) doc.note = fields.note;
 
   const play = await Watch.create(doc);
+  // A backdated play can become the first watch; flags follow the dates.
+  await syncRewatchFlags(userId, movieId);
   const summary = await watchedSummary(userId, movieId);
+  const saved = summary.plays.find((p) => p.id === String(play._id));
+  if (saved) play.isRewatch = saved.isRewatch;
   return { play, summary };
+}
+
+/** Changes the date and/or note of one of the user's plays. Null when it isn't theirs. */
+async function updatePlay(userId, playId, { watchedAt, note, rating }) {
+  const play = await Watch.findOne({ _id: playId, userFrom: userId });
+  if (!play) return null;
+  if (watchedAt) play.watchedAt = watchedAt;
+  if (note !== undefined) play.note = note;
+  // Rates this exact watch; null clears it.
+  if (rating !== undefined) play.rating = rating;
+  await play.save();
+  await syncRewatchFlags(userId, play.movieId);
+  return { play, summary: await watchedSummary(userId, play.movieId) };
 }
 
 /** Delete only the newest play. Older dates stay intact. */
@@ -90,6 +134,7 @@ async function removeLatestPlay(userId, movieId) {
   }
   const latest = plays[0];
   await Watch.deleteOne({ _id: latest._id, userFrom: userId });
+  await syncRewatchFlags(userId, movieId);
   const remaining = plays.slice(1);
   return { removed: latest, summary: summarizePlays(remaining) };
 }
@@ -128,6 +173,9 @@ function ratingByMovieId(plays) {
 }
 
 module.exports = {
+  rewatchFlags,
+  syncRewatchFlags,
+  updatePlay,
   sortPlaysNewestFirst,
   listPlaysForMovie,
   summarizePlays,

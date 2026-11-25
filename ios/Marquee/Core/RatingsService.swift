@@ -28,6 +28,16 @@ enum RatingSource: String, Hashable, Sendable {
     case rottenTomatoes
     case metacritic
     case tmdb
+
+    /// Plain source names: scores are shown as text, never with third-party logos.
+    var label: String {
+        switch self {
+        case .imdb: "IMDb"
+        case .rottenTomatoes: "Rotten Tomatoes"
+        case .metacritic: "Metacritic"
+        case .tmdb: "TMDB"
+        }
+    }
 }
 
 struct MediaRatings: Decodable, Hashable, Sendable {
@@ -92,6 +102,15 @@ struct RatingsChip: Identifiable, Hashable {
     let display: String
     let numericValue: Double
     let accessibilityLabel: String
+
+    /// The quiet scale after the figure ("/10"); percentages need none.
+    var scaleText: String {
+        switch source {
+        case .imdb, .tmdb: "/10"
+        case .metacritic: "/100"
+        case .rottenTomatoes: ""
+        }
+    }
 }
 
 enum RatingsService {

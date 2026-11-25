@@ -22,6 +22,10 @@ struct MovieDetailView: View {
     @State private var busy = false
     @State private var showWatchActions = false
     @State private var showRatingSheet = false
+    /// Every dated watch, newest first.
+    @State private var plays: [FilmPlay] = []
+    /// The log sheet: a new dated log, or editing one.
+    @State private var logTarget: FilmLogTarget?
 
     private enum LoadPhase { case loading, ready, failed(String) }
     private var idString: String { String(movieId) }
@@ -53,9 +57,10 @@ struct MovieDetailView: View {
             watchCount > 1 ? "Watched ×\(watchCount)" : "Watched",
             isPresented: $showWatchActions
         ) {
-            Button("Log again") {
+            Button("Log again today") {
                 Task { if let detail { await performWatch(detail, isRewatch: true) } }
             }
+            Button("Log with date & note…") { logTarget = .new }
             if watchCount > 1 {
                 Button("Remove last log") {
                     Task { if let detail { await performUnwatch(detail, mode: "latest") } }
@@ -69,6 +74,9 @@ struct MovieDetailView: View {
             Text(watchCount > 1
                 ? "Log again keeps older dates. Remove last log only drops the newest entry."
                 : "Log again adds a new dated watch, or remove this film from watched.")
+        }
+        .sheet(item: $logTarget) { target in
+            if let detail { logSheet(for: target, detail: detail) }
         }
         .sheet(isPresented: $showRatingSheet) {
             ratingSheet
@@ -106,6 +114,10 @@ struct MovieDetailView: View {
                 }
             },
             content: {
+                if !plays.isEmpty {
+                    FilmWatchesSection(plays: plays) { play in logTarget = .edit(play) }
+                        .transition(.opacity)
+                }
                 RatingsStrip(ratings: ratings, isLoading: !ratingsReady)
                 WatchProvidersRow(providers: providers, region: providerRegion)
 
@@ -148,6 +160,13 @@ struct MovieDetailView: View {
                 } else {
                     Task { await performWatch(detail, isRewatch: false) }
                 }
+            }
+            // One tap logs today; a long press offers the date and a note.
+            .contextMenu {
+                Button("Log today", systemImage: "checkmark.circle") {
+                    Task { await performWatch(detail, isRewatch: watched) }
+                }
+                Button("Log with date & note…", systemImage: "calendar.badge.plus") { logTarget = .new }
             }
 
             if !watched {
@@ -200,7 +219,7 @@ struct MovieDetailView: View {
                 Button("Save rating") {
                     Task {
                         do {
-                            try await DiaryService.rateMovie(id: idString, rating: max(1, rating * 2))
+                            try await DiaryService.rateMovie(id: idString, rating: rating)
                             showRatingSheet = false
                             Haptics.success()
                         } catch {
@@ -263,6 +282,69 @@ struct MovieDetailView: View {
         }
     }
 
+    // MARK: Log details
+
+    @ViewBuilder
+    private func logSheet(for target: FilmLogTarget, detail: MovieDetail) -> some View {
+        let subject = LogDetailsSubject(title: detail.displayTitle, subtitle: detail.year, posterPath: detail.poster_path)
+        switch target {
+        case .new:
+            LogDetailsSheet(subject: subject, mode: .new, ratesFilm: true) { draft in
+                try await logWithDetails(draft, detail: detail)
+            }
+        case .edit(let play):
+            LogDetailsSheet(
+                subject: subject,
+                mode: .edit,
+                initial: LogDetailsDraft(
+                    day: play.date.map { WatchDay.from($0) } ?? .today,
+                    rating: play.stars > 0 ? play.stars : nil,
+                    note: play.noteText ?? ""
+                ),
+                ratesFilm: true
+            ) { draft in
+                try await saveEdit(draft, play: play)
+            }
+        }
+    }
+
+    private func logWithDetails(_ draft: LogDetailsDraft, detail: MovieDetail) async throws {
+        let res = try await DiaryService.addMovieWatched(
+            bodyPayload(detail),
+            rating: draft.rating,
+            watchedAt: draft.day.date(),
+            note: draft.note.isEmpty ? nil : draft.note
+        )
+        applyWatchedSummary(
+            watched: true,
+            count: res.watchCount ?? (watchCount + 1),
+            watchedAt: res.watchedAt ?? lastWatchedAt,
+            ratingValue: res.rating ?? draft.rating.map { $0 * 2 }
+        )
+        watchlisted = false
+        if let fresh = res.plays { withAnimation(MarqueeMotion.standard) { plays = fresh } }
+    }
+
+    private func saveEdit(_ draft: LogDetailsDraft, play: FilmPlay) async throws {
+        // Only a changed day is sent, and it keeps the log's own time of day, so editing a note
+        // never reorders watches. The rating belongs to this watch (0 clears it).
+        let initialDay = play.date.map { WatchDay.from($0) } ?? .today
+        let newStars = draft.rating ?? 0
+        let res = try await DiaryService.updateFilmPlay(
+            playId: play.id,
+            watchedAt: draft.day == initialDay ? nil : draft.day.date(timeOf: play.date),
+            note: draft.note,
+            rating: abs(newStars - play.stars) > 0.01 ? newStars : nil
+        )
+        applyWatchedSummary(
+            watched: res.watched,
+            count: res.watchCount,
+            watchedAt: res.watchedAt,
+            ratingValue: res.rating
+        )
+        if let fresh = res.plays { withAnimation(MarqueeMotion.standard) { plays = fresh } }
+    }
+
     private func bodyPayload(_ detail: MovieDetail) -> MovieIdBody {
         MovieIdBody(
             movieId: idString,
@@ -283,7 +365,7 @@ struct MovieDetailView: View {
         watched = nextCount > 0
         lastWatchedAt = watchedAt
         if let r = ratingValue {
-            rating = min(5, r > 5 ? r / 2 : r)
+            rating = min(5, r / 2)
         } else if nextCount == 0 {
             rating = 0
         }
@@ -324,6 +406,7 @@ struct MovieDetailView: View {
                     watchedAt: watchedRes.watchedAt,
                     ratingValue: watchedRes.rating
                 )
+                plays = watchedRes.plays ?? []
             }
             watchlisted = userState?.watchlisted ?? false
             diaryReady = true
@@ -367,6 +450,7 @@ struct MovieDetailView: View {
                 watchedAt: res.watchedAt ?? lastWatchedAt,
                 ratingValue: res.rating ?? (rating > 0 ? rating * 2 : nil)
             )
+            if let fresh = res.plays { withAnimation(MarqueeMotion.standard) { plays = fresh } }
             if watchlisted {
                 try? await DiaryService.removeMovieWatchlist(id: idString)
                 watchlisted = false
@@ -407,6 +491,9 @@ struct MovieDetailView: View {
                 watchedAt: res.watchedAt,
                 ratingValue: res.rating
             )
+            withAnimation(MarqueeMotion.standard) {
+                if mode == "all" { plays = [] } else if !plays.isEmpty { plays.removeFirst() }
+            }
         } catch {
             watchCount = previousCount
             watched = previousWatched

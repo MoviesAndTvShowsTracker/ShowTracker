@@ -53,6 +53,11 @@ actor APIClient {
         return try Self.decode(raw)
     }
 
+    /// A GET whose body is a file (CSV, JSON export), returned as is.
+    nonisolated func getData(_ path: String, query: [URLQueryItem] = [], auth: Bool = true) async throws -> Data {
+        try await sharedGet(path: path, query: query, auth: auth).data
+    }
+
     nonisolated func post<Body: Encodable & Sendable, T: Decodable & Sendable>(_ path: String, body: Body, auth: Bool = true) async throws -> T {
         let raw = try await send(path: path, method: "POST", body: body, auth: auth)
         return try Self.decode(raw)
