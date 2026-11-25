@@ -7,8 +7,8 @@
  * Shows mid-rewatch are skipped. Previews by default; pass --apply to write.
  *
  * Usage:
- *   node scripts/repair-tv-tracking.js --user <username>
- *   node scripts/repair-tv-tracking.js --user <username> --apply
+ *   node scripts/repair-tv-tracking.js --user <username or email>
+ *   node scripts/repair-tv-tracking.js --user <username or email> --apply
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env'), quiet: true });
 
@@ -37,7 +37,7 @@ function code(s, e) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (!opts.user) {
-    console.error('Pass --user <username>.');
+    console.error('Pass --user <username or email>.');
     process.exit(1);
   }
   if (!process.env.TMDB_API_KEY) {
@@ -46,7 +46,7 @@ async function main() {
   }
 
   await mongoose.connect(keys.mongoURL);
-  const user = await User.findOne({ username: opts.user });
+  const user = await User.findOne({ $or: [{ username: opts.user }, { email: opts.user.toLowerCase() }] });
   if (!user) {
     console.error(`User not found: ${opts.user}`);
     process.exit(1);
