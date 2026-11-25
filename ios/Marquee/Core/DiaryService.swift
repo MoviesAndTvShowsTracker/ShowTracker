@@ -58,13 +58,21 @@ enum DiaryService {
     }
 
     @discardableResult
-    static func addMovieWatched(_ body: MovieIdBody, rating: Double? = nil) async throws -> FilmWatchMutationResponse {
+    /// Logs a watch: now by default, or on `watchedAt`, with an optional note.
+    static func addMovieWatched(
+        _ body: MovieIdBody,
+        rating: Double? = nil,
+        watchedAt: Date? = nil,
+        note: String? = nil
+    ) async throws -> FilmWatchMutationResponse {
         struct Body: Encodable {
             let movieId: String
             let movieTitle: String?
             let moviePosterImage: String?
             let movieRuntime: String?
             let rating: Double?
+            let watchedAt: String?
+            let note: String?
         }
         return try await APIClient.shared.post(
             "/api/watch/addToWatch",
@@ -73,8 +81,23 @@ enum DiaryService {
                 movieTitle: body.movieTitle,
                 moviePosterImage: body.moviePosterImage,
                 movieRuntime: body.movieRuntime,
-                rating: rating
+                rating: rating,
+                watchedAt: watchedAt.map(ISODate.string),
+                note: note
             )
+        )
+    }
+
+    /// Changes the date and/or note of one film log; returns the film's updated summary.
+    static func updateFilmPlay(playId: String, watchedAt: Date?, note: String?) async throws -> WatchedResponse {
+        struct Body: Encodable {
+            let playId: String
+            let watchedAt: String?
+            let note: String?
+        }
+        return try await APIClient.shared.post(
+            "/api/watch/play/update",
+            body: Body(playId: playId, watchedAt: watchedAt.map(ISODate.string), note: note)
         )
     }
 

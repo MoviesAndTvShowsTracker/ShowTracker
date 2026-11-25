@@ -38,6 +38,9 @@ struct WatchedResponse: Decodable, Sendable{
     let rating: Double?
     let isRewatch: Bool?
     let latestPlayId: String?
+    var note: String? = nil
+    /// Every dated watch, newest first (newer servers).
+    var plays: [FilmPlay]? = nil
 }
 
 struct FilmWatchMutationResponse: Decodable, Sendable {
@@ -50,6 +53,7 @@ struct FilmWatchMutationResponse: Decodable, Sendable {
     let watched: Bool?
     let mode: String?
     let deletedCount: Int?
+    var plays: [FilmPlay]? = nil
 }
 
 struct WatchlistedResponse: Decodable, Sendable{
