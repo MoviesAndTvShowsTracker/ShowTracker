@@ -212,6 +212,21 @@ extension TVDetailView {
                                 .lineLimit(1)
                         }
 
+                        if marked, let note = episodeNotes[key] {
+                            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                                Image(systemName: "text.quote")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(theme.olive)
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundStyle(theme.ink.opacity(0.8))
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Your note: \(note)")
+                        }
+
                         if let overview = ep.overview, !overview.isEmpty {
                             Text(overview)
                                 .font(.caption)
@@ -245,6 +260,32 @@ extension TVDetailView {
         .padding(.vertical, 12)
         .frame(minHeight: 72, alignment: .top)
         .background(isNext ? theme.oliveSoft.opacity(0.6) : Color.clear)
+        .contentShape(Rectangle())
+        // A tap marks today; a long press offers a date, a note, or catching up in one go.
+        .contextMenu {
+            if !isRewatching {
+                if marked || plays > 0 {
+                    Button("Edit date & note…", systemImage: "calendar.badge.clock") {
+                        episodeLogTarget = .edit(ep)
+                    }
+                    Button("Rate", systemImage: "star") {
+                        episodePendingRate = ep
+                        episodeRating = (episodeRatings[key] ?? 0) / 2
+                        showEpisodeRatingSheet = true
+                    }
+                } else {
+                    Button("Mark watched", systemImage: "checkmark.circle") {
+                        Task { await performMark(ep) }
+                    }
+                    Button("Log with date & note…", systemImage: "calendar.badge.plus") {
+                        episodeLogTarget = .new(ep)
+                    }
+                    Button("Mark watched up to here", systemImage: "checklist") {
+                        Task { await requestMarkUpTo(ep) }
+                    }
+                }
+            }
+        }
         .sensoryFeedback(.success, trigger: marked)
     }
 

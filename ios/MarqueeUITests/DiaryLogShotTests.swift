@@ -47,3 +47,32 @@ final class DiaryLogShotTests: XCTestCase {
         }
     }
 }
+
+extension DiaryLogShotTests {
+    func testShowDiary() throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let email = env["MARQUEE_SHOT_EMAIL"], let password = env["MARQUEE_SHOT_PASSWORD"] else {
+            throw XCTSkip("No seeded account")
+        }
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-debugEmail=\(email)", "-debugPassword=\(password)",
+            "-apiBaseURL", env["MARQUEE_SHOT_API"] ?? "http://localhost:5055",
+            "-previewTVDetail=1396",
+        ]
+        app.launch()
+        let pilot = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Pilot'")).firstMatch
+        for _ in 0..<8 where !pilot.isHittable { app.swipeUp(velocity: .slow) }
+        sleep(1)
+        let attach = { (name: String) in
+            let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; self.add(a)
+        }
+        attach("4-episodes")
+        let third = app.buttons.matching(NSPredicate(format: "label CONTAINS 'E3 ·'")).firstMatch
+        if third.waitForExistence(timeout: 5) {
+            third.press(forDuration: 0.8)
+            sleep(1)
+            attach("5-episode-menu")
+        }
+    }
+}

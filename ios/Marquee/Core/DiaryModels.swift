@@ -145,6 +145,9 @@ struct MarkEpisodeBody: Encodable, Sendable{
     var nextSeason: Int? = nil
     var nextEpisode: Int? = nil
     var nextEpisodeName: String? = nil
+    /// When it was watched (default: now) and an optional note.
+    var watchedAt: String? = nil
+    var note: String? = nil
 }
 
 struct BatchEpisodesBody: Encodable, Sendable{
@@ -190,6 +193,13 @@ struct WatchedEpisodeDoc: Codable, Hashable, Sendable{
     let seasonNumber: Int?
     let episodeNumber: Int?
     let rating: Double?
+    var watchedAt: String? = nil
+    var note: String? = nil
+}
+
+struct EpisodeLogUpdateResponse: Decodable, Sendable {
+    let success: Bool?
+    let episode: WatchedEpisodeDoc?
 }
 
 struct TrackingStartBody: Encodable, Sendable{
