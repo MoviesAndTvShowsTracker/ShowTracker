@@ -8,6 +8,7 @@ const { requestTimer, startLoopMonitor } = require('./lib/metrics');
 const { createRateLimiter } = require('./lib/rateLimit');
 const { errorResponse } = require('./lib/errors');
 const { securityHeaders } = require('./lib/securityHeaders');
+const { rejectOperators } = require('./lib/rejectOperators');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -70,6 +71,7 @@ app.use(requestTimer({ slowMs: 500 }));
 app.use(logger(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(rejectOperators);
 
 app.use(passport.initialize());
 

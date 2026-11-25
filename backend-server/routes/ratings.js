@@ -6,6 +6,7 @@ const TMDB_BASE = 'https://api.themoviedb.org/3/';
 const OMDB_BASE = 'https://www.omdbapi.com/';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const RatingsCache = require('../models/ratingsCache');
+const { isRottenTomatoesUrl } = require('../lib/urls');
 const { createRatingsStore } = require('../services/ratingsStore');
 
 function parseOmdbRatings(body) {
@@ -118,7 +119,7 @@ function parseTomatoMeterFromHtml(html) {
 
 /** OMDb often omits RT even when tomatoURL is present — fill from RT JSON-LD. */
 async function fetchRottenTomatoesScore(tomatoUrl) {
-  if (!tomatoUrl || tomatoUrl === 'N/A' || !String(tomatoUrl).includes('rottentomatoes.com')) {
+  if (!isRottenTomatoesUrl(tomatoUrl)) {
     return null;
   }
   const res = await fetch(tomatoUrl, {
