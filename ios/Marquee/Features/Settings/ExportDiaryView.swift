@@ -99,7 +99,8 @@ struct ExportDiaryView: View {
             case .ready(let url, let bytes):
                 ShareLink(item: url) {
                     Label("Share \(url.lastPathComponent)", systemImage: "square.and.arrow.up")
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -110,7 +111,7 @@ struct ExportDiaryView: View {
             case .failed(let message):
                 Text(message)
                     .font(.footnote)
-                    .foregroundStyle(theme.accentInk)
+                    .foregroundStyle(theme.ink)
                     .multilineTextAlignment(.center)
                 prepareButton(title: "Try again")
             case .idle, .preparing:

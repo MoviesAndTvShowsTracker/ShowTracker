@@ -100,15 +100,17 @@ enum DiaryService {
     }
 
     /// Changes the date and/or note of one film log; returns the film's updated summary.
-    static func updateFilmPlay(playId: String, watchedAt: Date?, note: String?) async throws -> WatchedResponse {
+    /// `rating`: stars for this watch (0 clears); nil leaves it.
+    static func updateFilmPlay(playId: String, watchedAt: Date?, note: String?, rating: Double? = nil) async throws -> WatchedResponse {
         struct Body: Encodable {
             let playId: String
             let watchedAt: String?
             let note: String?
+            let rating: Double?
         }
         return try await APIClient.shared.post(
             "/api/watch/play/update",
-            body: Body(playId: playId, watchedAt: watchedAt.map(ISODate.string), note: note)
+            body: Body(playId: playId, watchedAt: watchedAt.map(ISODate.string), note: note, rating: rating)
         )
     }
 

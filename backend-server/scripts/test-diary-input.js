@@ -27,4 +27,9 @@ rejects(() => parseNote('x'.repeat(NOTE_MAX + 1)), /500/);
 rejects(() => parseNote({ text: 'hi' }), /text/);
 assert.strictEqual(parseNote('a\u0000b\u0007c'), 'abc', 'control characters are dropped');
 
+// Counted like the app counts: what you see, so 300 emoji (600 UTF-16 units) fit.
+assert.strictEqual(parseNote('😀'.repeat(300)).length, 600);
+assert.ok(parseNote('👨‍👩‍👧'.repeat(NOTE_MAX)), 'family emoji count as one each');
+rejects(() => parseNote('😀'.repeat(NOTE_MAX + 1)), /500/);
+
 console.log('diary input: all passed');

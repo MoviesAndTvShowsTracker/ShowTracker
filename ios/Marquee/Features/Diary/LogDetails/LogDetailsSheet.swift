@@ -178,7 +178,7 @@ struct LogDetailsSheet: View {
             if let error {
                 Text(error)
                     .font(.footnote)
-                    .foregroundStyle(theme.accentInk)
+                    .foregroundStyle(theme.ink)
                     .multilineTextAlignment(.center)
                     .transition(.opacity)
             }

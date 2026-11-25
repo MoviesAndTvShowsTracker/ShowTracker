@@ -14,6 +14,8 @@ final class FilmPlayTests: XCTestCase {
         let json = #"[{"id":"a","watchedAt":"2024-02-14T20:00:00.000Z","note":"With Mom","rating":9,"isRewatch":false},{"id":"b","watchedAt":null,"note":"","rating":null,"isRewatch":true}]"#
         let plays = try JSONDecoder().decode([FilmPlay].self, from: Data(json.utf8))
         XCTAssertEqual(plays[0].stars, 4.5)
+        let low = try JSONDecoder().decode(FilmPlay.self, from: Data(#"{"id":"c","rating":4}"#.utf8))
+        XCTAssertEqual(low.stars, 2, "stored ratings are 1–10: 4 is two stars")
         XCTAssertEqual(plays[0].noteText, "With Mom")
         XCTAssertNotNil(plays[0].date)
         XCTAssertEqual(plays[1].stars, 0)

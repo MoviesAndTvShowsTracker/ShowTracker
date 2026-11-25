@@ -8,15 +8,18 @@ enum WatchDay: Hashable, Sendable {
 
     /// The moment to store. Past days keep the current time of day so logs stay in a natural order;
     /// nothing is ever in the future.
-    func date(now: Date = .now, calendar: Calendar = .current) -> Date {
+    /// `timeOf`: keep that moment's time of day (when moving an existing log to another day).
+    func date(now: Date = .now, calendar: Calendar = .current, timeOf: Date? = nil) -> Date {
         switch self {
         case .today:
             return now
         case .yesterday:
-            return calendar.date(byAdding: .day, value: -1, to: now) ?? now
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: now) else { return now }
+            guard let timeOf else { return yesterday }
+            return WatchDay.custom(yesterday).date(now: now, calendar: calendar, timeOf: timeOf)
         case .custom(let picked):
             let day = calendar.dateComponents([.year, .month, .day], from: picked)
-            let time = calendar.dateComponents([.hour, .minute, .second], from: now)
+            let time = calendar.dateComponents([.hour, .minute, .second], from: timeOf ?? now)
             var parts = DateComponents()
             parts.year = day.year; parts.month = day.month; parts.day = day.day
             parts.hour = time.hour; parts.minute = time.minute; parts.second = time.second

@@ -114,11 +114,13 @@ async function addFilmPlay(userId, fields) {
 }
 
 /** Changes the date and/or note of one of the user's plays. Null when it isn't theirs. */
-async function updatePlay(userId, playId, { watchedAt, note }) {
+async function updatePlay(userId, playId, { watchedAt, note, rating }) {
   const play = await Watch.findOne({ _id: playId, userFrom: userId });
   if (!play) return null;
   if (watchedAt) play.watchedAt = watchedAt;
   if (note !== undefined) play.note = note;
+  // Rates this exact watch; null clears it.
+  if (rating !== undefined) play.rating = rating;
   await play.save();
   await syncRewatchFlags(userId, play.movieId);
   return { play, summary: await watchedSummary(userId, play.movieId) };

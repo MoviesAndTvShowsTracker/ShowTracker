@@ -265,8 +265,10 @@ extension TVDetailView {
         .contextMenu {
             if !isRewatching {
                 if marked || plays > 0 {
-                    Button("Edit date & note…", systemImage: "calendar.badge.clock") {
-                        episodeLogTarget = .edit(ep)
+                    if marked {
+                        Button("Edit date & note…", systemImage: "calendar.badge.clock") {
+                            episodeLogTarget = .edit(ep)
+                        }
                     }
                     Button("Rate", systemImage: "star") {
                         episodePendingRate = ep
@@ -320,7 +322,8 @@ extension TVDetailView {
     func saveEpisodeRating() async {
         guard let ep = episodePendingRate else { return }
         let season = ep.season_number ?? selectedSeason
-        let apiRating = max(1, episodeRating * 2)
+        // Half-star value; the server stores it doubled.
+        let apiRating = episodeRating
         do {
             try await DiaryService.rateEpisode(
                 RateEpisodeBody(
@@ -330,7 +333,7 @@ extension TVDetailView {
                     rating: apiRating
                 )
             )
-            episodeRatings[ep.diaryKey] = apiRating
+            episodeRatings[ep.diaryKey] = apiRating * 2
             showEpisodeRatingSheet = false
             Haptics.success()
         } catch {

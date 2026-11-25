@@ -30,7 +30,7 @@ struct DiaryNoteField: View {
                 Text(counter)
                     .font(.caption2.weight(.medium))
                     .monospacedDigit()
-                    .foregroundStyle(note.count >= DiaryNote.limit ? theme.accentInk : theme.inkMuted)
+                    .foregroundStyle(note.count >= DiaryNote.limit ? theme.ink : theme.inkMuted)
                     .contentTransition(.numericText())
                     .transition(.opacity)
             }

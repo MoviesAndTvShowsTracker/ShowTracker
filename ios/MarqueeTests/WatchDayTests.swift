@@ -29,6 +29,15 @@ final class WatchDayTests: XCTestCase {
         XCTAssertEqual(WatchDay.custom(future).date(now: now, calendar: cal), now, "clamped to now")
     }
 
+    func testMovingALogToAnotherDayKeepsItsTimeOfDay() {
+        let original = cal.date(from: DateComponents(year: 2026, month: 11, day: 25, hour: 9, minute: 5))!
+        let picked = cal.date(from: DateComponents(year: 2026, month: 11, day: 20))!
+        let moved = WatchDay.custom(picked).date(now: now, calendar: cal, timeOf: original)
+        XCTAssertEqual(cal.dateComponents([.day, .hour, .minute], from: moved), DateComponents(day: 20, hour: 9, minute: 5))
+        let yesterday = WatchDay.yesterday.date(now: now, calendar: cal, timeOf: original)
+        XCTAssertEqual(cal.dateComponents([.day, .hour, .minute], from: yesterday), DateComponents(day: 24, hour: 9, minute: 5))
+    }
+
     func testAnExistingDateSelectsTheRightPill() {
         XCTAssertEqual(WatchDay.from(now.addingTimeInterval(-3600), now: now, calendar: cal), .today)
         XCTAssertEqual(WatchDay.from(cal.date(byAdding: .day, value: -1, to: now)!, now: now, calendar: cal), .yesterday)

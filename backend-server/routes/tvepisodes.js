@@ -306,6 +306,9 @@ router.post('/update', authenticate.verifyUser, async (req, res, next) => {
     } catch (err) {
       return res.status(400).json({ success: false, message: err.message });
     }
+    if (!Object.keys(set).length) {
+      return res.status(400).json({ success: false, message: 'Nothing to change.' });
+    }
     const episode = await TvEpisodeWatch.findOneAndUpdate(
       { userFrom: userId, tvId, seasonNumber, episodeNumber },
       { $set: set },

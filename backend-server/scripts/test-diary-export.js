@@ -28,6 +28,11 @@ assert.deepStrictEqual(rows.map((r) => [r.type, r.title, r.date, r.rewatch]), [
   ['film', 'Forrest Gump', '2024-02-14', 'no'],
 ]);
 assert.strictEqual(rows[2].rating, 4.5, 'ratings exported out of 5');
+// Stored ratings are always 1–10: a stored 4 is two stars.
+assert.strictEqual(diaryRows({ films: [{ movieId: '1', rating: 4, watchedAt: new Date() }], episodes: [], rewatches: [], showTitles: {} })[0].rating, 2);
+// Days are the user's local days: 01:00Z Nov 25 is still Nov 24 in Los Angeles.
+const la = diaryRows({ films: [{ movieId: '1', watchedAt: new Date('2026-11-25T01:00:00Z') }], episodes: [], rewatches: [], showTitles: {}, timeZone: 'America/Los_Angeles' });
+assert.strictEqual(la[0].date, '2026-11-24');
 assert.strictEqual(rows[1].episode, 'S1E1 Pilot');
 
 const csv = toCsv(rows, CSV_COLUMNS);

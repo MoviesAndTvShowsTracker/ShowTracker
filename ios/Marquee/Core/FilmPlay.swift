@@ -10,10 +10,10 @@ struct FilmPlay: Decodable, Identifiable, Hashable, Sendable {
 
     var date: Date? { ISODate.parse(watchedAt) }
 
-    /// Ratings are stored out of 10 (older logs) or 5; shown out of 5.
+    /// Stored as 1–10 (half-stars doubled); shown out of 5.
     var stars: Double {
         guard let rating, rating > 0 else { return 0 }
-        return rating > 5 ? rating / 2 : rating
+        return rating / 2
     }
 
     var noteText: String? {

@@ -52,6 +52,8 @@ struct TVDetailView: View {
 
     /// Notes on logged episodes, by "season-episode".
     @State var episodeNotes: [String: String] = [:]
+    /// When each episode was first logged (the canonical watch, not rewatches).
+    @State var episodeWatchedAt: [String: Date] = [:]
     /// The log sheet for an episode: log with a date and note, or edit one.
     @State var episodeLogTarget: EpisodeLogTarget?
 
@@ -192,7 +194,7 @@ struct TVDetailView: View {
             Button("Watch again") {
                 Task { await performLogRewatch(ep) }
             }
-            if !isRewatching {
+            if !isRewatching && watchedKeys.contains(ep.diaryKey) {
                 Button("Edit date & note…") { episodeLogTarget = .edit(ep) }
             }
             Button(episodeRemoveLabel(for: ep), role: .destructive) {
@@ -655,7 +657,7 @@ struct TVDetailView: View {
                 Button("Save rating") {
                     Task {
                         do {
-                            try await DiaryService.rateShow(tvId: idString, rating: max(1, showRating * 2))
+                            try await DiaryService.rateShow(tvId: idString, rating: showRating)
                             showRatingSheet = false
                             Haptics.success()
                         } catch {
@@ -804,6 +806,10 @@ struct TVDetailView: View {
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber, let rating = doc.rating else { return nil }
                 return ("\(s)-\(e)", rating)
             })
+            episodeWatchedAt = Dictionary(uniqueKeysWithValues: docs.compactMap { doc in
+                guard let s = doc.seasonNumber, let e = doc.episodeNumber, let at = ISODate.parse(doc.watchedAt) else { return nil }
+                return ("\(s)-\(e)", at)
+            })
             episodeNotes = Dictionary(uniqueKeysWithValues: docs.compactMap { doc in
                 guard let s = doc.seasonNumber, let e = doc.episodeNumber,
                       let note = doc.note.map(DiaryNote.trimmed), !note.isEmpty else { return nil }
@@ -915,6 +921,8 @@ struct TVDetailView: View {
                 episodePlayCounts[key] = playsAfter > 0 ? playsAfter : nil
                 if playsAfter <= 0 {
                     watchedKeys.remove(key)
+                    episodeNotes[key] = nil
+                    episodeWatchedAt[key] = nil
                 }
                 if let track = res.tracking {
                     tracking = track
@@ -1086,7 +1094,7 @@ struct TVDetailView: View {
                 try await logEpisodeWithDetails(ep, draft: draft)
             }
         case .edit:
-            let firstDate = (episodePlayDates[ep.diaryKey]?.first).flatMap(ISODate.parse)
+            let firstDate = episodeWatchedAt[ep.diaryKey]
             LogDetailsSheet(
                 subject: subject,
                 mode: .edit,
@@ -1117,18 +1125,24 @@ struct TVDetailView: View {
         (episodePlayCounts, episodePlayDates) = EpisodePlays.afterFirstWatch(
             counts: episodePlayCounts, dates: episodePlayDates, key: key, at: date
         )
+        episodeWatchedAt[key] = date
         if draft.note.isEmpty { episodeNotes[key] = nil } else { episodeNotes[key] = draft.note }
     }
 
     private func editEpisodeLog(_ ep: TVEpisode, draft: LogDetailsDraft) async throws {
         let key = ep.diaryKey
+        let original = episodeWatchedAt[key]
+        // Only a changed day is sent, keeping the log's own time of day.
+        let initialDay = original.map { WatchDay.from($0) } ?? .today
+        let newDate = draft.day == initialDay ? nil : draft.day.date(timeOf: original)
         _ = try await DiaryService.updateEpisodeLog(
             tvId: idString,
             season: ep.season_number ?? selectedSeason,
             episode: ep.episode_number,
-            watchedAt: draft.day.date(),
+            watchedAt: newDate,
             note: draft.note
         )
+        if let newDate { episodeWatchedAt[key] = newDate }
         if draft.note.isEmpty { episodeNotes[key] = nil } else { episodeNotes[key] = draft.note }
         // Dates for this episode (first watch and any rewatches) come back in date order.
         if let state = try? await DiaryService.rewatchState(tvId: idString) {

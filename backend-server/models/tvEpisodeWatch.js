@@ -13,7 +13,7 @@ const TvEpisodeWatch = new Schema(
     watchedAt: { type: Date, default: Date.now },
     rating: { type: Number, min: 1, max: 10, default: null },
     // The user's note about this episode (up to 500 characters).
-    note: { type: String, maxlength: 500, default: '' },
+    note: { type: String, maxlength: 4000, default: '' },
   },
   { timestamps: true }
 );

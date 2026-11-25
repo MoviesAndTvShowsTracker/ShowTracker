@@ -7,14 +7,11 @@ const TvWatchlist = require('../models/tvwatchlist');
 const Favorite = require('../models/favorite');
 const FavoriteTv = require('../models/favoritefortv');
 
-/** Ratings are stored out of 10 (older) or 5; exports always say out of 5. */
-function stars(rating) {
-  if (!(rating > 0)) return null;
-  return rating > 5 ? rating / 2 : rating;
-}
+const { dateKeyInZone } = require('./statsCalendar');
 
-function day(date) {
-  return date ? new Date(date).toISOString().slice(0, 10) : '';
+/** Ratings are stored as 1–10 (half-stars doubled); exports say out of 5. */
+function stars(rating) {
+  return rating > 0 ? rating / 2 : null;
 }
 
 /** One CSV cell: quoted when needed, and never a formula when a spreadsheet opens the file. */
@@ -44,7 +41,9 @@ function toCsv(rows, columns = CSV_COLUMNS) {
 }
 
 /** Every logged watch as one diary, newest first. */
-function diaryRows({ films, episodes, rewatches, showTitles }) {
+function diaryRows({ films, episodes, rewatches, showTitles, timeZone = 'UTC' }) {
+  // The user's own calendar day, as the app shows it.
+  const day = (date) => (date ? dateKeyInZone(date, timeZone) : '');
   const episodeRow = (e, rewatch) => ({
     at: e.watchedAt,
     date: day(e.watchedAt),
@@ -74,7 +73,7 @@ function diaryRows({ films, episodes, rewatches, showTitles }) {
 }
 
 /** Everything the user has put into Marquee, for the export file. */
-async function buildExport(userId) {
+async function buildExport(userId, timeZone = 'UTC') {
   const scope = { userFrom: userId };
   const [films, episodes, rewatches, shows, filmWatchlist, showWatchlist, favFilms, favShows] = await Promise.all([
     Watch.find(scope).lean(),
@@ -87,7 +86,7 @@ async function buildExport(userId) {
     FavoriteTv.find(scope).lean(),
   ]);
   const showTitles = Object.fromEntries(shows.map((s) => [String(s.tvId), s.tvTitle || null]));
-  const rows = diaryRows({ films, episodes, rewatches, showTitles });
+  const rows = diaryRows({ films, episodes, rewatches, showTitles, timeZone });
   return {
     rows,
     json: {

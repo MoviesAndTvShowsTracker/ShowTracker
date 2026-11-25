@@ -2,10 +2,9 @@ const Watch = require('../models/watch');
 const MovieWatchlist = require('../models/moviewatchlist');
 const { libraryFilmsFromPlays } = require('./filmWatchService');
 
-/** Ratings are out of 5; older 10-point values are halved. */
+/** Ratings are stored as 1–10 (half-stars doubled). */
 function stars(rating) {
-  if (!(rating > 0)) return 0;
-  return rating > 5 ? rating / 2 : rating;
+  return rating > 0 ? rating / 2 : 0;
 }
 
 /**

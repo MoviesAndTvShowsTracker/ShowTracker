@@ -7,7 +7,15 @@ struct WatchDayPills: View {
     @Binding var calendarOpen: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { pills }
+            VStack(alignment: .leading, spacing: 8) { pills }
+        }
+    }
+
+    @ViewBuilder
+    private var pills: some View {
+        Group {
             pill("Today", selected: day == .today) {
                 day = .today
                 calendarOpen = false
@@ -34,7 +42,7 @@ struct WatchDayPills: View {
                 if let systemImage {
                     Image(systemName: systemImage).font(.footnote.weight(.semibold))
                 }
-                Text(title).lineLimit(1)
+                Text(title).lineLimit(1).fixedSize()
             }
             .font(.subheadline.weight(.semibold))
             // A single-choice control: the chosen day is solid Deep Olive, unmistakable at a glance.

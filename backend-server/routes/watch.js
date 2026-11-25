@@ -104,13 +104,21 @@ router.post('/play/update', authenticate.verifyUser, async (req, res, next) => {
     }
     let watchedAt;
     let note;
+    let rating;
     try {
       watchedAt = req.body.watchedAt === undefined ? undefined : parseWatchedAt(req.body.watchedAt);
       note = parseNote(req.body.note);
+      if (req.body.rating !== undefined) {
+        // 0 or null clears; otherwise a half-star value (0.5–5).
+        rating = req.body.rating === null || Number(req.body.rating) === 0 ? null : normalizeRating(req.body.rating);
+      }
     } catch (err) {
       return res.status(400).json({ success: false, message: err.message });
     }
-    const result = await updatePlay(req.user._id, req.body.playId, { watchedAt, note });
+    if (watchedAt === undefined && note === undefined && rating === undefined) {
+      return res.status(400).json({ success: false, message: 'Nothing to change.' });
+    }
+    const result = await updatePlay(req.user._id, req.body.playId, { watchedAt, note, rating });
     if (!result) return res.status(404).json({ success: false, message: 'Log not found.' });
     await invalidateUserStats(req.user._id);
     const { summary } = result;

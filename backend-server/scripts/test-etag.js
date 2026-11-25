@@ -39,12 +39,12 @@ const changed = fakeRes();
 sendWithEtag({ headers: { 'if-none-match': etagFor({ a: 1 }) } }, changed, { a: 2 });
 assert.strictEqual(changed.statusCode, 200);
 
-// Index: [id, plays] per film, watchlist ids, and the newest film rated 4+ stars (10-point ratings halved).
+// Index: [id, plays] per film, watchlist ids, and the newest film rated 4+ stars (stored 1–10).
 const index = diaryIndexFromFilms(
   [
     { movieId: '1', watchCount: 3, rating: 9, watchedAt: '2026-11-01T00:00:00Z', movieTitle: 'Old love' },
-    { movieId: '2', watchCount: 1, rating: 4, watchedAt: '2026-11-20T00:00:00Z', movieTitle: 'New love' },
-    { movieId: '3', watchCount: 1, rating: 3.5, watchedAt: '2026-11-24T00:00:00Z', movieTitle: 'Fine' },
+    { movieId: '2', watchCount: 1, rating: 8, watchedAt: '2026-11-20T00:00:00Z', movieTitle: 'New love' },
+    { movieId: '3', watchCount: 1, rating: 7, watchedAt: '2026-11-24T00:00:00Z', movieTitle: 'Fine' },
     { movieId: '4', watchCount: 2, rating: null, watchedAt: null, movieTitle: 'Unrated' },
   ],
   [{ movieId: '9' }, { movieId: '8' }]
@@ -57,8 +57,8 @@ assert.strictEqual(diaryIndexFromFilms([], []).loved, null);
 // MongoDB returns Date objects: the newest by time wins (Fri Nov 20 beats Sun Nov 1), missing dates lose.
 const byDate = diaryIndexFromFilms(
   [
-    { movieId: 'a', watchCount: 1, rating: 5, watchedAt: new Date('2026-11-01T00:00:00Z'), movieTitle: 'Sunday' },
-    { movieId: 'b', watchCount: 1, rating: 5, watchedAt: new Date('2026-11-20T00:00:00Z'), movieTitle: 'Friday' },
+    { movieId: 'a', watchCount: 1, rating: 10, watchedAt: new Date('2026-11-01T00:00:00Z'), movieTitle: 'Sunday' },
+    { movieId: 'b', watchCount: 1, rating: 10, watchedAt: new Date('2026-11-20T00:00:00Z'), movieTitle: 'Friday' },
     { movieId: 'c', watchCount: 1, rating: 5, watchedAt: null, movieTitle: 'Undated' },
   ],
   []

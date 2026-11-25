@@ -219,7 +219,7 @@ struct MovieDetailView: View {
                 Button("Save rating") {
                     Task {
                         do {
-                            try await DiaryService.rateMovie(id: idString, rating: max(1, rating * 2))
+                            try await DiaryService.rateMovie(id: idString, rating: rating)
                             showRatingSheet = false
                             Haptics.success()
                         } catch {
@@ -293,19 +293,17 @@ struct MovieDetailView: View {
                 try await logWithDetails(draft, detail: detail)
             }
         case .edit(let play):
-            // The rating belongs to the newest watch; older ones edit date and note only.
-            let isLatest = play.id == plays.first?.id
             LogDetailsSheet(
                 subject: subject,
                 mode: .edit,
                 initial: LogDetailsDraft(
                     day: play.date.map { WatchDay.from($0) } ?? .today,
-                    rating: isLatest && rating > 0 ? rating : nil,
+                    rating: play.stars > 0 ? play.stars : nil,
                     note: play.noteText ?? ""
                 ),
-                ratesFilm: isLatest
+                ratesFilm: true
             ) { draft in
-                try await saveEdit(draft, play: play, isLatest: isLatest)
+                try await saveEdit(draft, play: play)
             }
         }
     }
@@ -313,7 +311,7 @@ struct MovieDetailView: View {
     private func logWithDetails(_ draft: LogDetailsDraft, detail: MovieDetail) async throws {
         let res = try await DiaryService.addMovieWatched(
             bodyPayload(detail),
-            rating: draft.rating.map { $0 * 2 },
+            rating: draft.rating,
             watchedAt: draft.day.date(),
             note: draft.note.isEmpty ? nil : draft.note
         )
@@ -327,21 +325,22 @@ struct MovieDetailView: View {
         if let fresh = res.plays { withAnimation(MarqueeMotion.standard) { plays = fresh } }
     }
 
-    private func saveEdit(_ draft: LogDetailsDraft, play: FilmPlay, isLatest: Bool) async throws {
+    private func saveEdit(_ draft: LogDetailsDraft, play: FilmPlay) async throws {
+        // Only a changed day is sent, and it keeps the log's own time of day, so editing a note
+        // never reorders watches. The rating belongs to this watch (0 clears it).
+        let initialDay = play.date.map { WatchDay.from($0) } ?? .today
+        let newStars = draft.rating ?? 0
         let res = try await DiaryService.updateFilmPlay(
             playId: play.id,
-            watchedAt: draft.day.date(),
-            note: draft.note
+            watchedAt: draft.day == initialDay ? nil : draft.day.date(timeOf: play.date),
+            note: draft.note,
+            rating: abs(newStars - play.stars) > 0.01 ? newStars : nil
         )
-        if isLatest, let stars = draft.rating, abs(stars - rating) > 0.01 {
-            try await DiaryService.rateMovie(id: idString, rating: max(1, stars * 2))
-            rating = stars
-        }
         applyWatchedSummary(
             watched: res.watched,
             count: res.watchCount,
             watchedAt: res.watchedAt,
-            ratingValue: isLatest ? (draft.rating.map { $0 * 2 } ?? res.rating) : res.rating
+            ratingValue: res.rating
         )
         if let fresh = res.plays { withAnimation(MarqueeMotion.standard) { plays = fresh } }
     }
@@ -366,7 +365,7 @@ struct MovieDetailView: View {
         watched = nextCount > 0
         lastWatchedAt = watchedAt
         if let r = ratingValue {
-            rating = min(5, r > 5 ? r / 2 : r)
+            rating = min(5, r / 2)
         } else if nextCount == 0 {
             rating = 0
         }

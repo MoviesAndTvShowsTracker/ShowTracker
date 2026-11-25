@@ -4,6 +4,7 @@ const { buildActivity } = require('../services/diaryActivity');
 const { buildDiaryIndex } = require('../services/diaryIndex');
 const { sendWithEtag } = require('../lib/etag');
 const { buildExport, toCsv } = require('../services/diaryExport');
+const { resolveTimeZone } = require('../services/statsCalendar');
 
 const router = express.Router();
 
@@ -31,7 +32,8 @@ router.get('/index', authenticate.verifyUser, async (req, res, next) => {
 router.get('/export', authenticate.verifyUser, async (req, res, next) => {
   try {
     const format = req.query.format === 'json' ? 'json' : 'csv';
-    const { rows, json } = await buildExport(req.user._id);
+    const timeZone = resolveTimeZone(req.query.tz || req.headers['x-timezone']);
+    const { rows, json } = await buildExport(req.user._id, timeZone);
     const stamp = new Date().toISOString().slice(0, 10);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Disposition', `attachment; filename="marquee-diary-${stamp}.${format}"`);

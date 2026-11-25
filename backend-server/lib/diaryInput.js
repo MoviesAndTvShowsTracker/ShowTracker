@@ -22,6 +22,14 @@ function parseWatchedAt(raw, now = new Date()) {
   return at;
 }
 
+const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+function visibleLength(text) {
+  let n = 0;
+  for (const _ of segmenter.segment(text)) n += 1;
+  return n;
+}
+
 /** A note: undefined = leave as is; null/'' = clear; otherwise trimmed text up to 500 characters. */
 function parseNote(raw) {
   if (raw === undefined) return undefined;
@@ -29,7 +37,8 @@ function parseNote(raw) {
   if (typeof raw !== 'string') throw badRequest('A note must be text.');
   // Drop control characters except line breaks and tabs.
   const cleaned = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
-  if (cleaned.length > NOTE_MAX) throw badRequest(`Notes can be up to ${NOTE_MAX} characters.`);
+  // Count what people see (grapheme clusters), exactly as the app counts, not UTF-16 units.
+  if (visibleLength(cleaned) > NOTE_MAX) throw badRequest(`Notes can be up to ${NOTE_MAX} characters.`);
   return cleaned;
 }
 
