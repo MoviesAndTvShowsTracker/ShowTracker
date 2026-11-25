@@ -1,14 +1,14 @@
 import SwiftUI
 
 enum TVDetailPane: String, CaseIterable, Identifiable {
-    case info
     case episodes
+    case info
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .info: return "Info"
+        case .info: return "About"
         case .episodes: return "Episodes"
         }
     }
@@ -25,69 +25,34 @@ enum TVDetailPane: String, CaseIterable, Identifiable {
     }
 }
 
-/// Editorial two-pane switcher — underline slides under the active label
-/// (matched geometry), not a system segmented control.
+/// Native segmented switch between the episode list and the catalogue info.
 struct TVDetailPaneSwitcher: View {
-    @Environment(\.marqueeTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var pane: TVDetailPane
     var enabled: Bool = true
-    /// When false, both labels stay neutral so preferred-tab commit isn’t visible mid-load.
+    /// When false, nothing reads as selected so the preferred tab isn't seen switching mid-load.
     var showsSelection: Bool = true
-    @Namespace private var underlineNS
 
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(TVDetailPane.allCases) { item in
-                paneButton(item)
+    private var selection: Binding<TVDetailPane?> {
+        guard showsSelection else { return .constant(nil) }
+        return Binding(
+            get: { pane },
+            set: { next in
+                guard let next, next != pane else { return }
+                Haptics.light()
+                withAnimation(reduceMotion ? nil : MarqueeMotion.micro) { pane = next }
             }
-        }
-        .padding(.bottom, 1)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(theme.border)
-                .frame(height: 1)
-        }
-        .opacity(enabled ? 1 : 0.55)
-        .allowsHitTesting(enabled)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Show sections")
-        .respectReducedMotion()
+        )
     }
 
-    private func paneButton(_ item: TVDetailPane) -> some View {
-        let selected = showsSelection && pane == item
-        return Button {
-            guard enabled, pane != item else { return }
-            Haptics.light()
-            withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
-                pane = item
-            }
-        } label: {
-            VStack(spacing: 10) {
-                Text(item.title)
-                    .font(.subheadline.weight(selected ? .bold : .semibold))
-                    .tracking(selected ? 0.8 : 0.4)
-                    .textCase(.uppercase)
-                    .foregroundStyle(selected ? theme.ink : theme.inkMuted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .contentShape(Rectangle())
-
-                ZStack {
-                    Color.clear.frame(height: 2)
-                    if selected {
-                        Capsule()
-                            .fill(theme.accent)
-                            .frame(height: 2)
-                            .matchedGeometryEffect(id: "tvDetailPaneUnderline", in: underlineNS)
-                    }
-                }
+    var body: some View {
+        Picker("Show sections", selection: selection) {
+            ForEach(TVDetailPane.allCases) { item in
+                Text(item.title).tag(Optional(item))
             }
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityHint(selected ? "" : "Shows \(item.title.lowercased())")
+        .pickerStyle(.segmented)
+        .disabled(!enabled)
     }
 }
 
@@ -157,37 +122,13 @@ struct TVDetailPanePlaceholder: View {
     }
 }
 
+/// Same footprint as the header's action row (untracked case), so nothing jumps.
 struct TVDetailDiaryChromePlaceholder: View {
-    @Environment(\.marqueeTheme) private var theme
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    SkeletonBlock(height: 22, width: 88, radius: 11)
-                    Spacer()
-                    SkeletonBlock(height: 12, width: 52)
-                }
-                SkeletonBlock(height: 18, width: 160)
-                SkeletonBlock(height: 12, width: 120)
-                SkeletonBlock(height: 10)
-                SkeletonBlock(height: 44, radius: 12)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(theme.surfaceElevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(theme.border, lineWidth: 1)
-                    )
-            )
-
-            HStack(spacing: 8) {
-                SkeletonBlock(height: 38, width: 112, radius: 19)
-                SkeletonBlock(height: 38, width: 100, radius: 19)
-                Spacer(minLength: 0)
-            }
+        HStack(spacing: 10) {
+            SkeletonBlock(height: 50, radius: 14)
+            SkeletonBlock(height: 50, width: 50, radius: 25)
+            SkeletonBlock(height: 50, width: 50, radius: 25)
         }
         .accessibilityLabel("Loading tracking")
     }

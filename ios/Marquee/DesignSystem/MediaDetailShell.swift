@@ -361,6 +361,8 @@ struct MediaDetailShell<Actions: View, Content: View>: View {
     var genresLine: String? = nil
     let shareText: String
     var onBack: () -> Void
+    /// Set to a view ID inside `content` to scroll it into view; the shell clears it after.
+    var scrollTarget: Binding<String?> = .constant(nil)
     @ViewBuilder var actions: () -> Actions
     @ViewBuilder var content: () -> Content
 
@@ -441,6 +443,14 @@ struct MediaDetailShell<Actions: View, Content: View>: View {
                         }
                     }
                 }
+            }
+            .onChange(of: scrollTarget.wrappedValue) { _, id in
+                guard let id else { return }
+                // Below the compact top chrome, not under it.
+                withAnimation(reduceMotion ? nil : MarqueeMotion.standard) {
+                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.18))
+                }
+                scrollTarget.wrappedValue = nil
             }
         }
     }

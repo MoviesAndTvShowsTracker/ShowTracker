@@ -3,7 +3,7 @@ import SwiftUI
 struct TVDetailView: View {
     @Environment(\.marqueeTheme) var theme
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(AppPreferences.self) private var preferences
     let tvId: Int
 
@@ -33,14 +33,16 @@ struct TVDetailView: View {
     @State var episodeRatings: [String: Double] = [:]
     @State private var loadGeneration = 0
     @State private var seasonLoadGeneration = 0
-    @State private var pane: TVDetailPane = .info
+    @State var pane: TVDetailPane = .info
+    @State var scrollTarget: String?
+    /// The row Start points at; it glows briefly so the eye lands on it.
+    @State var flashEpisodeKey: String?
     @State private var didApplyPreferredPane = false
     @State private var providersReady = false
     @State private var paneRevealToken = 0
     @State var rewatchSession: RewatchSessionDoc?
     @State var showStartRewatchConfirm = false
     @State var showCancelRewatchConfirm = false
-    @State var showSeasonActionConfirm = false
     /// "S-E" → total plays (first watch + rewatches).
     @State var episodePlayCounts: [String: Int] = [:]
     /// "S-E" → ISO watch dates, oldest → newest.
@@ -99,11 +101,6 @@ struct TVDetailView: View {
 
     enum LoadPhase { case loading, ready, failed(String) }
     var idString: String { String(tvId) }
-    private var isTracking: Bool {
-        guard let status = tracking?.status else { return false }
-        return status == "watching" || status == "paused" || status == "completed" || status == "rewatching"
-    }
-
     var isRewatching: Bool { tracking?.status == "rewatching" }
 
     private var episodeAlertTitle: String {
@@ -205,18 +202,6 @@ struct TVDetailView: View {
         } message: { ep in
             Text(episodeAlertMessage(for: ep))
         }
-        .alert("Season watched", isPresented: $showSeasonActionConfirm) {
-            Button("Watch season again") {
-                Task { await performSeasonRewatch() }
-            }
-            Button("Remove season watches", role: .destructive) {
-                pendingBatch = .unmarkSeason(season: selectedSeason, count: watchedInSeason.count)
-                showBatchConfirm = true
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Add another watch for every aired episode, or strip watches from this season (latest first).")
-        }
         .sheet(isPresented: $showRatingSheet) {
             ratingSheet
                 .presentationDetents([.medium])
@@ -264,15 +249,10 @@ struct TVDetailView: View {
             genresLine: detail.genres?.prefix(3).map(\.name).joined(separator: "  ·  "),
             shareText: shareText(for: detail),
             onBack: { dismiss() },
+            scrollTarget: $scrollTarget,
             actions: {
                 if diaryReady {
-                    VStack(alignment: .leading, spacing: 14) {
-                        trackingBlock(detail)
-                        DiaryGlassStrip {
-                            diaryActions(detail)
-                        }
-                    }
-                    .animation(reduceMotion ? nil : MarqueeMotion.standard, value: diaryReady)
+                    header(detail)
                 } else {
                     TVDetailDiaryChromePlaceholder()
                 }
@@ -280,6 +260,7 @@ struct TVDetailView: View {
             content: {
                 if diaryReady {
                     TVDetailPaneSwitcher(pane: $pane, enabled: true, showsSelection: true)
+                        .id(Self.paneSwitcherID)
                     paneBody(detail)
                         .id("\(pane.rawValue)-\(paneRevealToken)")
                         .transition(userPaneTransition)
@@ -332,12 +313,6 @@ struct TVDetailView: View {
         VStack(alignment: .leading, spacing: 24) {
             RatingsStrip(ratings: ratings, isLoading: !ratingsReady)
 
-            WatchProvidersRow(
-                providers: providers,
-                region: providerRegion,
-                isLoading: !providersReady
-            )
-
             if let overview = detail.overview, !overview.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     SectionKicker(text: "Synopsis")
@@ -351,6 +326,12 @@ struct TVDetailView: View {
                     .foregroundStyle(theme.inkMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            WatchProvidersRow(
+                providers: providers,
+                region: providerRegion,
+                isLoading: !providersReady
+            )
 
             CreditsRows(rows: tvCreditRows(detail))
             MediaCastRail(cast: tvCastItems(detail))
@@ -426,209 +407,6 @@ struct TVDetailView: View {
         return parts.joined(separator: " ")
     }
 
-
-    @ViewBuilder
-    private func trackingBlock(_ detail: TVDetail) -> some View {
-        if let tracking {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        OliveChip(text: trackingChipLabel(tracking))
-                        Spacer()
-                        if tracking.status == "watching" {
-                            Button("Pause") { Task { await pause() } }
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.inkMuted)
-                        } else if tracking.status == "paused" {
-                            Button("Resume") { Task { await resume() } }
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.accentInk)
-                        } else if tracking.status == "rewatching" {
-                            Button("Cancel rewatch") { showCancelRewatchConfirm = true }
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.red.opacity(0.9))
-                        } else if tracking.status == "completed" {
-                            Button("Start rewatch") { showStartRewatchConfirm = true }
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(theme.accentInk)
-                        }
-                    }
-
-                    let progress = showProgress(detail: detail, tracking: tracking)
-                    Text(progress.episodeLine)
-                        .font(.headline)
-                        .foregroundStyle(theme.ink)
-                    if isRewatching || progress.fraction < 1 {
-                        Text(
-                            isRewatching
-                                ? (progress.next?.name ?? tracking.nextEpisodeName ?? "Next episode to rewatch")
-                                : (progress.next?.name ?? tracking.nextEpisodeName ?? "Up next")
-                        )
-                        .font(.subheadline)
-                        .foregroundStyle(theme.inkMuted)
-                    }
-
-                    HStack {
-                        ProgressTrack(
-                            progress: progress.fraction,
-                            completed: progress.isComplete && !isRewatching
-                        )
-                        if progress.total > 0 {
-                            Text("\(progress.percent)%")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(theme.olive)
-                                .monospacedDigit()
-                        }
-                    }
-
-                    Text(rewatchCaption(progress: progress, tracking: tracking))
-                        .font(.caption)
-                        .foregroundStyle(theme.inkMuted)
-
-                    if tracking.status == "watching" || tracking.status == "rewatching" {
-                        NavigationLink {
-                            TVContinueView(tvId: tvId, seed: tracking)
-                        } label: {
-                            Text(tracking.status == "rewatching" ? "Continue rewatch" : "Continue watching")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(theme.onAccent)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(theme.accent)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        } else {
-            // Match web: tracking starts when you mark an episode — don't create a 0-ep Watching row.
-            Button {
-                withAnimation(reduceMotion ? nil : MarqueeMotion.micro) {
-                    pane = .episodes
-                }
-                Haptics.light()
-            } label: {
-                Label("Mark an episode to start", systemImage: "checklist")
-                    .font(.headline)
-                    .foregroundStyle(theme.olive)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(theme.oliveSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func diaryActions(_ detail: TVDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                ActionStripButton(
-                    title: favorited ? "Favorited" : "Favorite",
-                    systemImage: favorited ? "heart.fill" : "heart",
-                    active: favorited
-                ) { Task { await toggleFavorite(detail) } }
-
-                // Web pattern: status replaces watchlist once tracking
-                if let status = tracking?.status, status != "dropped" {
-                    statusChip(status)
-                } else {
-                    ActionStripButton(
-                        title: watchlisted ? "On list" : "Watchlist",
-                        systemImage: watchlisted ? "bookmark.fill" : "bookmark",
-                        active: watchlisted
-                    ) { Task { await toggleWatchlist(detail) } }
-                }
-                Spacer(minLength: 0)
-            }
-            .disabled(busy)
-
-            if (tracking?.watchedEpisodeCount ?? 0) > 0 {
-                Button {
-                    showRatingSheet = true
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Show rating")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(theme.ink)
-                            if showRating > 0 {
-                                StarRatingView(rating: $showRating, editable: false, size: .body)
-                            } else {
-                                Text("Tap to rate")
-                                    .font(.caption)
-                                    .foregroundStyle(theme.inkMuted)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(theme.olive)
-                    }
-                    .padding(14)
-                    .background(theme.oliveSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func statusChip(_ status: String) -> some View {
-        let label: String
-        let icon: String
-        let subtitle: String?
-        switch status {
-        case "completed":
-            label = "Completed"
-            icon = "checkmark.circle.fill"
-            let times = tracking?.timesCompleted ?? 1
-            subtitle = times > 1 ? "×\(times)" : nil
-        case "paused":
-            label = "Paused"; icon = "pause.circle.fill"; subtitle = nil
-        case "rewatching":
-            let n = rewatchSession?.sessionNumber ?? 1
-            label = "Rewatch"
-            icon = "arrow.clockwise"
-            subtitle = "#\(n)"
-        default:
-            label = "Watching"; icon = "play.circle.fill"; subtitle = nil
-        }
-        return NavigationLink {
-            TVContinueView(tvId: tvId, seed: tracking)
-        } label: {
-            DiaryChipLabel(title: label, systemImage: icon, subtitle: subtitle, active: true)
-        }
-        .buttonStyle(PressablePosterStyle())
-        .fixedSize()
-    }
-
-    private func trackingChipLabel(_ tracking: TrackingRecord) -> String {
-        switch tracking.status {
-        case "rewatching":
-            let n = rewatchSession?.sessionNumber ?? 1
-            return "Rewatch #\(n)"
-        case "completed":
-            let times = tracking.timesCompleted ?? 1
-            return times > 1 ? "Completed ×\(times)" : "Completed"
-        default:
-            return tracking.status?.capitalized ?? "Tracking"
-        }
-    }
-
-    private func rewatchCaption(progress: ShowProgress, tracking: TrackingRecord) -> String {
-        if tracking.status == "rewatching" {
-            if progress.total > 0 {
-                return "Rewatch \(progress.watched) of \(progress.total) — original history kept"
-            }
-            return "Rewatch in progress — original history kept"
-        }
-        if rewatchPlayTotal > 0, tracking.status == "completed" {
-            return "\(progress.caption) · \(rewatchPlayTotal) rewatch play\(rewatchPlayTotal == 1 ? "" : "s")"
-        }
-        return progress.caption
-    }
 
     private var ratingSheet: some View {
         NavigationStack {
@@ -1312,7 +1090,7 @@ struct TVDetailView: View {
         }
     }
 
-    private func toggleFavorite(_ detail: TVDetail) async {
+    func toggleFavorite(_ detail: TVDetail) async {
         busy = true
         defer { busy = false }
         let body = TVIdBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
@@ -1330,7 +1108,7 @@ struct TVDetailView: View {
         }
     }
 
-    private func toggleWatchlist(_ detail: TVDetail) async {
+    func toggleWatchlist(_ detail: TVDetail) async {
         busy = true
         defer { busy = false }
         let body = TVIdBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
@@ -1348,11 +1126,11 @@ struct TVDetailView: View {
         }
     }
 
-    private func pause() async {
+    func pause() async {
         if let updated = try? await DiaryService.stopTracking(tvId: idString, status: "paused") { tracking = updated }
     }
 
-    private func resume() async {
+    func resume() async {
         if let updated = try? await DiaryService.resumeTracking(tvId: idString) { tracking = updated }
     }
 }

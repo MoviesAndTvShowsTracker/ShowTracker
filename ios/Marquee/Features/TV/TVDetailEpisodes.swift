@@ -8,118 +8,36 @@ extension TVDetailView {
         let unwatchedAiredSeason = airedSeason.filter { !watchedKeys.contains($0.diaryKey) }
         let seasonComplete = !airedSeason.isEmpty && unwatchedAiredSeason.isEmpty
         let seasonFraction = airedSeason.isEmpty ? 0 : Double(watchedAiredSeason.count) / Double(airedSeason.count)
-
         let ratingsSummary = EpisodeRatingsSummary(ratings: episodeRatings, names: episodeNames)
 
-        return VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                SectionKicker(text: "Episodes")
-                Text("Mark as you go")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(theme.ink)
-            }
-
-            if ratingsSummary.hasBest, !isRewatching {
-                BestEpisodesCard(entries: ratingsSummary.best()) { entry in
-                    guard entry.season != selectedSeason else { return }
-                    selectedSeason = entry.season
-                    Task { await loadSeason() }
-                }
-            }
-
-            if seasons.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(seasons) { season in
-                            Button {
-                                selectedSeason = season.season_number
-                                Task { await loadSeason() }
-                            } label: {
-                                Text(season.name ?? "S\(season.season_number)")
-                                    .font(.subheadline.weight(.semibold))
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 9)
-                                    .foregroundStyle(selectedSeason == season.season_number ? theme.onAccent : theme.olive)
-                                    .background(selectedSeason == season.season_number ? theme.olive : theme.oliveSoft)
-                                    .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(batching)
-                        }
-                    }
-                }
-            }
-
+        return VStack(alignment: .leading, spacing: 16) {
             GlassCard(padding: 0) {
                 VStack(spacing: 0) {
-                    if !seasonLoading, !episodes.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text(selectedSeasonName)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(theme.ink)
-                                Spacer()
-                                Text("\(watchedAiredSeason.count) of \(airedSeason.count) aired")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(theme.inkMuted)
-                                    .monospacedDigit()
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .center, spacing: 10) {
+                            seasonTitle(seasons)
+                            Spacer(minLength: 8)
+                            if !seasonLoading, !episodes.isEmpty {
+                                seasonCount(
+                                    watched: watchedAiredSeason.count,
+                                    aired: airedSeason.count,
+                                    average: ratingsSummary.average(season: selectedSeason)
+                                )
                             }
-                            ProgressTrack(progress: seasonFraction, completed: seasonComplete)
-                            if let average = ratingsSummary.average(season: selectedSeason) {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "star.fill")
-                                        .font(.caption2)
-                                        .foregroundStyle(theme.accentInk)
-                                    Text("Your average \(average.formatted(.number.precision(.fractionLength(1))))")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(theme.inkMuted)
-                                        .monospacedDigit()
-                                }
-                                .accessibilityElement(children: .combine)
-                            }
-
-                            HStack(spacing: 8) {
-                                if seasonComplete {
-                                    Button {
-                                        showSeasonActionConfirm = true
-                                    } label: {
-                                        Label("Season watched", systemImage: "checkmark.circle.fill")
-                                    }
-                                    .buttonStyle(SecondaryButtonStyle())
-                                    .disabled(batching || watchedInSeason.isEmpty)
-                                } else {
-                                    Button {
-                                        pendingBatch = .markSeason(
-                                            season: selectedSeason,
-                                            count: unwatchedAiredSeason.count
-                                        )
-                                        showBatchConfirm = true
-                                    } label: {
-                                        Label("Mark season", systemImage: "checkmark.circle.fill")
-                                    }
-                                    .buttonStyle(SecondaryButtonStyle())
-                                    .disabled(batching || unwatchedAiredSeason.isEmpty)
-                                }
-
-                                if canMarkWholeShow {
-                                    Button {
-                                        Task { await confirmMarkShow() }
-                                    } label: {
-                                        if batching {
-                                            ProgressView().tint(theme.onAccent)
-                                        } else {
-                                            Label("Whole show", systemImage: "rectangle.stack.fill.badge.checkmark")
-                                        }
-                                    }
-                                    .buttonStyle(PrimaryButtonStyle())
-                                    .disabled(batching)
-                                }
-                            }
+                            seasonMenu(
+                                seasonCount: seasons.count,
+                                complete: seasonComplete,
+                                unwatched: unwatchedAiredSeason.count
+                            )
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.top, 14)
-                        .padding(.bottom, 10)
+                        if !seasonLoading, !watchedAiredSeason.isEmpty {
+                            ProgressTrack(progress: seasonFraction, completed: seasonComplete)
+                                .transition(.opacity)
+                        }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 10)
 
                     if seasonLoading {
                         VStack(spacing: 0) {
@@ -133,14 +51,127 @@ extension TVDetailView {
                     } else {
                         LazyVStack(spacing: 0) {
                             ForEach(episodes) { ep in
-                                episodeRow(ep)
                                 Divider().overlay(theme.border).padding(.leading, 56)
+                                episodeRow(ep)
+                                    .id(Self.episodeRowID(ep.diaryKey))
                             }
                         }
                     }
                 }
             }
+            .task(id: flashEpisodeKey) {
+                guard flashEpisodeKey != nil else { return }
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.6)) { flashEpisodeKey = nil }
+            }
+
+            if ratingsSummary.hasBest, !isRewatching {
+                BestEpisodesCard(entries: ratingsSummary.best()) { entry in
+                    guard entry.season != selectedSeason else { return }
+                    selectedSeason = entry.season
+                    Task { await loadSeason() }
+                }
+            }
         }
+    }
+
+    @ViewBuilder
+    private func seasonTitle(_ seasons: [TVSeason]) -> some View {
+        if seasons.count > 1 {
+            Menu {
+                Picker("Season", selection: Binding(
+                    get: { selectedSeason },
+                    set: { next in
+                        guard next != selectedSeason else { return }
+                        selectedSeason = next
+                        Task { await loadSeason() }
+                    }
+                )) {
+                    ForEach(seasons) { season in
+                        Text(season.name ?? "Season \(season.season_number)").tag(season.season_number)
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(selectedSeasonName)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(theme.olive)
+                }
+                .font(.headline)
+                .foregroundStyle(theme.ink)
+                .contentShape(Rectangle())
+            }
+            .disabled(batching)
+            .accessibilityLabel("Season: \(selectedSeasonName)")
+            .accessibilityHint("Choose a season")
+        } else {
+            Text(selectedSeasonName)
+                .font(.headline)
+                .foregroundStyle(theme.ink)
+                .lineLimit(1)
+        }
+    }
+
+    private func seasonCount(watched: Int, aired: Int, average: Double?) -> some View {
+        HStack(spacing: 6) {
+            if let average {
+                Label(average.formatted(.number.precision(.fractionLength(1))), systemImage: "star.fill")
+                    .labelStyle(.titleAndIcon)
+                    .accessibilityLabel("Your average \(average.formatted(.number.precision(.fractionLength(1))))")
+                Text("·").accessibilityHidden(true)
+            }
+            Text(TVShowPageLogic.seasonCountLine(watched: watched, aired: aired, total: episodes.count))
+                .contentTransition(.numericText(value: Double(watched)))
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(theme.inkMuted)
+        .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: watched)
+    }
+
+    private func seasonMenu(seasonCount: Int, complete: Bool, unwatched: Int) -> some View {
+        Menu {
+            if complete {
+                Button("Watch season again", systemImage: "arrow.clockwise") {
+                    Task { await performSeasonRewatch() }
+                }
+                Button("Remove season watches", systemImage: "minus.circle", role: .destructive) {
+                    pendingBatch = .unmarkSeason(season: selectedSeason, count: watchedInSeason.count)
+                    showBatchConfirm = true
+                }
+                .disabled(watchedInSeason.isEmpty)
+            } else {
+                Button("Mark season watched", systemImage: "checkmark.circle") {
+                    pendingBatch = .markSeason(season: selectedSeason, count: unwatched)
+                    showBatchConfirm = true
+                }
+                .disabled(unwatched == 0)
+            }
+            if TVShowPageLogic.offersWholeShow(seasonCount: seasonCount, canMarkWholeShow: canMarkWholeShow) {
+                Button("Mark whole show watched", systemImage: "rectangle.stack.badge.checkmark") {
+                    Task { await confirmMarkShow() }
+                }
+            }
+        } label: {
+            Group {
+                if batching {
+                    ProgressView()
+                } else {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(theme.olive)
+                }
+            }
+            .frame(width: 36, height: 36)
+            .background(theme.oliveSoft, in: Circle())
+            .contentShape(Circle())
+        }
+        .disabled(batching || seasonLoading || episodes.isEmpty)
+        .accessibilityLabel("Season actions")
     }
 
     var selectedSeasonName: String {
@@ -159,6 +190,8 @@ extension TVDetailView {
         } ?? false
 
         let plays = episodePlayCounts[key] ?? (marked ? 1 : 0)
+        let aired = ep.hasAired
+        let flashing = flashEpisodeKey == key
 
         // Not a single outer Button — nesting Rate inside Button labels crashes
         // SwiftUI (EXC_BAD_ACCESS) when playCounts refresh the LazyVStack.
@@ -174,14 +207,23 @@ extension TVDetailView {
                 EpisodePlayMark(plays: marked || plays > 0 ? max(plays, 1) : 0)
             }
             .buttonStyle(.plain)
-            .disabled(batching)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .padding(.vertical, -8)
+            .disabled(batching || !aired)
 
+            // The circle marks; the row opens date, rating and note, so a stray tap never logs.
             Button {
-                if marked || plays > 0 {
-                    episodePendingUnmark = ep
-                    showUnmarkConfirm = true
+                guard aired else { return }
+                if isRewatching {
+                    if marked || plays > 0 {
+                        episodePendingUnmark = ep
+                        showUnmarkConfirm = true
+                    } else {
+                        Task { await performMark(ep) }
+                    }
                 } else {
-                    Task { await performMark(ep) }
+                    episodeLogTarget = marked ? .edit(ep) : .new(ep)
                 }
             } label: {
                 HStack(alignment: .top, spacing: 12) {
@@ -202,13 +244,11 @@ extension TVDetailView {
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
                             if isNext {
-                                Text("Up next")
+                                Text("Next")
                                     .font(.caption2.weight(.bold))
+                                    .tracking(MarqueeType.labelTracking)
+                                    .textCase(.uppercase)
                                     .foregroundStyle(theme.olive)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(theme.oliveSoft)
-                                    .clipShape(Capsule())
                             }
                         }
 
@@ -264,13 +304,20 @@ extension TVDetailView {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(batching)
+            .disabled(batching || !aired)
+            .accessibilityHint(isRewatching ? "" : (marked ? "Edit date, rating and note" : "Log with date, rating and note"))
 
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 6)
         .padding(.vertical, 12)
         .frame(minHeight: 72, alignment: .top)
+        .opacity(aired ? 1 : 0.55)
         .background(isNext ? theme.oliveSoft.opacity(0.6) : Color.clear)
+        .overlay {
+            theme.olive
+                .opacity(flashing ? 0.16 : 0)
+                .allowsHitTesting(false)
+        }
         .contentShape(Rectangle())
         // A tap marks today; a long press offers a date, a note, or catching up in one go.
         .contextMenu {
