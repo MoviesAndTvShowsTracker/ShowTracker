@@ -737,11 +737,7 @@ struct TVDetailView: View {
             // so the first pane paint is already the right tab with no CLS pops.
             let region = preferences.resolvedWatchRegion
             async let detailTask = TMDBService.tvDetail(id: tvId)
-            async let favTask = DiaryService.tvFavorited(id: idString)
-            async let listTask = DiaryService.tvWatchlisted(id: idString)
-            async let trackTask = DiaryService.tracking(for: idString)
-            async let epsTask = DiaryService.watchedEpisodes(tvId: idString)
-            async let rewatchTask = DiaryService.rewatchState(tvId: idString)
+            async let stateTask = DiaryService.tvState(id: idString)
             async let providersTask = WatchProviderService.load(kind: .tv, id: tvId, preferredRegion: region)
             async let ratingsTask = RatingsService.load(kind: .tv, id: tvId)
 
@@ -755,11 +751,12 @@ struct TVDetailView: View {
 
             async let seasonLoad: Void = loadSeason()
 
-            let resolvedTrack = try? await trackTask
-            let resolvedFav = (try? await favTask) ?? false
-            let resolvedList = (try? await listTask) ?? false
-            let docs = (try? await epsTask) ?? []
-            let rewatchState = try? await rewatchTask
+            let userState = try? await stateTask
+            let resolvedTrack = userState?.tracking
+            let resolvedFav = userState?.favorited ?? false
+            let resolvedList = userState?.watchlisted ?? false
+            let docs = userState?.episodes ?? []
+            let rewatchState = userState?.rewatch
             let loadedProviders = await providersTask
             let loadedRatings = await ratingsTask
             guard generation == loadGeneration else { return }

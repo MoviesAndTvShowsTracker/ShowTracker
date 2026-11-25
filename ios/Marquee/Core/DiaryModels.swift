@@ -291,6 +291,22 @@ struct RewatchSessionDoc: Decodable, Identifiable, Sendable {
     private var fallbackId: String { "session-\(sessionNumber ?? 0)" }
 }
 
+/// GET /api/me/tv/:id — everything the show page knows about the user, in one call.
+struct TVUserState: Decodable, Sendable {
+    var favorited: Bool?
+    var watchlisted: Bool?
+    var tracking: TrackingRecord?
+    var episodes: [WatchedEpisodeDoc]?
+    var rewatch: RewatchStateResponse?
+}
+
+/// GET /api/me/movie/:id — favorite, watchlist and watch summary for the film page.
+struct MovieUserState: Decodable, Sendable {
+    var favorited: Bool?
+    var watchlisted: Bool?
+    var watched: WatchedResponse?
+}
+
 struct RewatchStateResponse: Decodable, Sendable {
     let success: Bool?
     let tracking: TrackingRecord?

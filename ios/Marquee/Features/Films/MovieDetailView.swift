@@ -305,9 +305,7 @@ struct MovieDetailView: View {
         diaryReady = false
         do {
             async let detailTask = TMDBService.movieDetail(id: movieId)
-            async let f = DiaryService.movieFavorited(id: idString)
-            async let w = DiaryService.movieWatched(id: idString)
-            async let l = DiaryService.movieWatchlisted(id: idString)
+            async let stateTask = DiaryService.movieState(id: idString)
             let region = await MainActor.run { preferences.resolvedWatchRegion }
             async let providersTask = WatchProviderService.load(kind: .movie, id: movieId, preferredRegion: region)
             async let ratingsTask = RatingsService.load(kind: .movie, id: movieId)
@@ -317,8 +315,9 @@ struct MovieDetailView: View {
             providerRegion = loadedProviders.region
             ratings = await ratingsTask
             ratingsReady = true
-            favorited = (try? await f) ?? false
-            if let watchedRes = try? await w {
+            let userState = try? await stateTask
+            favorited = userState?.favorited ?? false
+            if let watchedRes = userState?.watched {
                 applyWatchedSummary(
                     watched: watchedRes.watched,
                     count: watchedRes.watchCount,
@@ -326,7 +325,7 @@ struct MovieDetailView: View {
                     ratingValue: watchedRes.rating
                 )
             }
-            watchlisted = (try? await l) ?? false
+            watchlisted = userState?.watchlisted ?? false
             diaryReady = true
             phase = .ready
         } catch {

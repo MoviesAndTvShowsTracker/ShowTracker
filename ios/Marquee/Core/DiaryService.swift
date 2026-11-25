@@ -3,6 +3,35 @@ import Foundation
 enum DiaryService {
     // MARK: Movies
 
+    /// One request for the show page; older servers (404) get the five separate calls.
+    static func tvState(id: String) async throws -> TVUserState {
+        do {
+            return try await APIClient.shared.get("/api/me/tv/\(id)")
+        } catch where HomeService.shouldFallback(error) {
+            async let fav = tvFavorited(id: id)
+            async let list = tvWatchlisted(id: id)
+            async let track = tracking(for: id)
+            async let eps = watchedEpisodes(tvId: id)
+            async let rewatch = rewatchState(tvId: id)
+            return TVUserState(
+                favorited: try? await fav, watchlisted: try? await list, tracking: try? await track,
+                episodes: try? await eps, rewatch: try? await rewatch
+            )
+        }
+    }
+
+    /// One request for the film page; older servers (404) get the three separate calls.
+    static func movieState(id: String) async throws -> MovieUserState {
+        do {
+            return try await APIClient.shared.get("/api/me/movie/\(id)")
+        } catch where HomeService.shouldFallback(error) {
+            async let fav = movieFavorited(id: id)
+            async let list = movieWatchlisted(id: id)
+            async let watched = movieWatched(id: id)
+            return MovieUserState(favorited: try? await fav, watchlisted: try? await list, watched: try? await watched)
+        }
+    }
+
     static func movieFavorited(id: String) async throws -> Bool {
         let res: FavoritedResponse = try await APIClient.shared.post(
             "/api/favorite/favorited",
