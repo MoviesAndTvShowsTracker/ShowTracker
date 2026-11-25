@@ -25,4 +25,6 @@ var TvWatchlist = new Schema({
     timestamps: true
 });
 
+TvWatchlist.index({ userFrom: 1, tvId: 1 });
+
 module.exports = mongoose.model('TvWatchlist', TvWatchlist);

@@ -28,4 +28,6 @@ var FavoriteTv = new Schema({
     timestamps: true
 });
 
+FavoriteTv.index({ userFrom: 1, tvId: 1 });
+
 module.exports = mongoose.model('FavoriteTv', FavoriteTv);
