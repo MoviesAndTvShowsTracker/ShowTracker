@@ -26,7 +26,7 @@ struct HomeView: View {
                 header(today)
 
                 if !loading && HomeFeedLogic.isStarter(feed) {
-                    StarterSection()
+                    StarterSection { Task { HomeService.clearCache(); await load() } }
                 } else {
                     UpNextSection(model: upNext, pausedCount: feed.pausedCount, loading: loading, today: today)
                     AgendaSection(rows: HomeFeedLogic.agendaRows(feed.thisWeek, today: today))
@@ -68,6 +68,7 @@ struct HomeView: View {
         .refreshable { await load() }
         .task {
             upNext.onChange = { Task { await reloadAfterMark() } }
+            if UITestingFixtures.emptyDiary { loading = false; return }
             if UITestingFixtures.isEnabled {
                 feed.upNext = UITestingFixtures.continueItems.map { UpNextItem(track: $0, nextAirDate: nil) }
                 feed.recent = UITestingFixtures.diaryItems

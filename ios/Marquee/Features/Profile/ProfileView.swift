@@ -37,7 +37,7 @@ struct ProfileView: View {
                     ProfileSkeleton().padding(.horizontal, 20)
                 } else {
                     header
-                    statsTeaser
+                    if hasDiary { statsTeaser }
                     if let type = stats?.lobbyType, let label = type.label, !label.isEmpty {
                         viewerType(label: label, blurb: type.blurb)
                     }
@@ -48,7 +48,7 @@ struct ProfileView: View {
                         profileRail("Favorite TV", items: favTVEntries, isTV: true, list: .favoriteTV)
                         badgesTeaser
                     } else {
-                        emptyOnboarding.padding(.horizontal, 20)
+                        emptyOnboarding
                     }
                     moreLinks
                 }
@@ -73,7 +73,10 @@ struct ProfileView: View {
             }
         }
         .navigationDestination(isPresented: $showStats) { StatsView() }
-        .task { await load() }
+        .task {
+            if UITestingFixtures.emptyDiary { ready = true; return }
+            await load()
+        }
         .refreshable { await load() }
     }
 
@@ -291,46 +294,52 @@ struct ProfileView: View {
     }
 
     private var emptyOnboarding: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Your diary is ready for its first entry")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(theme.ink)
-                    Text("Log what you watch, save favorites, and build a personal screening room over time.")
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-
-            Text("How it works")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(theme.olive)
-
-            VStack(spacing: 10) {
-                howStep(1, "Browse", "Find a film or show worth tracking.")
-                howStep(2, "Log it", "Mark watched — films and episodes become your diary.")
-                howStep(3, "Save favorites", "Heart titles you love so they stay easy to find.")
-            }
+        VStack(alignment: .leading, spacing: 28) {
+            ImportPromptCard().padding(.horizontal, 20)
+            GhostRail(title: "Watched films", hint: "Log a film and it lands here.") { MediaBrowseView(kind: .movie) }
+            GhostRail(title: "Watched TV", hint: "Mark an episode to start a show.") { MediaBrowseView(kind: .tv) }
+            firstBadges
         }
     }
 
-    private func howStep(_ n: Int, _ title: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text("\(n)")
-                .font(.headline.weight(.bold))
-                .foregroundStyle(theme.olive)
-                .frame(width: 32, height: 32)
-                .background(theme.oliveSoft)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).foregroundStyle(theme.ink)
-                Text(text).font(.subheadline).foregroundStyle(theme.inkMuted)
+    /// The three badges closest to earning, so a new diary has goals.
+    @ViewBuilder
+    private var firstBadges: some View {
+        let next = BadgeCatalog.badges(from: stats).filter { !$0.earned }
+            .sorted { ($0.progress, -$0.target) > ($1.progress, -$1.target) }
+            .prefix(3)
+        if !next.isEmpty {
+            NavigationLink { StatsView() } label: {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("First badges")
+                        .font(.headline)
+                        .foregroundStyle(theme.ink)
+                    HStack(alignment: .top, spacing: 12) {
+                        ForEach(Array(next)) { badge in
+                            VStack(spacing: 8) {
+                                BadgeMedal(badge: badge, size: 48)
+                                Text(badge.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(theme.ink)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                Text(badge.detail)
+                                    .font(.caption2)
+                                    .foregroundStyle(theme.inkMuted)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.border, lineWidth: 1))
             }
+            .buttonStyle(PressableRowStyle())
+            .padding(.horizontal, 20)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func load() async {

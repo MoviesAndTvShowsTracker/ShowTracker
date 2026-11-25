@@ -19,6 +19,15 @@ enum UITestingFixtures {
     /// `-previewViaSearch` wraps the preview detail under a searchable nav stack
     /// so chrome inherits the same safe-area quirks as Search → movie/TV.
     /// `-startTab=films|tv|search|you|stats` opens that screen (DEBUG screenshots).
+    /// `-emptyDiary` shows Home and You as a brand-new user sees them (DEBUG screenshots).
+    static var emptyDiary: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-emptyDiary")
+        #else
+        false
+        #endif
+    }
+
     static var startTab: String? {
         #if DEBUG
         guard let raw = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-startTab=") }) else {
