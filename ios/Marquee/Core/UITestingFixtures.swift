@@ -11,6 +11,15 @@ enum UITestingFixtures {
         intArgument(prefix: "-previewMovieDetail=")
     }
 
+    /// `-previewLogSheet=film|episode|edit` opens the log details sheet with sample content
+    /// (requires `-uiTesting`; DEBUG screenshots).
+    static var previewLogSheet: String? {
+        guard let raw = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-previewLogSheet=") }) else {
+            return nil
+        }
+        return String(raw.dropFirst("-previewLogSheet=".count))
+    }
+
     /// `-previewTVDetail=1396` opens that show detail (requires `-uiTesting`).
     static var previewTVId: Int? {
         intArgument(prefix: "-previewTVDetail=")
