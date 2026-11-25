@@ -4,6 +4,7 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var logger = require('morgan');
+const { requestTimer, startLoopMonitor } = require('./lib/metrics');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -56,14 +57,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-app.use(logger('dev'));
+const loopMonitor = startLoopMonitor();
+app.use(requestTimer({ slowMs: 500 }));
+app.use(logger(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(passport.initialize());
 
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true, service: 'marquee-api' });
+  res.status(200).json({ ok: true, service: 'marquee-api', loop: loopMonitor.snapshot() });
 });
 
 app.use('/', indexRouter);
