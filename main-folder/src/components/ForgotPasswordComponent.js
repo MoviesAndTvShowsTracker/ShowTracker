@@ -12,7 +12,6 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sentTo, setSentTo] = useState('');
-  const [emailDispatched, setEmailDispatched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -30,7 +29,6 @@ export default function ForgotPassword() {
       const r = await api.post('/users/forgot-password', { email: trimmed });
       if (r.data.success) {
         setSentTo(trimmed);
-        setEmailDispatched(Boolean(r.data.emailDispatched));
       } else {
         setError(r.data.message || 'Something went wrong. Try again.');
       }
@@ -66,29 +64,17 @@ export default function ForgotPassword() {
             >
               ✓
             </div>
-            <h1 className="page-title text-xl sm:text-2xl">
-              {emailDispatched ? 'Reset link sent' : 'Request received'}
-            </h1>
-            {emailDispatched ? (
-              <>
-                <p className="mt-3 text-sm text-muted">
-                  We emailed a password reset link to{' '}
-                  <span className="font-semibold text-ink-bright">{sentTo}</span>.
-                </p>
-                <p className="mt-2 text-sm text-muted">
-                  The link expires in 1 hour. Check your spam folder if you don&apos;t see it within a few minutes.
-                </p>
-                <p className="mt-2 text-xs text-muted-dim">
-                  Signed up with Google? This link lets you set a password so you can sign in with email too.
-                </p>
-              </>
-            ) : (
-              <p className="mt-3 text-sm text-muted">
-                If an account exists for{' '}
-                <span className="font-semibold text-ink-bright">{sentTo}</span>, we&apos;ll send a reset link shortly.
-                Check your inbox and spam folder.
-              </p>
-            )}
+            <h1 className="page-title text-xl sm:text-2xl">Check your email</h1>
+            <p className="mt-3 text-sm text-muted">
+              If an account exists for{' '}
+              <span className="font-semibold text-ink-bright">{sentTo}</span>, we sent it a password reset link.
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              The link expires in 1 hour. Check your spam folder if you don&apos;t see it within a few minutes.
+            </p>
+            <p className="mt-2 text-xs text-muted-dim">
+              Signed up with Google? This link lets you set a password so you can sign in with email too.
+            </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link to="/login" className="btn-primary inline-block text-center">
                 Back to sign in

@@ -5,6 +5,7 @@ var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
 const { deleteAccountData } = require('../services/accountDeletion');
+const { requestPasswordReset } = require('../services/passwordResetFlow');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
 const { verifyAppleIdentityToken, findOrCreateAppleUser } = require('../lib/appleAuth');
 const {
@@ -16,14 +17,7 @@ const {
   canReadProfile,
   publicProfile,
 } = require('../lib/userHelpers');
-const { sendPasswordResetEmail } = require('../lib/mail');
-const {
-  RESET_GENERIC_MESSAGE,
-  generateResetToken,
-  hashResetToken,
-  buildResetUrl,
-  setPassword,
-} = require('../lib/passwordReset');
+const { hashResetToken, setPassword } = require('../lib/passwordReset');
 
 router.use(bodyParser.json());
 
@@ -283,47 +277,11 @@ router.post('/changePassword', authenticate.verifyUser, (req, res) => {
   });
 });
 
+// Same answer for every address, sent before any lookup, so it never reveals who has an account.
 router.post('/forgot-password', async (req, res, next) => {
   try {
-    const normalizedEmail = normalizeEmail(req.body.email);
-    if (!normalizedEmail) {
-      return res.status(400).json({ success: false, message: 'Email is required.' });
-    }
-
-    const user = await findUserByEmail(normalizedEmail);
-    let emailDispatched = false;
-
-    if (user) {
-      const { raw, hash, expires } = generateResetToken();
-      user.resetPasswordToken = hash;
-      user.resetPasswordExpires = expires;
-      await user.save();
-
-      try {
-        await sendPasswordResetEmail({
-          to: user.email,
-          resetUrl: buildResetUrl(raw),
-        });
-        emailDispatched = true;
-      } catch (mailErr) {
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save();
-        console.error('[forgot-password] email failed:', mailErr.message);
-        return res.status(mailErr.status || 502).json({
-          success: false,
-          message: 'Could not send reset email. Try again later.',
-        });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      emailDispatched,
-      message: emailDispatched
-        ? 'Check your inbox for a password reset link. It expires in 1 hour.'
-        : RESET_GENERIC_MESSAGE,
-    });
+    const body = await requestPasswordReset(req.body.email);
+    return res.status(200).json(body);
   } catch (err) {
     next(err);
   }
