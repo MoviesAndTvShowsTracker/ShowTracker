@@ -43,6 +43,7 @@ async function buildActivity(userId, limit) {
       isRewatch: Boolean(f.isRewatch),
       watchedAt: f.watchedAt || f.updatedAt || f.createdAt,
       rating: f.rating ?? null,
+      note: f.note || null,
     })),
     ...episodes.map((e) => ({
       kind: 'episode',
@@ -54,6 +55,7 @@ async function buildActivity(userId, limit) {
       isRewatch: false,
       watchedAt: e.watchedAt || e.updatedAt || e.createdAt,
       rating: e.rating ?? null,
+      note: e.note || null,
     })),
     ...rewatchEpisodes.map((e) => ({
       kind: 'episode',

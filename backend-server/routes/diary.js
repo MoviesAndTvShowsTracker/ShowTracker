@@ -4,6 +4,7 @@ const { buildActivity } = require('../services/diaryActivity');
 const { buildDiaryIndex } = require('../services/diaryIndex');
 const { sendWithEtag } = require('../lib/etag');
 const { buildExport, toCsv } = require('../services/diaryExport');
+const { buildNotes } = require('../services/diaryNotes');
 const { resolveTimeZone } = require('../services/statsCalendar');
 
 const router = express.Router();
@@ -23,6 +24,17 @@ router.get('/index', authenticate.verifyUser, async (req, res, next) => {
   try {
     const index = await buildDiaryIndex(req.user._id);
     sendWithEtag(req, res, { success: true, ...index });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** "Your notes": every note, newest first; ?q= filters by note or title text. */
+router.get('/notes', authenticate.verifyUser, async (req, res, next) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 100) : '';
+    const notes = await buildNotes(req.user._id, { q, limit: req.query.limit });
+    res.status(200).json({ success: true, notes });
   } catch (err) {
     next(err);
   }

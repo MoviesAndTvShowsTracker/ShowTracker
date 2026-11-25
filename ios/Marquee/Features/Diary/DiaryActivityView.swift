@@ -10,6 +10,8 @@ struct DiaryActivityItem: Codable, Identifiable, Sendable {
     let isRewatch: Bool?
     let watchedAt: String?
     let rating: Double?
+    /// Your note on this log (newer servers).
+    var note: String? = nil
 
     init(
         id: String,
@@ -335,6 +337,19 @@ struct DiaryActivityView: View {
                         .font(.caption)
                         .foregroundStyle(theme.inkMuted)
                         .lineLimit(1)
+                }
+                if let note = item.note.map(DiaryNote.trimmed), !note.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Image(systemName: "text.quote")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(theme.olive)
+                        Text(note)
+                            .font(.caption)
+                            .foregroundStyle(theme.ink.opacity(0.8))
+                            .lineLimit(2)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Your note: \(note)")
                 }
             }
             Spacer(minLength: 0)

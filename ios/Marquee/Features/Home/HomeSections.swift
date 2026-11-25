@@ -108,12 +108,25 @@ struct RecentlyLoggedSection: View {
 
     @ViewBuilder
     private func tile(_ item: DiaryActivityItem) -> some View {
+        let hasNote = !(item.note.map(DiaryNote.trimmed) ?? "").isEmpty
         let poster = PosterTile(
             title: item.title ?? "",
             posterPath: item.posterPath,
             width: 96,
             year: HomeFeedLogic.recentCaption(item, today: today)
         )
+        .overlay(alignment: .topLeading) {
+            // A note on this log: a small quote mark, so notes surface where you see your diary.
+            if hasNote {
+                Image(systemName: "text.quote")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(theme.surface)
+                    .frame(width: 22, height: 22)
+                    .background(theme.olive, in: Circle())
+                    .padding(6)
+                    .accessibilityLabel("Has a note")
+            }
+        }
         if let id = item.mediaId.flatMap(Int.init) {
             if item.kind == "film" {
                 MediaNavLink(id: id, kind: .movie) { poster }

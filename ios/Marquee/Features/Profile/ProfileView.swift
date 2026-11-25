@@ -42,6 +42,7 @@ struct ProfileView: View {
                         viewerType(label: label, blurb: type.blurb)
                     }
                     if hasDiary {
+                        notesLink
                         profileRail("Watched films", items: watchedFilms.map { ($0.movieId, $0.movieTitle ?? "Film", $0.posterPath) }, isTV: false, list: .watchedFilms)
                         profileRail("Favorite films", items: favFilmEntries, isTV: false, list: .favoriteFilms)
                         profileRail("Watched TV", items: watchedTV.map { ($0.tvId, $0.tvTitle ?? "Show", $0.posterPath) }, isTV: true, list: .watchedTV)
@@ -156,6 +157,39 @@ struct ProfileView: View {
         }
         .buttonStyle(PressableRowStyle())
         .accessibilityHint("Opens your stats")
+        .padding(.horizontal, 20)
+    }
+
+    /// You → Your notes: every line you've written, searchable.
+    private var notesLink: some View {
+        NavigationLink {
+            NotesJournalView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "text.quote")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(theme.olive)
+                    .frame(width: 40, height: 40)
+                    .background(theme.oliveSoft, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your notes")
+                        .font(.headline)
+                        .foregroundStyle(theme.ink)
+                    Text("Everything you've written about what you watched.")
+                        .font(.subheadline)
+                        .foregroundStyle(theme.inkMuted)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(theme.inkMuted)
+            }
+            .padding(16)
+            .background(theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.border, lineWidth: 1))
+        }
+        .buttonStyle(PressableRowStyle())
         .padding(.horizontal, 20)
     }
 

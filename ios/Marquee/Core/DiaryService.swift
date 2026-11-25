@@ -14,6 +14,15 @@ enum DiaryService {
         return (url, data.count)
     }
 
+    /// "Your notes": every note, newest first; `query` filters by note or title.
+    static func notes(query: String = "") async throws -> [DiaryNoteEntry] {
+        var items: [URLQueryItem] = []
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !q.isEmpty { items.append(URLQueryItem(name: "q", value: q)) }
+        let res: DiaryNotesResponse = try await APIClient.shared.get("/api/diary/notes", query: items)
+        return res.notes ?? []
+    }
+
     /// Catalogue badge data. Revalidated with ETag, so an unchanged diary costs a 304.
     static func diaryIndex() async throws -> DiaryIndexResponse {
         try await APIClient.shared.get("/api/diary/index")
