@@ -114,7 +114,7 @@ enum HomeFeedLogic {
         }
         if let tonight { return "\(tonight) airs tonight." }
         if !feed.thisWeek.isEmpty { return "New episodes this week." }
-        if !feed.films.isEmpty || !feed.tv.isEmpty { return "Your queue is waiting." }
+        if !feed.films.isEmpty || !feed.tv.isEmpty { return "Your watchlist is waiting." }
         return "Let’s start your diary."
     }
 

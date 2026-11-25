@@ -146,7 +146,7 @@ struct WatchlistView: View {
             return "Nothing on those services in this filter — try Any service."
         }
         switch scope {
-        case .all: return "Nothing queued yet — bookmark a film or show."
+        case .all: return "Nothing on your watchlist yet — bookmark a film or show."
         case .films: return "No films on your watchlist."
         case .tv: return "No shows on your watchlist."
         }

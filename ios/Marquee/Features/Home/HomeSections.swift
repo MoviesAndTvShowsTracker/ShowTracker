@@ -131,30 +131,31 @@ struct RecentlyLoggedSection: View {
 
 struct QueueSection: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let films: [FavoriteMovieDoc]
     let tv: [FavoriteTVDoc]
     @State private var scope: WatchlistView.Scope?
 
+    /// Films first, unless only shows are saved.
     private var active: WatchlistView.Scope { scope ?? (films.isEmpty ? .tv : .films) }
 
     var body: some View {
         if !films.isEmpty || !tv.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Your queue") {
-                    if !films.isEmpty && !tv.isEmpty {
-                        Picker("Queue", selection: Binding(get: { active }, set: { scope = $0 })) {
-                            Text("Films").tag(WatchlistView.Scope.films)
-                            Text("TV").tag(WatchlistView.Scope.tv)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 150)
-                    }
+                SectionHeader(title: "Watchlist") {
                     NavigationLink("All") { WatchlistView(initialScope: active) }
                         .trailingLink(theme)
                 }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 12) {
-                        if active == .films {
+
+                HStack(spacing: 8) {
+                    pill("Films", count: films.count, scope: .films)
+                    pill("TV", count: tv.count, scope: .tv)
+                }
+                .padding(.horizontal, 20)
+
+                Group {
+                    if active == .films {
+                        rail(isEmpty: films.isEmpty, empty: "No films saved yet.") {
                             ForEach(films.prefix(12), id: \.movieId) { f in
                                 if let id = Int(f.movieId) {
                                     MediaNavLink(id: id, kind: .movie) {
@@ -162,7 +163,9 @@ struct QueueSection: View {
                                     }
                                 }
                             }
-                        } else {
+                        }
+                    } else {
+                        rail(isEmpty: tv.isEmpty, empty: "No shows saved yet.") {
                             ForEach(tv.prefix(12), id: \.tvId) { s in
                                 if let id = Int(s.tvId) {
                                     MediaNavLink(id: id, kind: .tv) {
@@ -172,8 +175,57 @@ struct QueueSection: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
+                .id(active)
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: active == .films ? .leading : .trailing)))
+            }
+            .animation(reduceMotion ? nil : MarqueeMotion.standard, value: active)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("home-watchlist")
+        }
+    }
+
+    private func pill(_ title: String, count: Int, scope target: WatchlistView.Scope) -> some View {
+        let selected = active == target
+        return Button {
+            guard !selected else { return }
+            Haptics.light()
+            scope = target
+        } label: {
+            HStack(spacing: 6) {
+                Text(title)
+                Text("\(count)")
+                    .monospacedDigit()
+                    .foregroundStyle(selected ? theme.olive.opacity(0.75) : theme.inkMuted)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(selected ? theme.olive : theme.ink)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(selected ? theme.oliveSoft : theme.surfaceElevated, in: Capsule(style: .continuous))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(selected ? theme.olive.opacity(0.35) : theme.border, lineWidth: 1)
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressablePosterStyle())
+        .accessibilityLabel("\(title), \(count) saved")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func rail<Content: View>(isEmpty: Bool, empty: String, @ViewBuilder content: () -> Content) -> some View {
+        if isEmpty {
+            Text(empty)
+                .font(.subheadline)
+                .foregroundStyle(theme.inkMuted)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) { content() }
+                    .padding(.horizontal, 20)
             }
         }
     }
