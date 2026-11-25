@@ -1,8 +1,8 @@
 const express = require('express');
 
-const { createTmdbCache, ttlFor } = require('../services/tmdbCache');
+const { ttlFor } = require('../services/tmdbCache');
+const { tmdbClient } = require('../lib/tmdbClient');
 
-const cache = createTmdbCache({ maxEntries: 800 });
 const router = express.Router();
 
 const TMDB_BASE = 'https://api.themoviedb.org/3/';
@@ -62,25 +62,14 @@ router.get(/^\/(.+)$/, async (req, res) => {
   const ttl = ttlFor(tmdbPath);
   // Cache key never includes the API key.
   const cacheKey = url.href.replace(/([?&])api_key=[^&]*/, '$1');
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    res.setHeader('Content-Type', cached.contentType);
-    res.setHeader('Cache-Control', `private, max-age=${ttl}`);
-    res.setHeader('X-Cache', 'HIT');
-    return res.status(200).send(cached.body);
-  }
-
   try {
-    const upstream = await fetch(url);
-    const body = await upstream.text();
-    const contentType = upstream.headers.get('content-type') || 'application/json';
-    res.setHeader('Content-Type', contentType);
-    if (upstream.ok) {
-      cache.set(cacheKey, { body, contentType }, ttl);
+    const result = await tmdbClient().getText(url.href, { cacheKey: `proxy:${cacheKey}`, ttlSeconds: ttl });
+    res.setHeader('Content-Type', result.contentType);
+    if (result.status >= 200 && result.status < 300) {
       res.setHeader('Cache-Control', `private, max-age=${ttl}`);
     }
-    res.setHeader('X-Cache', 'MISS');
-    res.status(upstream.status).send(body);
+    res.setHeader('X-Cache', result.cache);
+    res.status(result.status).send(result.body);
   } catch {
     res.status(502).json({ success: false, message: 'Upstream TMDB request failed.' });
   }
