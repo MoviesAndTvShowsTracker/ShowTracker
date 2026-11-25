@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const AdmZip = require('adm-zip');
+const { readImportZip, NEEDED_FILES } = require('../lib/safeZip');
 const authenticate = require('../authenticate');
 const ImportJob = require('../models/importJob');
 const { runTvTimeImport } = require('../services/tvtimeImport');
@@ -39,26 +39,6 @@ const upload = multer({
     cb(ok ? null : new Error('Upload a .zip file from TV Time.'), ok);
   },
 });
-
-function extractZip(zipPath, destDir) {
-  const zip = new AdmZip(zipPath);
-  zip.extractAllTo(destDir, true);
-}
-
-/** Find folder containing required CSVs (zip root or gdpr-data subfolder). */
-function resolveDataDir(extractRoot) {
-  const direct = extractRoot;
-  const nested = path.join(extractRoot, 'gdpr-data');
-  if (fs.existsSync(path.join(nested, 'tracking-prod-records-v2.csv'))) return nested;
-  if (fs.existsSync(path.join(direct, 'tracking-prod-records-v2.csv'))) return direct;
-  const entries = fs.readdirSync(extractRoot, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const candidate = path.join(extractRoot, entry.name);
-    if (fs.existsSync(path.join(candidate, 'tracking-prod-records-v2.csv'))) return candidate;
-  }
-  return null;
-}
 
 function rmDirSafe(dir) {
   if (dir && fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
@@ -164,10 +144,15 @@ router.post(
       workDir = path.join(UPLOAD_ROOT, String(req.user._id), `job-${Date.now()}`);
       fs.mkdirSync(workDir, { recursive: true });
 
-      extractZip(req.file.path, workDir);
-      fs.unlinkSync(req.file.path);
+      // Only the CSVs we need, read entry by entry with size caps; nothing else leaves the zip.
+      let written;
+      try {
+        written = await readImportZip(req.file.path, workDir);
+      } finally {
+        fs.unlinkSync(req.file.path);
+      }
 
-      const dataDir = resolveDataDir(workDir);
+      const dataDir = written.includes(NEEDED_FILES[0]) ? workDir : null;
       if (!dataDir) {
         rmDirSafe(workDir);
         return res.status(400).json({
