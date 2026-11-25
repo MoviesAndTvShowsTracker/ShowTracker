@@ -103,6 +103,9 @@ actor APIClient {
                 }
                 throw APIError.server(message: "Request failed (\(http.statusCode))", status: http.statusCode)
             }
+            if Freshness.invalidates(method: request.httpMethod ?? "GET", path: request.url?.path ?? "") {
+                Freshness.shared.invalidateAll()
+            }
             if T.self == EmptyResponse.self {
                 return EmptyResponse() as! T
             }
