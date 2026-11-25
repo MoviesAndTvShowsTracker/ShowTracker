@@ -24,6 +24,18 @@ final class FilmDiaryIndex {
     func refresh(force: Bool = false) async {
         if UITestingFixtures.isEnabled { return }
         if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 120 { return }
+        do {
+            let index = try await DiaryService.diaryIndex()
+            watchCounts = index.watchCounts
+            watchlist = index.watchlistIds
+            loved = index.loved.flatMap { l in Int(l.id).map { ($0, l.title) } }
+            loadedAt = Date()
+            return
+        } catch where !HomeService.shouldFallback(error) {
+            return
+        } catch {
+            // Older server without /api/diary/index: fall through to the full lists.
+        }
         async let watchedTask = DiaryService.watchedMovies()
         async let listTask = DiaryService.movieWatchlist()
         if let watched = try? await watchedTask {

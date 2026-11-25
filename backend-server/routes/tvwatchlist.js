@@ -68,13 +68,17 @@ router.post('/removeFromWatchlist', authenticate.verifyUser, async (req, res, ne
   }
 });
 
-router.post('/getTvWatchlist', authenticate.verifyUser, async (req, res, next) => {
+async function getTvWatchlist(req, res, next) {
   try {
     const watchlist = await getQueuedTvWatchlist(req.user._id);
     res.status(200).json({ success: true, watchlist });
   } catch (err) {
     next(err);
   }
-});
+}
+
+// Read with GET (cacheable, safe to retry); POST kept for older app builds.
+router.get('/getTvWatchlist', authenticate.verifyUser, getTvWatchlist);
+router.post('/getTvWatchlist', authenticate.verifyUser, getTvWatchlist);
 
 module.exports = router;

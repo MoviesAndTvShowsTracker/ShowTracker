@@ -252,6 +252,7 @@ final class AuthStore {
         KeychainStore.remove(Keys.firstName)
         KeychainStore.remove(Keys.username)
         ResponseCache.clearAll()
+        APIClient.shared.clearCachedResponses()
     }
 
     #if DEBUG

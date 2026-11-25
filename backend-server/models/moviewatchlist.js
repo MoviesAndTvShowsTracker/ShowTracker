@@ -25,4 +25,6 @@ var Watchlist = new Schema({
     timestamps: true
 });
 
+Watchlist.index({ userFrom: 1, movieId: 1 });
+
 module.exports = mongoose.model('Watchlist', Watchlist);

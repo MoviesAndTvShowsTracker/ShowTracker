@@ -28,4 +28,6 @@ var Favorite = new Schema({
     timestamps: true
 });
 
+Favorite.index({ userFrom: 1, movieId: 1 });
+
 module.exports = mongoose.model('Favorite', Favorite);

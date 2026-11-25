@@ -3,6 +3,40 @@ import Foundation
 enum DiaryService {
     // MARK: Movies
 
+    /// Catalogue badge data. Revalidated with ETag, so an unchanged diary costs a 304.
+    static func diaryIndex() async throws -> DiaryIndexResponse {
+        try await APIClient.shared.get("/api/diary/index")
+    }
+
+    /// One request for the show page; older servers (404) get the five separate calls.
+    static func tvState(id: String) async throws -> TVUserState {
+        do {
+            return try await APIClient.shared.get("/api/me/tv/\(id)")
+        } catch where HomeService.shouldFallback(error) {
+            async let fav = tvFavorited(id: id)
+            async let list = tvWatchlisted(id: id)
+            async let track = tracking(for: id)
+            async let eps = watchedEpisodes(tvId: id)
+            async let rewatch = rewatchState(tvId: id)
+            return TVUserState(
+                favorited: try? await fav, watchlisted: try? await list, tracking: try? await track,
+                episodes: try? await eps, rewatch: try? await rewatch
+            )
+        }
+    }
+
+    /// One request for the film page; older servers (404) get the three separate calls.
+    static func movieState(id: String) async throws -> MovieUserState {
+        do {
+            return try await APIClient.shared.get("/api/me/movie/\(id)")
+        } catch where HomeService.shouldFallback(error) {
+            async let fav = movieFavorited(id: id)
+            async let list = movieWatchlisted(id: id)
+            async let watched = movieWatched(id: id)
+            return MovieUserState(favorited: try? await fav, watchlisted: try? await list, watched: try? await watched)
+        }
+    }
+
     static func movieFavorited(id: String) async throws -> Bool {
         let res: FavoritedResponse = try await APIClient.shared.post(
             "/api/favorite/favorited",
@@ -177,15 +211,21 @@ enum DiaryService {
         return res.tracking
     }
 
-    static func stopTracking(tvId: String, status: String = "paused") async throws {
-        let _: SuccessMessage = try await APIClient.shared.post(
+    /// Returns the updated tracking the server sends back.
+    @discardableResult
+    static func stopTracking(tvId: String, status: String = "paused") async throws -> TrackingRecord? {
+        let res: TrackingShowResponse = try await APIClient.shared.post(
             "/api/tv/tracking/stop",
             body: TrackingStopBody(tvId: tvId, status: status)
         )
+        return res.tracking
     }
 
-    static func resumeTracking(tvId: String) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/tracking/resume", body: ["tvId": tvId])
+    /// Returns the updated tracking the server sends back.
+    @discardableResult
+    static func resumeTracking(tvId: String) async throws -> TrackingRecord? {
+        let res: TrackingShowResponse = try await APIClient.shared.post("/api/tv/tracking/resume", body: ["tvId": tvId])
+        return res.tracking
     }
 
     static func tracking(for tvId: String) async throws -> TrackingRecord? {
@@ -321,7 +361,15 @@ enum DiaryService {
     static func dashboardStats(refresh: Bool = false) async throws -> DashboardStats {
         var query: [URLQueryItem] = []
         if refresh { query.append(URLQueryItem(name: "refresh", value: "1")) }
-        let env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
+        var env: DashboardStatsEnvelope = try await APIClient.shared.get("/api/stats/dashboard", query: query)
+        // Stale answer: the server is rebuilding in the background; ask once more shortly.
+        // Callers already show the device's copy, so this wait isn't visible.
+        if env.stale == true {
+            try? await Task.sleep(for: .milliseconds(1500))
+            if let fresh: DashboardStatsEnvelope = try? await APIClient.shared.get("/api/stats/dashboard") {
+                env = fresh
+            }
+        }
         if let stats = env.stats { ResponseCache.store(stats, key: dashboardCacheKey) }
         return env.stats ?? DashboardStats(
             insight: nil, overview: nil, library: nil, taste: nil, year: nil,

@@ -19,8 +19,23 @@ function isFullyFinished(track) {
   );
 }
 
-/** Move inactive shows to paused (stopped) unless caught up, finished, or mid-rewatch. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+const lastRunByUser = new Map();
+
+/** True at most once a day per user (per server process); records the run when true. */
+function maintenanceDue(userId, now = Date.now()) {
+  const key = String(userId);
+  const last = lastRunByUser.get(key);
+  if (last != null && now - last < DAY_MS) return false;
+  lastRunByUser.delete(key);
+  lastRunByUser.set(key, now);
+  if (lastRunByUser.size > 10000) lastRunByUser.delete(lastRunByUser.keys().next().value);
+  return true;
+}
+
+/** Move inactive shows to paused (stopped) unless caught up, finished, or mid-rewatch. Once a day per user. */
 async function autoPauseStaleTracks(userId) {
+  if (!maintenanceDue(userId)) return 0;
   const cutoff = new Date(Date.now() - STALE_MS);
   const stale = await TvShowTracking.find({
     userFrom: userId,
@@ -58,6 +73,7 @@ function mapTabToStatus(tab) {
 }
 
 module.exports = {
+  maintenanceDue,
   STALE_DAYS,
   isCaughtUpWaiting,
   isFullyFinished,

@@ -737,11 +737,7 @@ struct TVDetailView: View {
             // so the first pane paint is already the right tab with no CLS pops.
             let region = preferences.resolvedWatchRegion
             async let detailTask = TMDBService.tvDetail(id: tvId)
-            async let favTask = DiaryService.tvFavorited(id: idString)
-            async let listTask = DiaryService.tvWatchlisted(id: idString)
-            async let trackTask = DiaryService.tracking(for: idString)
-            async let epsTask = DiaryService.watchedEpisodes(tvId: idString)
-            async let rewatchTask = DiaryService.rewatchState(tvId: idString)
+            async let stateTask = DiaryService.tvState(id: idString)
             async let providersTask = WatchProviderService.load(kind: .tv, id: tvId, preferredRegion: region)
             async let ratingsTask = RatingsService.load(kind: .tv, id: tvId)
 
@@ -755,11 +751,12 @@ struct TVDetailView: View {
 
             async let seasonLoad: Void = loadSeason()
 
-            let resolvedTrack = try? await trackTask
-            let resolvedFav = (try? await favTask) ?? false
-            let resolvedList = (try? await listTask) ?? false
-            let docs = (try? await epsTask) ?? []
-            let rewatchState = try? await rewatchTask
+            let userState = try? await stateTask
+            let resolvedTrack = userState?.tracking
+            let resolvedFav = userState?.favorited ?? false
+            let resolvedList = userState?.watchlisted ?? false
+            let docs = userState?.episodes ?? []
+            let rewatchState = userState?.rewatch
             let loadedProviders = await providersTask
             let loadedRatings = await ratingsTask
             guard generation == loadGeneration else { return }
@@ -870,18 +867,11 @@ struct TVDetailView: View {
                 let res = try await DiaryService.markRewatchEpisode(body)
                 applyRewatchMutation(res)
             } else {
-                try await DiaryService.markEpisode(body)
-                if tracking == nil, let detail {
-                    try? await DiaryService.startTracking(
-                        TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
-                    )
-                }
-                tracking = try? await DiaryService.tracking(for: idString)
-                if let state = try? await DiaryService.rewatchState(tvId: idString) {
-                    episodePlayCounts = state.playCounts ?? episodePlayCounts
-                    episodePlayDates = state.playDates ?? episodePlayDates
-                    rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
-                }
+                // The mark creates tracking if needed and returns it: no follow-up requests.
+                if let updated = try await DiaryService.markEpisode(body) { tracking = updated }
+                (episodePlayCounts, episodePlayDates) = EpisodePlays.afterFirstWatch(
+                    counts: episodePlayCounts, dates: episodePlayDates, key: key, at: .now
+                )
             }
         } catch {
             watchedKeys.remove(key)
@@ -1231,12 +1221,10 @@ struct TVDetailView: View {
     }
 
     private func pause() async {
-        try? await DiaryService.stopTracking(tvId: idString, status: "paused")
-        tracking = try? await DiaryService.tracking(for: idString)
+        if let updated = try? await DiaryService.stopTracking(tvId: idString, status: "paused") { tracking = updated }
     }
 
     private func resume() async {
-        try? await DiaryService.resumeTracking(tvId: idString)
-        tracking = try? await DiaryService.tracking(for: idString)
+        if let updated = try? await DiaryService.resumeTracking(tvId: idString) { tracking = updated }
     }
 }

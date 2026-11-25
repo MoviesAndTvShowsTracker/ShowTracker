@@ -12,6 +12,9 @@ async function clearWatchlistForShow(userId, tvId) {
   const target = normTvId(tvId);
   if (!target) return;
 
+  // Indexed exact match first; the scan only runs for legacy ids saved with stray whitespace.
+  const exact = await tvwatchlist.deleteMany({ userFrom: userId, tvId: target });
+  if (exact.deletedCount) return;
   const rows = await tvwatchlist.find({ userFrom: userId }).select('_id tvId');
   const staleIds = rows.filter((row) => normTvId(row.tvId) === target).map((row) => row._id);
   if (staleIds.length) {

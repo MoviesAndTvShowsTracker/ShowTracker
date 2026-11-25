@@ -77,6 +77,8 @@ struct HomeView: View {
                 loading = false
                 return
             }
+            // Tab switches reuse what's on screen unless it's older than a minute or something changed.
+            guard Freshness.shared.isStale("home") else { return }
             await load()
         }
     }
@@ -112,6 +114,7 @@ struct HomeView: View {
             let fresh = try await HomeService.load()
             apply(fresh)
             HomeService.store(fresh)
+            Freshness.shared.markLoaded("home")
             loading = false
             await afterLoad(fresh)
         } catch {
@@ -128,6 +131,7 @@ struct HomeView: View {
         guard let fresh = try? await HomeService.load() else { return }
         apply(fresh)
         HomeService.store(fresh)
+        Freshness.shared.markLoaded("home")
         await afterLoad(fresh)
     }
 

@@ -44,7 +44,7 @@ router.post('/removeFromWatchlist', authenticate.verifyUser, async (req, res, ne
   }
 });
 
-router.post('/getMovieWatchlist', authenticate.verifyUser, async (req, res, next) => {
+async function getMovieWatchlist(req, res, next) {
   try {
     const watchlist = await moviewatchlist.find({ userFrom: req.user._id }).sort({
       updatedAt: -1,
@@ -55,6 +55,10 @@ router.post('/getMovieWatchlist', authenticate.verifyUser, async (req, res, next
   } catch (err) {
     next(err);
   }
-});
+}
+
+// Read with GET (cacheable, safe to retry); POST kept for older app builds.
+router.get('/getMovieWatchlist', authenticate.verifyUser, getMovieWatchlist);
+router.post('/getMovieWatchlist', authenticate.verifyUser, getMovieWatchlist);
 
 module.exports = router;

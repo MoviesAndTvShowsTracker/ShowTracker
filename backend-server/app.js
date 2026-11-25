@@ -4,6 +4,9 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var logger = require('morgan');
+const { requestTimer, startLoopMonitor } = require('./lib/metrics');
+const { createRateLimiter } = require('./lib/rateLimit');
+const { errorResponse } = require('./lib/errors');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -32,6 +35,17 @@ mongoose
   .catch((err) => console.log('no connection to mongodb', err.message));
 
 var app = express();
+// Render terminates TLS in front of us; trust its one hop for req.ip.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// Baseline security headers for a JSON API (no HTML pages to frame or sniff).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 var cors = require('cors');
 
@@ -56,14 +70,24 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-app.use(logger('dev'));
+const loopMonitor = startLoopMonitor();
+app.use(requestTimer({ slowMs: 500 }));
+app.use(logger(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(passport.initialize());
 
+// Per client address. Sign-in endpoints are tight (password guessing); the TMDB proxy needs no
+// login, so it gets its own budget; everything else gets a generous ceiling.
+const authLimit = createRateLimiter({ name: 'auth', windowMs: 15 * 60 * 1000, max: 20 });
+['/users/login', '/users/signup', '/users/google', '/users/apple', '/users/forgot-password', '/users/reset-password']
+  .forEach((path) => app.post(path, authLimit));
+app.use('/api/tmdb', createRateLimiter({ name: 'tmdb', windowMs: 60 * 1000, max: 300 }));
+app.use('/api', createRateLimiter({ name: 'api', windowMs: 60 * 1000, max: 600 }));
+
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true, service: 'marquee-api' });
+  res.status(200).json({ ok: true, service: 'marquee-api', loop: loopMonitor.snapshot() });
 });
 
 app.use('/', indexRouter);
@@ -84,6 +108,7 @@ app.use('/api/ratings', ratingsRouter);
 app.use('/api/devices', devicesRouter);
 app.use('/api/diary', diaryRouter);
 app.use('/api/home', require('./routes/home'));
+app.use('/api/me', require('./routes/me'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -92,11 +117,9 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (err, req, res, next) {
-  res.status(err.status || 500);
-  if (req.path.startsWith('/users') || req.path.startsWith('/api')) {
-    return res.json({ success: false, message: err.message });
-  }
-  res.json({ success: false, message: err.message });
+  const { status, body } = errorResponse(err);
+  if (status >= 500) console.error(`[error] ${req.method} ${req.path}`, err.stack || err.message);
+  res.status(status).json(body);
 });
 
 module.exports = app;

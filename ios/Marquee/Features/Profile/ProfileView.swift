@@ -75,6 +75,7 @@ struct ProfileView: View {
         .navigationDestination(isPresented: $showStats) { StatsView() }
         .task {
             if UITestingFixtures.emptyDiary { ready = true; return }
+            guard Freshness.shared.isStale("you") else { return }
             await load()
         }
         .refreshable { await load() }
@@ -359,6 +360,7 @@ struct ProfileView: View {
                 ready = true
                 error = nil
             }
+            Freshness.shared.markLoaded("you")
         } catch {
             self.error = error.localizedDescription
             ready = true
