@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
@@ -9,6 +10,7 @@ struct SettingsView: View {
     @State private var confirmDeleteAccount = false
     @State private var deletingAccount = false
     @State private var deleteError: String?
+    @Environment(\.requestReview) private var requestReview
 
     private var displayName: String {
         let first = auth.profile?.firstName ?? auth.session?.firstName ?? ""
@@ -29,132 +31,88 @@ struct SettingsView: View {
         )
     }
 
-    private var deviceRegionCode: String {
-        if let region = Locale.current.region?.identifier, region.count == 2 {
-            return region.uppercased()
-        }
-        return "US"
-    }
-
-    private var watchRegionBinding: Binding<String?> {
-        Binding(
-            get: { preferences.watchRegionCode },
-            set: { preferences.watchRegionCode = $0 }
-        )
-    }
-
-    private static let watchRegionOptions = [
-        "US", "CA", "GB", "AU", "IN", "DE", "FR", "BR", "JP", "KR", "MX", "AE"
-    ]
-
     var body: some View {
         List {
-            Section {
-                accountHeader
-            }
-
-            Section {
-                AppearancePicker(selection: Bindable(preferences).appearance)
-            } header: {
-                Text("Look")
-            } footer: {
-                Text("Night uses a warm lobby grey so posters and captions stay readable.")
-            }
-
-            Section {
-                Toggle(isOn: Bindable(preferences).blobsEnabled) {
-                    SettingsLabel("Ambient color", systemImage: "circle.hexagongrid.fill")
-                }
-                Toggle(isOn: Bindable(preferences).heroAutoplay) {
-                    SettingsLabel("Autoplay carousels", systemImage: "play.square.stack")
-                }
-                Toggle(isOn: Bindable(preferences).hapticsEnabled) {
-                    SettingsLabel("Haptics", systemImage: "hand.tap")
-                }
-                Picker(selection: Bindable(preferences).gridDensity) {
-                    Text("Cozy").tag(GridDensity.cozy)
-                    Text("Compact").tag(GridDensity.compact)
-                } label: {
-                    SettingsLabel("Poster size", systemImage: "square.grid.2x2")
-                }
-            } header: {
-                Text("Feel")
-            } footer: {
-                Text("Ambient color slowly drifts olive and pink behind the diary. Turn it off if you want a still canvas.")
-            }
-
-            Section {
-                Toggle(isOn: episodeAlertsBinding) {
-                    SettingsLabel("Episode air alerts", systemImage: "bell.badge")
-                }
-            } header: {
-                Text("Alerts")
-            } footer: {
-                Text("Marquee reminds you at 9am on days your tracked shows drop a new episode. Add the Up Next widget from your Home Screen for a one-tap jump back in.")
-            }
-
-            Section {
-                Picker(selection: watchRegionBinding) {
-                    Text("Device (\(WatchProviderService.regionDisplayName(deviceRegionCode)))")
-                        .tag(String?.none)
-                    ForEach(Self.watchRegionOptions, id: \.self) { code in
-                        Text("\(WatchProviderService.regionDisplayName(code)) (\(code))")
-                            .tag(String?.some(code))
-                    }
-                } label: {
-                    SettingsLabel("Watch region", systemImage: "globe")
-                }
-            } header: {
-                Text("Where to watch")
-            } footer: {
-                Text("Uses your device region by default — no location permission. Change it here if your streaming catalog is for another country.")
-            }
-
-            Section {
-                StreamingFilterBar(
-                    selected: Bindable(preferences).preferredProviderIds,
-                    showLabels: true
-                )
-                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
-                .listRowBackground(Color.clear)
-            } header: {
-                Text("My streaming services")
-            } footer: {
-                Text("Tap a logo to include it. Films and TV use this for “On your services.” The grid icon clears the filter.")
-            }
-
             Section {
                 NavigationLink {
                     EditProfileView()
                 } label: {
-                    SettingsLabel("Profile", systemImage: "person.text.rectangle")
+                    accountHeader
                 }
+            }
+
+            Section {
+                NavigationLink {
+                    AppearanceSettingsView()
+                } label: {
+                    SettingsLabel("Appearance", systemImage: "paintbrush")
+                }
+                NavigationLink {
+                    StreamingSettingsView()
+                } label: {
+                    LabeledContent {
+                        Text(servicesSummary).foregroundStyle(theme.inkMuted)
+                    } label: {
+                        SettingsLabel("Streaming", systemImage: "play.tv")
+                    }
+                }
+                Toggle(isOn: episodeAlertsBinding) {
+                    SettingsLabel("New episode alerts", systemImage: "bell.badge")
+                }
+            } header: {
+                Text("Preferences")
+            } footer: {
+                Text("A 9 am reminder on days a show you track has a new episode.")
+            }
+
+            Section {
+                NavigationLink {
+                    TVTimeImportView()
+                } label: {
+                    SettingsLabel("Import from TV Time", systemImage: "square.and.arrow.down")
+                }
+                Button {
+                    preferences.clearSearchHistory()
+                    Haptics.success()
+                    Feedback.done("Search history cleared")
+                } label: {
+                    SettingsLabel("Clear search history", systemImage: "clock.arrow.circlepath")
+                }
+                Button {
+                    Task { await ImageCache.shared.clear() }
+                    Haptics.success()
+                    Feedback.done("Image cache cleared")
+                } label: {
+                    SettingsLabel("Clear image cache", systemImage: "photo.on.rectangle.angled")
+                }
+            } header: {
+                Text("Your data")
+            }
+
+            Section {
                 NavigationLink {
                     ChangePasswordView()
                 } label: {
                     SettingsLabel("Password", systemImage: "key")
                 }
-                NavigationLink {
-                    TVTimeImportView()
+                Button {
+                    confirmSignOut = true
                 } label: {
-                    SettingsLabel("TV Time import", systemImage: "square.and.arrow.down")
+                    SettingsLabel("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
             } header: {
                 Text("Account")
             }
 
             Section {
-                Button {
-                    preferences.clearSearchHistory()
-                    Haptics.success()
-                } label: {
-                    SettingsLabel("Clear search history", systemImage: "clock.arrow.circlepath")
+                Link(destination: AppConfig.feedbackEmail) {
+                    SettingsLabel("Send feedback", systemImage: "envelope")
                 }
-            } header: {
-                Text("Diary")
-            }
-
-            Section {
+                Button {
+                    requestReview()
+                } label: {
+                    SettingsLabel("Rate Marquee", systemImage: "star")
+                }
                 Link(destination: AppConfig.privacyURL) {
                     SettingsLabel("Privacy Policy", systemImage: "hand.raised")
                 }
@@ -162,53 +120,31 @@ struct SettingsView: View {
                     SettingsLabel("Terms of Service", systemImage: "doc.text")
                 }
                 Link(destination: AppConfig.tmdbAttributionURL) {
-                    SettingsLabel("This product uses the TMDB API", systemImage: "film.stack")
-                }
-                Link(destination: AppConfig.feedbackEmail) {
-                    SettingsLabel("Send feedback", systemImage: "envelope")
-                }
-                Link(destination: AppConfig.appStoreURL) {
-                    SettingsLabel("Rate on the App Store", systemImage: "star")
-                }
-                Button {
-                    Task { await ImageCache.shared.clear() }
-                    Haptics.success()
-                } label: {
-                    SettingsLabel("Clear image cache", systemImage: "photo.on.rectangle.angled")
-                }
-                LabeledContent("Signed in as") {
-                    Text(auth.session?.email ?? "—")
-                        .foregroundStyle(theme.inkMuted)
-                        .lineLimit(1)
+                    SettingsLabel("Data from TMDB", systemImage: "film.stack")
                 }
                 LabeledContent("Version") {
-                    Text(appVersion)
-                        .foregroundStyle(theme.inkMuted)
+                    Text(appVersion).foregroundStyle(theme.inkMuted).monospacedDigit()
                 }
             } header: {
                 Text("About")
             } footer: {
-                Text("Marquee is not endorsed or certified by TMDB. Artwork and titles come from The Movie Database.")
+                Text("Marquee uses the TMDB API but is not endorsed or certified by TMDB.")
             }
 
             Section {
-                Button("Sign out", role: .destructive) {
-                    confirmSignOut = true
-                }
                 Button(role: .destructive) {
                     confirmDeleteAccount = true
                 } label: {
-                    if deletingAccount {
-                        ProgressView()
-                    } else {
-                        Text("Delete account")
+                    HStack {
+                        Spacer()
+                        if deletingAccount { ProgressView() } else { Text("Delete account") }
+                        Spacer()
                     }
                 }
                 .disabled(deletingAccount)
+            } footer: {
                 if let deleteError {
-                    Text(deleteError)
-                        .font(.footnote)
-                        .foregroundStyle(theme.accentInk)
+                    Text(deleteError).foregroundStyle(theme.accentInk)
                 }
             }
         }
@@ -235,17 +171,29 @@ struct SettingsView: View {
         .navigationTitle("Settings")
     }
 
+    private var servicesSummary: String {
+        let count = preferences.preferredProviderIds.count
+        return count == 0 ? "None" : "\(count)"
+    }
+
     private var accountHeader: some View {
         HStack(spacing: 14) {
-            Text(String(displayName.prefix(1)).uppercased())
-                .font(.title2.weight(.bold))
-                .foregroundStyle(MarqueeColor.saltGrey)
-                .frame(width: 52, height: 52)
-                .background(theme.olive)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            VStack(alignment: .leading, spacing: 4) {
+            Group {
+                if let avatar = ProfileAvatarStore.load() {
+                    Image(uiImage: avatar).resizable().scaledToFill()
+                } else {
+                    Text(String(displayName.prefix(1)).uppercased())
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(MarqueeColor.saltGrey)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(theme.olive)
+                }
+            }
+            .frame(width: 56, height: 56)
+            .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 3) {
                 Text(displayName)
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(theme.ink)
                 Text(auth.session?.email ?? "")
                     .font(.subheadline)
@@ -255,6 +203,7 @@ struct SettingsView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .accessibilityHint("Edit your profile")
     }
 
     private var appVersion: String {
@@ -275,7 +224,7 @@ struct SettingsView: View {
     }
 }
 
-private struct SettingsLabel: View {
+struct SettingsLabel: View {
     @Environment(\.marqueeTheme) private var theme
     let title: String
     let systemImage: String
@@ -296,7 +245,7 @@ private struct SettingsLabel: View {
     }
 }
 
-private struct AppearancePicker: View {
+struct AppearancePicker: View {
     @Environment(\.marqueeTheme) private var theme
     @Binding var selection: AppPreferences.Appearance
 

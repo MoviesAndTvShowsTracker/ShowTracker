@@ -8,15 +8,24 @@ final class Feedback {
     static let shared = Feedback()
 
     private(set) var message: String?
+    private(set) var success = false
     private var dismissTask: Task<Void, Never>?
 
     static func failed(_ message: String) {
         shared.show(message)
     }
 
-    func show(_ text: String) {
-        withAnimation(MarqueeMotion.standard) { message = text }
-        Haptics.medium()
+    /// Quiet confirmation for actions with no visible result (clearing caches, history).
+    static func done(_ message: String) {
+        shared.show(message, success: true)
+    }
+
+    func show(_ text: String, success: Bool = false) {
+        withAnimation(MarqueeMotion.standard) {
+            message = text
+            self.success = success
+        }
+        if !success { Haptics.medium() }
         dismissTask?.cancel()
         dismissTask = Task {
             try? await Task.sleep(for: .seconds(3.2))
@@ -39,7 +48,7 @@ struct FeedbackBanner: View {
         VStack {
             if let message = feedback.message {
                 HStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.circle.fill")
+                    Image(systemName: feedback.success ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                         .foregroundStyle(theme.olive)
                     Text(message)
                         .font(.subheadline.weight(.semibold))

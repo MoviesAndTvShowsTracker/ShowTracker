@@ -102,8 +102,10 @@ final class AppPreferences {
         }
     }
 
+    /// Typed searches and the Recently viewed rail.
     func clearSearchHistory() {
         defaults.removeObject(forKey: "recentSearches")
+        defaults.removeObject(forKey: "search.recentlyViewed")
     }
 
     private let defaults: UserDefaults
