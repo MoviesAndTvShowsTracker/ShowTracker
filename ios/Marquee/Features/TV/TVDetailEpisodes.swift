@@ -303,7 +303,13 @@ extension TVDetailView {
 /// buried caption in the meta row.
 struct EpisodePlayMark: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let plays: Int
+
+    /// Tapped often when catching up on a season: a quick scale-in, no bounce.
+    private var swap: AnyTransition {
+        reduceMotion ? .opacity : .scale(scale: 0.8).combined(with: .opacity)
+    }
 
     var body: some View {
         ZStack {
@@ -311,20 +317,27 @@ struct EpisodePlayMark: View {
                 Image(systemName: "circle")
                     .font(.title3)
                     .foregroundStyle(theme.olive.opacity(0.45))
+                    .transition(swap)
             } else if plays == 1 {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
                     .foregroundStyle(theme.accentInk)
+                    .transition(swap)
             } else {
-                Circle()
-                    .fill(theme.accent)
-                    .frame(width: 28, height: 28)
-                Text("\(plays)×")
-                    .font(.caption2.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(theme.onAccent)
+                ZStack {
+                    Circle()
+                        .fill(theme.accent)
+                        .frame(width: 28, height: 28)
+                    Text("\(plays)×")
+                        .font(.caption2.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.onAccent)
+                        .contentTransition(.numericText(value: Double(plays)))
+                }
+                .transition(swap)
             }
         }
+        .animation(reduceMotion ? nil : MarqueeMotion.micro, value: plays)
         .frame(width: 28, height: 28)
         .contentShape(Rectangle())
         .accessibilityLabel(

@@ -141,6 +141,7 @@ struct MetaCell: View {
 
 struct ProgressTrack: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var progress: Double
     var completed: Bool = false
 
@@ -153,6 +154,8 @@ struct ProgressTrack: View {
                     .frame(width: fillWidth(in: geo.size.width))
             }
         }
+        .animation(reduceMotion ? nil : MarqueeMotion.standard, value: progress)
+        .animation(reduceMotion ? nil : MarqueeMotion.standard, value: completed)
         .frame(height: 6)
     }
 

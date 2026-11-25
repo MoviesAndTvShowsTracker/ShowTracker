@@ -233,8 +233,17 @@ struct UndoToast: View {
     let toast: UpNextModel.Toast
     let onUndo: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
     var body: some View {
         HStack(spacing: 14) {
+            if toast.finished {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(theme.olive)
+                    .symbolEffect(.bounce, value: reduceMotion ? false : appeared)
+                    .accessibilityHidden(true)
+            }
             Text(toast.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(theme.ink)
@@ -246,6 +255,7 @@ struct UndoToast: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .glassEffect(.regular, in: Capsule())
+        .onAppear { appeared = true }
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: "Undo", onUndo)
     }

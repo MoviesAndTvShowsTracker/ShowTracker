@@ -56,7 +56,8 @@ final class HomeTests: XCTestCase {
         _ = await (a, b)
         XCTAssertEqual(calls, 1)
         XCTAssertEqual(model.items.map(\.id), ["1", "3"])
-        XCTAssertEqual(model.toast?.title, "Logged Show 2 S1E5")
+        XCTAssertEqual(model.toast?.title, "Finished Show 2.")
+        XCTAssertEqual(model.toast?.finished, true)
 
         await model.undoLast()
         XCTAssertEqual(undone, ["2"])

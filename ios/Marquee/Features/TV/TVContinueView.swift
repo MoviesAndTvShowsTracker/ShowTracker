@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TVContinueView: View {
     @Environment(\.marqueeTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let tvId: Int
     var seed: TrackingRecord?
     var catalogTotal: Int? = nil
@@ -59,14 +60,17 @@ struct TVContinueView: View {
             Text(progress.episodeLine)
                 .font(.headline)
                 .foregroundStyle(theme.olive)
+                .contentTransition(.numericText())
         }
         .frame(maxWidth: .infinity)
+        .animation(reduceMotion ? nil : MarqueeMotion.standard, value: progress.episodeLine)
     }
 
     private var episodeCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text(episodeName)
+                    .contentTransition(.opacity)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(theme.ink)
                     .lineLimit(2)
@@ -79,6 +83,7 @@ struct TVContinueView: View {
                     .opacity(metaLine.isEmpty ? 0 : 1)
 
                 Text(overviewText)
+                    .contentTransition(.opacity)
                     .font(.subheadline)
                     .foregroundStyle(theme.inkMuted)
                     .lineLimit(4)
@@ -91,12 +96,16 @@ struct TVContinueView: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(theme.olive)
                         .monospacedDigit()
+                        .contentTransition(.numericText(value: Double(progress.watched)))
                         .frame(minWidth: 36, alignment: .trailing)
                 }
                 Text(progress.caption)
                     .font(.caption)
                     .foregroundStyle(theme.inkMuted)
+                    .contentTransition(.numericText(value: Double(progress.watched)))
             }
+            .animation(reduceMotion ? nil : MarqueeMotion.standard, value: progress.watched)
+            .animation(reduceMotion ? nil : MarqueeMotion.standard, value: episode?.id)
         }
     }
 

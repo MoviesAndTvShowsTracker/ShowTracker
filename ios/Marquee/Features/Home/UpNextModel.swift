@@ -8,6 +8,7 @@ final class UpNextModel {
     struct Toast: Equatable {
         let id = UUID()
         let title: String
+        var finished = false
     }
 
     private(set) var items: [UpNextItem]
@@ -64,7 +65,13 @@ final class UpNextModel {
                 }
             }
             lastMark = (index, item, body)
-            toast = Toast(title: "Logged \(item.track.tvTitle ?? "show") S\(body.seasonNumber)E\(body.episodeNumber)")
+            let title = item.track.tvTitle ?? "show"
+            if result.updated?.status == "completed" {
+                toast = Toast(title: "Finished \(title).", finished: true)
+                Haptics.success()
+            } else {
+                toast = Toast(title: "Logged \(title) S\(body.seasonNumber)E\(body.episodeNumber)")
+            }
             if !justMarked.contains(item.id) { flashCheck(item.id) }
             onChange()
         } catch {

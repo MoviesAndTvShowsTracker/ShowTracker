@@ -214,10 +214,19 @@ struct PosterRail: View {
 }
 
 struct StarRatingView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var rating: Double
     var maxStars: Int = 5
     var editable: Bool = true
     var size: Font = .title3
+    /// Per-star tap counts, so only the star you touched bounces.
+    @State private var taps: [Int: Int] = [:]
+
+    private func set(_ value: Double, star: Int) {
+        withAnimation(reduceMotion ? nil : MarqueeMotion.micro) { rating = value }
+        taps[star, default: 0] += 1
+        Haptics.light()
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -228,20 +237,16 @@ struct StarRatingView: View {
                     Image(systemName: starSymbol(for: full))
                         .font(size)
                         .foregroundStyle(MarqueeColor.hibiscus)
+                        .contentTransition(.symbolEffect(.replace.downUp))
+                        .symbolEffect(.bounce.up, options: .speed(1.4), value: reduceMotion ? 0 : taps[star, default: 0])
                     if editable {
                         HStack(spacing: 0) {
                             Color.clear
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    rating = half
-                                    Haptics.light()
-                                }
+                                .onTapGesture { set(half, star: star) }
                             Color.clear
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    rating = full
-                                    Haptics.light()
-                                }
+                                .onTapGesture { set(full, star: star) }
                         }
                     }
                 }
