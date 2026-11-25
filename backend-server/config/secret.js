@@ -8,4 +8,11 @@ function secretStatus(env = process.env) {
   return { secret: DEV_FALLBACK, problem };
 }
 
-module.exports = { secretStatus };
+/** The secret to sign with; production refuses to start without one (confirmed set on Render). */
+function requireSecret(env = process.env) {
+  const { secret, problem } = secretStatus(env);
+  if (problem) throw new Error(`${problem} Set it before starting the server.`);
+  return secret;
+}
+
+module.exports = { secretStatus, requireSecret };

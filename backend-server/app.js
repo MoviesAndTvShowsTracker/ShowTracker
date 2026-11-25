@@ -7,6 +7,7 @@ var logger = require('morgan');
 const { requestTimer, startLoopMonitor } = require('./lib/metrics');
 const { createRateLimiter } = require('./lib/rateLimit');
 const { errorResponse } = require('./lib/errors');
+const { securityHeaders } = require('./lib/securityHeaders');
 const config = require('./config/keys');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -39,13 +40,7 @@ var app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// Baseline security headers for a JSON API (no HTML pages to frame or sniff).
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  next();
-});
+app.use(securityHeaders);
 
 var cors = require('cors');
 
