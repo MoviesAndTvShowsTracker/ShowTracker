@@ -3,6 +3,17 @@ import Foundation
 enum DiaryService {
     // MARK: Movies
 
+    /// Downloads the diary export and saves it to a temporary file ready to share (URL and size).
+    static func exportDiary(_ format: DiaryExportFormat) async throws -> (url: URL, bytes: Int) {
+        let data = try await APIClient.shared.getData(
+            "/api/diary/export",
+            query: [URLQueryItem(name: "format", value: format.query)]
+        )
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(format.fileName())
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        return (url, data.count)
+    }
+
     /// Catalogue badge data. Revalidated with ETag, so an unchanged diary costs a 304.
     static func diaryIndex() async throws -> DiaryIndexResponse {
         try await APIClient.shared.get("/api/diary/index")

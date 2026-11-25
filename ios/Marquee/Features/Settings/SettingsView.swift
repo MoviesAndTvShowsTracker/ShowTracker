@@ -71,6 +71,11 @@ struct SettingsView: View {
                 } label: {
                     SettingsLabel("Import from TV Time", systemImage: "square.and.arrow.down")
                 }
+                NavigationLink {
+                    ExportDiaryView()
+                } label: {
+                    SettingsLabel("Export your diary", systemImage: "square.and.arrow.up")
+                }
                 Button {
                     preferences.clearSearchHistory()
                     Haptics.success()

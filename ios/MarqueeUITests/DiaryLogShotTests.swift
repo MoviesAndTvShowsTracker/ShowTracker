@@ -76,3 +76,35 @@ extension DiaryLogShotTests {
         }
     }
 }
+
+extension DiaryLogShotTests {
+    func testExport() throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let email = env["MARQUEE_SHOT_EMAIL"], let password = env["MARQUEE_SHOT_PASSWORD"] else {
+            throw XCTSkip("No seeded account")
+        }
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-debugEmail=\(email)", "-debugPassword=\(password)",
+            "-apiBaseURL", env["MARQUEE_SHOT_API"] ?? "http://localhost:5055",
+            "-startTab=you",
+        ]
+        app.launch()
+        let attach = { (name: String) in
+            let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; self.add(a)
+        }
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 15))
+        settings.tap()
+        let export = app.buttons["Export your diary"]
+        for _ in 0..<4 where !export.isHittable { app.swipeUp(velocity: .slow) }
+        export.tap()
+        sleep(1)
+        attach("6-export")
+        app.buttons["Prepare export"].tap()
+        let share = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Share'")).firstMatch
+        XCTAssertTrue(share.waitForExistence(timeout: 15))
+        sleep(1)
+        attach("7-export-ready")
+    }
+}

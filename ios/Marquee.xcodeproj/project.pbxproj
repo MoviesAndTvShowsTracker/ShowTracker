@@ -25,6 +25,7 @@
 		21B02D925B47A540DA99987B /* ErrorStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F403992781B93F372C8B0F11 /* ErrorStateView.swift */; };
 		22084A9A4E0321E672A4AC85 /* ProfileEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DDA0433BAFB62BE73F1880 /* ProfileEdit.swift */; };
 		222B5F0B1CA5C9954CACC472 /* HomeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5587707C01F6F92D6D0B3CE9 /* HomeSchedule.swift */; };
+		2294E5494177683633EA67C2 /* DiaryExportFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F2B4CF916DBE8236797069 /* DiaryExportFormat.swift */; };
 		23276642CCA88BB75767DBED /* LaunchTiming.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC159E29E1428B6204B55E2 /* LaunchTiming.swift */; };
 		270FEE28BADE67EB6AA27795 /* MarqueeVisualUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67DE099591FD4E4ECEEA093 /* MarqueeVisualUITests.swift */; };
 		273676622AA62EEBEAF82BA8 /* MovieDetailPolishUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A86612A3BFC7C99673E1BD7 /* MovieDetailPolishUITests.swift */; };
@@ -49,6 +50,7 @@
 		4A5EFB6F443E2A719A8DE513 /* MediaDetailShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E3BBD68ED2CD2A815AE163C /* MediaDetailShell.swift */; };
 		4F02FB4B185C5FA067A9733F /* SwipeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = E124EF284A5E5A27001E90C6 /* SwipeBack.swift */; };
 		4F646CF8A61B195730C36F65 /* AuthChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61808C50465A2A227EE63BAB /* AuthChrome.swift */; };
+		519E14D1CC4D9DAD0E7465CE /* DiaryExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F40FF2DCB9BF4B18AAC7F9 /* DiaryExportTests.swift */; };
 		52442763865210EF4C34BBE5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6AFED27CD3FF1E062137241F /* PrivacyInfo.xcprivacy */; };
 		528B462DC39BAAD11715776F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E1C91523079756EDFCC574 /* MainTabView.swift */; };
 		5366B1483C341EDFAA435099 /* FreshnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00F606FB4A03D9B172975ACB /* FreshnessTests.swift */; };
@@ -92,6 +94,7 @@
 		9AB9DCBF9FD490D258F3C2A5 /* ShowProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37095F35B989872BBA4B99A9 /* ShowProgress.swift */; };
 		9C69AE377FB87A97930853CA /* LobbyStatsVisuals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203F3245C5F2ED925B806427 /* LobbyStatsVisuals.swift */; };
 		9CBCDD367ADDD130F9514D36 /* HeroCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A7EFBC0F456A8329839FD6 /* HeroCarousel.swift */; };
+		9D20BE6AC9E6AE237EEBAA9A /* ExportDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EE8A00FA8BE6C1650D6532 /* ExportDiaryView.swift */; };
 		A00862D711F4A815A2CCA520 /* EpisodeLogTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550440DFDD21FC1A959E8D68 /* EpisodeLogTarget.swift */; };
 		A55F0043F11246BE6BD56792 /* DiaryActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE548A2874690602B4A3562 /* DiaryActivityView.swift */; };
 		A787C71EC0592865BBDF9900 /* EpisodePlaysTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 772EA66D6A47B63699EC52A1 /* EpisodePlaysTests.swift */; };
@@ -235,6 +238,7 @@
 		5675595E83BB3CAC0252B524 /* MarqueeWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeWidgets.swift; sourceTree = "<group>"; };
 		5766ABB3F6FD070D29A7016D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		59D15FA5617EB176D557EA51 /* Skeletons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeletons.swift; sourceTree = "<group>"; };
+		59F2B4CF916DBE8236797069 /* DiaryExportFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryExportFormat.swift; sourceTree = "<group>"; };
 		5AD95B7E214227F1C398E970 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5C345BFA1BA9318A2EF83954 /* Atmosphere.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Atmosphere.swift; sourceTree = "<group>"; };
 		5C42916F4B5F2EF9AFA4D909 /* KeychainStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStoreTests.swift; sourceTree = "<group>"; };
@@ -263,6 +267,7 @@
 		8303538E8B26AC4A98F1AD06 /* StatsChapters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsChapters.swift; sourceTree = "<group>"; };
 		84516D28A281EAA8D5B69914 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		848536B67D7EABDBB10E504E /* BrowseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseModels.swift; sourceTree = "<group>"; };
+		84EE8A00FA8BE6C1650D6532 /* ExportDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportDiaryView.swift; sourceTree = "<group>"; };
 		861FDAC60B6CED103FA4564E /* StatsExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsExtras.swift; sourceTree = "<group>"; };
 		86A7D609F9D3D3B4CCFDA71E /* StatsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsModels.swift; sourceTree = "<group>"; };
 		8BFE372EE43F08FB8680BFA4 /* StatsCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCharts.swift; sourceTree = "<group>"; };
@@ -291,6 +296,7 @@
 		AD2D378EA169072EF9D6E463 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		AE4D3606E3C5198CAF8D2257 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		AFEF23C7DA78F1793DA99919 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
+		B1F40FF2DCB9BF4B18AAC7F9 /* DiaryExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryExportTests.swift; sourceTree = "<group>"; };
 		B352893C356EAA0D660DE7B8 /* FilmShelves.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmShelves.swift; sourceTree = "<group>"; };
 		B3AE94CA78662D8193C5FE16 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
 		B5721E074EC18658D0CAC21C /* PrivacyManifestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyManifestTests.swift; sourceTree = "<group>"; };
@@ -425,6 +431,7 @@
 			isa = PBXGroup;
 			children = (
 				B3AE94CA78662D8193C5FE16 /* APIClientTests.swift */,
+				B1F40FF2DCB9BF4B18AAC7F9 /* DiaryExportTests.swift */,
 				A2A26AF46A912A9C5A4EAAF3 /* DiaryIndexTests.swift */,
 				E89B9CCDF91AD5B361BAAF94 /* EpisodeOrderTests.swift */,
 				772EA66D6A47B63699EC52A1 /* EpisodePlaysTests.swift */,
@@ -446,6 +453,7 @@
 		63D62DDE3068D401E8AFE42D /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				84EE8A00FA8BE6C1650D6532 /* ExportDiaryView.swift */,
 				795558EF6DEF10FFD62A3A2E /* SettingsSubpages.swift */,
 				D9ADB060330D18F40B2E24A6 /* SettingsView.swift */,
 			);
@@ -574,6 +582,7 @@
 				1ED4562473CCEE8C05264FC7 /* AppPreferences.swift */,
 				4FFFDD199442624DFA77ECA3 /* AuthModels.swift */,
 				9C0CA2C6489447764AC72E2A /* AuthStore.swift */,
+				59F2B4CF916DBE8236797069 /* DiaryExportFormat.swift */,
 				2EED6F55DAFA1EFB4CA67001 /* DiaryModels.swift */,
 				68A37F9332F963CC1AA008A7 /* DiaryNote.swift */,
 				A9EBDE5E160366D8BB89E26E /* DiaryService.swift */,
@@ -855,6 +864,7 @@
 				D2D1D76151544F6AD485CD83 /* CatalogShelves.swift in Sources */,
 				A55F0043F11246BE6BD56792 /* DiaryActivityView.swift in Sources */,
 				EDC8E2826C63C76E984290A2 /* DiaryChrome.swift in Sources */,
+				2294E5494177683633EA67C2 /* DiaryExportFormat.swift in Sources */,
 				6CC27A74D55F8B252DB8F636 /* DiaryModels.swift in Sources */,
 				67BB00EEF5E63BF04C48C0FA /* DiaryNote.swift in Sources */,
 				496E732E14D3F1460B6CE86E /* DiaryNoteField.swift in Sources */,
@@ -865,6 +875,7 @@
 				AE044F6ECA15AE7AB2CC3189 /* EpisodeOrder.swift in Sources */,
 				2AFE88D290AB129ECEBEC1A3 /* EpisodePlays.swift in Sources */,
 				21B02D925B47A540DA99987B /* ErrorStateView.swift in Sources */,
+				9D20BE6AC9E6AE237EEBAA9A /* ExportDiaryView.swift in Sources */,
 				FA38DB52F401A61479DAE50B /* Feedback.swift in Sources */,
 				2D754DAFF63339981485786A /* FilmDiaryIndex.swift in Sources */,
 				0F4B65E7E2B4DAB4BB5D4BC6 /* FilmLogTarget.swift in Sources */,
@@ -977,6 +988,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				39AFA6BFE6B1ABC8DD595262 /* APIClientTests.swift in Sources */,
+				519E14D1CC4D9DAD0E7465CE /* DiaryExportTests.swift in Sources */,
 				413C7E5CEBB003E44E9B1994 /* DiaryIndexTests.swift in Sources */,
 				738FCFC073CE7E4BB989B010 /* EpisodeOrderTests.swift in Sources */,
 				A787C71EC0592865BBDF9900 /* EpisodePlaysTests.swift in Sources */,
