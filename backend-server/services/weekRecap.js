@@ -7,10 +7,27 @@ const { mergeEpisodePlaysForTime } = require('./userStatsDashboard');
 const {
   resolveTimeZone,
   periodBounds,
-  dateKeyInZone,
   computeStreakFromDaySet,
 } = require('./statsCalendar');
 const { dedupeFilms } = require('./filmDedupe');
+
+/** Distinct local days with any play, computed in MongoDB (a few hundred keys, not every play). */
+function dayKeysPipeline(userId, timeZone) {
+  return [
+    { $match: { userFrom: userId, watchedAt: { $ne: null } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$watchedAt', timezone: timeZone } } } },
+  ];
+}
+
+async function activeDayKeys(userId, timeZone) {
+  const pipeline = dayKeysPipeline(userId, timeZone);
+  const lists = await Promise.all([
+    TvEpisodeWatch.aggregate(pipeline),
+    TvRewatchEpisode.aggregate(pipeline),
+    Watch.aggregate(pipeline),
+  ]);
+  return new Set(lists.flat().map((row) => row._id));
+}
 
 async function buildWeekRecap(userId, options = {}) {
   const timeZone = resolveTimeZone(options.timeZone);
@@ -46,7 +63,7 @@ async function buildWeekRecap(userId, options = {}) {
   }
 
   const bounds = periodBounds(timeZone);
-  const [weekCanonical, weekRewatches, weekFilms, allEpisodes, allRewatches, allFilms] =
+  const [weekCanonical, weekRewatches, weekFilms, daySet] =
     await Promise.all([
       TvEpisodeWatch.find({
         userFrom: userId,
@@ -60,22 +77,12 @@ async function buildWeekRecap(userId, options = {}) {
         userFrom: userId,
         watchedAt: { $gte: bounds.weekStartDate },
       }).lean(),
-      TvEpisodeWatch.find({ userFrom: userId }).select('watchedAt runtimeMinutes tvId seasonNumber episodeNumber').lean(),
-      TvRewatchEpisode.find({ userFrom: userId }).select('watchedAt runtimeMinutes tvId seasonNumber episodeNumber').lean(),
-      Watch.find({ userFrom: userId }).select('watchedAt movieId').lean(),
+      activeDayKeys(userId, timeZone),
     ]);
 
   // Unique titles for the week card; every play date feeds the streak + watch time.
   const films = dedupeFilms(weekFilms);
   const weekPlays = mergeEpisodePlaysForTime(weekCanonical, weekRewatches);
-  const allPlays = mergeEpisodePlaysForTime(allEpisodes, allRewatches);
-  const allFilmKeys = allFilms
-    .filter((f) => f.watchedAt)
-    .map((f) => dateKeyInZone(f.watchedAt, timeZone));
-  const daySet = new Set([
-    ...allPlays.filter((ep) => ep.watchedAt).map((ep) => dateKeyInZone(ep.watchedAt, timeZone)),
-    ...allFilmKeys,
-  ]);
 
   const episodesThisWeek = weekCanonical.length;
   const filmsThisWeek = films.length;
@@ -137,4 +144,4 @@ function buildWeekInsight({ filmsThisWeek, episodesThisWeek, totalMinsThisWeek, 
   return { kind: 'time', text: 'Time is on the clock — keep going.' };
 }
 
-module.exports = { buildWeekRecap, buildWeekInsight };
+module.exports = { buildWeekRecap, buildWeekInsight, dayKeysPipeline, activeDayKeys };
