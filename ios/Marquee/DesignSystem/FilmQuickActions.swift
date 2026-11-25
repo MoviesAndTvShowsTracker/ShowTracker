@@ -15,23 +15,32 @@ struct FilmQuickActions: ViewModifier {
                 }
             }
             .contextMenu {
-                let queued = index.watchlist.contains(item.id)
-                Button {
-                    run(queued ? "Couldn't update your watchlist. Try again." : "Couldn't add to your watchlist. Try again.") {
-                        try await index.toggleWatchlist(item)
-                    }
-                } label: {
-                    Label(queued ? "Remove from watchlist" : "Add to watchlist",
-                          systemImage: queued ? "bookmark.slash" : "bookmark")
-                }
-                Button {
-                    run("Couldn't log that film. Try again.") { try await index.markWatched(item) }
-                } label: {
-                    Label(index.watchCounts[item.id] == nil ? "Mark watched" : "Log again", systemImage: "checkmark.circle")
-                }
-                if let url = URL(string: "https://www.themoviedb.org/movie/\(item.id)") {
-                    ShareLink(item: url, subject: Text(item.displayTitle)) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                let options = QuickActionMenu.film(
+                    loaded: index.isLoaded,
+                    watchCount: index.watchCounts[item.id] ?? 0,
+                    onWatchlist: index.watchlist.contains(item.id)
+                )
+                ForEach(options, id: \.self) { option in
+                    switch option {
+                    case .markWatched, .logAgain:
+                        Button {
+                            run("Couldn't log that film. Try again.") { try await index.markWatched(item) }
+                        } label: {
+                            Label(option == .logAgain ? "Log again today" : "Mark watched", systemImage: "checkmark.circle")
+                        }
+                    case .addToWatchlist, .removeFromWatchlist:
+                        Button {
+                            run("Couldn't update your watchlist. Try again.") { try await index.toggleWatchlist(item) }
+                        } label: {
+                            Label(option == .removeFromWatchlist ? "Remove from watchlist" : "Add to watchlist",
+                                  systemImage: option == .removeFromWatchlist ? "bookmark.slash" : "bookmark")
+                        }
+                    case .share:
+                        if let url = URL(string: "https://www.themoviedb.org/movie/\(item.id)") {
+                            ShareLink(item: url, subject: Text(item.displayTitle)) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
                     }
                 }
             }
@@ -64,20 +73,32 @@ struct TVQuickActions: ViewModifier {
                 }
             }
             .contextMenu {
-                let queued = index.watchlist.contains(item.id)
-                Button {
-                    Task { @MainActor in
-                        do { try await index.toggleWatchlist(item); Haptics.success() } catch {
-                            Feedback.failed("Couldn't update your watchlist. Try again.")
+                let options = QuickActionMenu.show(
+                    loaded: index.isLoaded,
+                    tracked: index.seen.contains(item.id),
+                    onWatchlist: index.watchlist.contains(item.id)
+                )
+                ForEach(options, id: \.self) { option in
+                    switch option {
+                    case .addToWatchlist, .removeFromWatchlist:
+                        Button {
+                            Task { @MainActor in
+                                do { try await index.toggleWatchlist(item); Haptics.success() } catch {
+                                    Feedback.failed("Couldn't update your watchlist. Try again.")
+                                }
+                            }
+                        } label: {
+                            Label(option == .removeFromWatchlist ? "Remove from watchlist" : "Add to watchlist",
+                                  systemImage: option == .removeFromWatchlist ? "bookmark.slash" : "bookmark")
                         }
-                    }
-                } label: {
-                    Label(queued ? "Remove from watchlist" : "Add to watchlist",
-                          systemImage: queued ? "bookmark.slash" : "bookmark")
-                }
-                if let url = URL(string: "https://www.themoviedb.org/tv/\(item.id)") {
-                    ShareLink(item: url, subject: Text(item.displayTitle)) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                    case .share:
+                        if let url = URL(string: "https://www.themoviedb.org/tv/\(item.id)") {
+                            ShareLink(item: url, subject: Text(item.displayTitle)) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    case .markWatched, .logAgain:
+                        EmptyView()
                     }
                 }
             }

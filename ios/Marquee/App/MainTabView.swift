@@ -43,6 +43,13 @@ struct MainTabView: View {
             // Don't prompt for push on every lobby open — sync only if already authorized.
             PushRegistration.syncIfAuthorized()
         }
+        // Poster badges and long-press menus everywhere read these; keep them current.
+        // Cheap when nothing changed (304 / skipped while fresh).
+        .task(id: tab) {
+            async let films: Void = FilmDiaryIndex.shared.refresh()
+            async let shows: Void = TVDiaryIndex.shared.refresh()
+            _ = await (films, shows)
+        }
     }
 
     private var tabBinding: Binding<AppTab> {

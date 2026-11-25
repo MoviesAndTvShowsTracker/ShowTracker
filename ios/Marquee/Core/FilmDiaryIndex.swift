@@ -13,7 +13,9 @@ final class FilmDiaryIndex {
     /// Most recent film rated 4+ (out of 5), for "Because you loved".
     private(set) var loved: (id: Int, title: String)?
 
-    @ObservationIgnored private var loadedAt: Date?
+    /// True once the diary has loaded; menus show only safe actions before that.
+    private(set) var isLoaded = false
+    @ObservationIgnored private var refreshing = false
 
     func mark(_ id: Int) -> DiaryStatusMark? {
         if let times = watchCounts[id] { return .watched(times: times) }
@@ -23,13 +25,18 @@ final class FilmDiaryIndex {
     /// Refreshes at most every 2 minutes unless forced.
     func refresh(force: Bool = false) async {
         if UITestingFixtures.isEnabled { return }
-        if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 120 { return }
+        // Any write anywhere marks this stale (Freshness), so menus and badges never lag a change.
+        if refreshing { return }
+        if !force, isLoaded, !Freshness.shared.isStale("film-index", window: 300) { return }
+        refreshing = true
+        defer { refreshing = false }
         do {
             let index = try await DiaryService.diaryIndex()
             watchCounts = index.watchCounts
             watchlist = index.watchlistIds
             loved = index.loved.flatMap { l in Int(l.id).map { ($0, l.title) } }
-            loadedAt = Date()
+            isLoaded = true
+            Freshness.shared.markLoaded("film-index")
             return
         } catch where !HomeService.shouldFallback(error) {
             return
@@ -51,7 +58,8 @@ final class FilmDiaryIndex {
         if let list = try? await listTask {
             watchlist = Set(list.compactMap { Int($0.movieId) })
         }
-        loadedAt = Date()
+        isLoaded = true
+        Freshness.shared.markLoaded("film-index")
     }
 
     func toggleWatchlist(_ item: MediaItem) async throws {

@@ -12,7 +12,9 @@ final class TVDiaryIndex {
     /// Most recently finished show rated 4+ (out of 5), for "Because you loved".
     private(set) var loved: (id: Int, title: String)?
 
-    @ObservationIgnored private var loadedAt: Date?
+    /// True once the diary has loaded; menus show only safe actions before that.
+    private(set) var isLoaded = false
+    @ObservationIgnored private var refreshing = false
 
     func mark(_ id: Int) -> DiaryStatusMark? {
         if seen.contains(id) { return .watched }
@@ -21,7 +23,11 @@ final class TVDiaryIndex {
 
     func refresh(force: Bool = false) async {
         if UITestingFixtures.isEnabled { return }
-        if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 120 { return }
+        // Any write anywhere marks this stale (Freshness), so menus and badges never lag a change.
+        if refreshing { return }
+        if !force, isLoaded, !Freshness.shared.isStale("tv-index", window: 300) { return }
+        refreshing = true
+        defer { refreshing = false }
         async let watchedTask = DiaryService.watchedTV()
         async let listTask = DiaryService.tvWatchlist()
         async let finishedTask = DiaryService.library(tab: "finished")
@@ -37,7 +43,8 @@ final class TVDiaryIndex {
                 .first { FilmDiaryIndex.stars($0.rating) >= 4 }
                 .flatMap { t in Int(t.tvId).map { ($0, t.tvTitle ?? "a show") } }
         }
-        loadedAt = Date()
+        isLoaded = true
+        Freshness.shared.markLoaded("tv-index")
     }
 
     func toggleWatchlist(_ item: MediaItem) async throws {
