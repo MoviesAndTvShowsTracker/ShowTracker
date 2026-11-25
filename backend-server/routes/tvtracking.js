@@ -17,6 +17,7 @@ const {
   STALE_DAYS,
 } = require('../services/tvTrackingMaintenance');
 const { normalizeRating } = require('../services/ratings');
+const { decideStatus, resolveProgress } = require('../services/tvCatalog');
 const { invalidateUserStats } = require('../services/statsCache');
 
 router.use(bodyParser.json());
@@ -36,10 +37,18 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
     return null;
   }
 
+  // Never rewrite next / status while a rewatch session owns Up Next / episode checks.
+  const rewatching = tracking.status === 'rewatching';
+
+  // TMDB's catalog decides the next episode and totals; client values are only a fallback.
+  const furthest = last ? { season: last.seasonNumber, episode: last.episodeNumber } : null;
+  const truth = rewatching ? null : await resolveProgress(tvId, furthest);
+  const facts = truth ? { ...extra, ...truth } : extra;
+
   const patch = {
     watchedEpisodeCount: count,
     lastWatchedAt: new Date(),
-    ...extra,
+    ...facts,
   };
 
   if (last) {
@@ -47,58 +56,36 @@ async function syncTrackingCounts(userId, tvId, extra = {}) {
     patch.lastEpisode = last.episodeNumber;
   }
 
-  const progressTotal =
-    extra.airedEpisodeCount ?? tracking.airedEpisodeCount ?? tracking.totalEpisodes;
-  const hasUnreleased =
-    tracking.totalEpisodes > 0 && progressTotal < tracking.totalEpisodes;
-
-  // Never rewrite status while a rewatch session owns Up Next / episode checks.
-  const rewatching = tracking.status === 'rewatching';
-
   if (!rewatching) {
-    if (progressTotal > 0 && count >= progressTotal) {
-      if (hasUnreleased && count < tracking.totalEpisodes) {
-        patch.status = 'watching';
-        if (!extra.nextSeason && !('nextSeason' in extra)) {
-          patch.nextSeason = null;
-          patch.nextEpisode = null;
-          patch.nextEpisodeName = null;
-        }
-      } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
-        patch.status = 'completed';
-        patch.nextSeason = null;
-        patch.nextEpisode = null;
-        patch.nextEpisodeName = null;
-        if (!tracking.timesCompleted || tracking.timesCompleted < 1) {
-          patch.timesCompleted = 1;
-        }
-      }
-    } else if (tracking.status === 'completed' && progressTotal > 0 && count < progressTotal) {
-      patch.status = 'watching';
-    } else if (tracking.totalEpisodes > 0 && count >= tracking.totalEpisodes) {
-      patch.status = 'completed';
+    const total = positive(facts.totalEpisodes) || positive(tracking.totalEpisodes);
+    const aired = positive(facts.airedEpisodeCount) || positive(tracking.airedEpisodeCount) || total;
+    const hasNext = facts.nextSeason != null ? facts.nextSeason > 0 : tracking.nextSeason > 0;
+    patch.status = decideStatus({
+      status: tracking.status,
+      count,
+      total,
+      aired,
+      hasNext,
+      resolved: Boolean(truth),
+    });
+    if (patch.status === 'completed') {
       patch.nextSeason = null;
       patch.nextEpisode = null;
       patch.nextEpisodeName = null;
       if (!tracking.timesCompleted || tracking.timesCompleted < 1) {
         patch.timesCompleted = 1;
       }
-    } else if (tracking.status === 'completed' && count < tracking.totalEpisodes) {
-      patch.status = 'watching';
     }
-
-    if (tracking.status === 'paused' && count > 0) {
-      patch.status = 'watching';
-    }
-  }
-
-  if (extra.airedEpisodeCount != null) {
-    patch.airedEpisodeCount = extra.airedEpisodeCount;
   }
 
   Object.assign(tracking, patch);
   await tracking.save();
   return tracking;
+}
+
+function positive(n) {
+  const v = Number(n);
+  return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
 router.post('/start', authenticate.verifyUser, async (req, res, next) => {

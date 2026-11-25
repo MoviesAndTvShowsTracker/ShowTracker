@@ -68,12 +68,9 @@ struct ShowProgress {
             if let s = track?.nextSeason, let e = track?.nextEpisode, s > 0, e > 0 {
                 return EpisodePointer(season: s, episode: e, name: track?.nextEpisodeName)
             }
-            if let last {
-                return EpisodePointer(season: last.season, episode: last.episode + 1)
-            }
-            if watched > 0 {
-                return EpisodePointer(season: 1, episode: watched + 1)
-            }
+            // The server sets next from TMDB's catalog. Once anything is watched, no next means
+            // caught up — never invent "last + 1", which may not exist.
+            if last != nil || watched > 0 { return nil }
             return EpisodePointer(season: 1, episode: 1)
         }()
 

@@ -678,8 +678,8 @@ struct TVDetailView: View {
             return !keys.contains("\(s)-\(candidate.episode_number)")
                 && (s > season || (s == season && candidate.episode_number > ep.episode_number))
         }
-        let nextSeason = later?.season_number ?? (later == nil ? season + 1 : season)
-        let nextEpisode = later?.episode_number ?? 1
+        // Only this season's episodes are loaded here; past its end the server picks the next
+        // real episode from TMDB, so don't guess "season + 1".
         let total = detail?.number_of_episodes
 
         return MarkEpisodeBody(
@@ -692,8 +692,8 @@ struct TVDetailView: View {
             tvPosterImage: detail?.poster_path,
             totalEpisodes: total,
             airedEpisodeCount: total,
-            nextSeason: nextSeason,
-            nextEpisode: nextEpisode,
+            nextSeason: later.map { $0.season_number ?? season },
+            nextEpisode: later?.episode_number,
             nextEpisodeName: later?.name
         )
     }

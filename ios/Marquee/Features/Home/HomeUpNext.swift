@@ -111,6 +111,7 @@ private struct UpNextRow: View {
     private var progress: ShowProgress { ShowProgress.from(track: track) }
     private var trailing: UpNextTrailing { HomeFeedLogic.trailing(for: item, today: today) }
     private var title: String { track.tvTitle ?? "Show" }
+    private var justMarked: Bool { model.justMarked.contains(item.id) }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -128,6 +129,8 @@ private struct UpNextRow: View {
             trailingControl
         }
         .padding(12)
+        .background(theme.oliveSoft.opacity(justMarked ? 1 : 0))
+        .animation(reduceMotion ? nil : MarqueeMotion.standard, value: justMarked)
         .accessibilityActions {
             if trailing == .mark {
                 Button("Mark watched") { Task { await model.mark(item) } }
@@ -146,10 +149,17 @@ private struct UpNextRow: View {
                     .font(.headline)
                     .foregroundStyle(theme.ink)
                     .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
-                Text(episodeLine)
-                    .font(.subheadline)
-                    .foregroundStyle(theme.inkMuted)
-                    .lineLimit(1)
+                // The episode line rolls up to the next one after a mark.
+                ZStack(alignment: .leading) {
+                    Text(episodeLine)
+                        .font(.subheadline)
+                        .foregroundStyle(theme.inkMuted)
+                        .lineLimit(1)
+                        .id(episodeLine)
+                        .transition(reduceMotion ? .opacity : .push(from: .bottom))
+                }
+                .clipped()
+                .animation(reduceMotion ? nil : MarqueeMotion.standard, value: episodeLine)
                 if let caption = HomeFeedLogic.progressCaption(progress) {
                     HStack(spacing: 8) {
                         ProgressTrack(progress: progress.fraction, completed: progress.isComplete)
@@ -158,7 +168,9 @@ private struct UpNextRow: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(theme.olive)
                             .monospacedDigit()
+                            .contentTransition(.numericText(value: Double(progress.watched)))
                     }
+                    .animation(reduceMotion ? nil : MarqueeMotion.standard, value: progress.watched)
                 }
             }
             Spacer(minLength: 0)
@@ -177,8 +189,8 @@ private struct UpNextRow: View {
     private var trailingControl: some View {
         switch trailing {
         case .mark:
-            let busy = model.marking.contains(item.id)
-            let done = model.justMarked.contains(item.id)
+            let done = justMarked
+            let busy = model.marking.contains(item.id) && !done
             Button {
                 Haptics.light()
                 Task { await model.mark(item) }

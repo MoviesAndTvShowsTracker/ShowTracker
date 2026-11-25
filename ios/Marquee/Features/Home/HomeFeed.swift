@@ -45,6 +45,7 @@ struct AgendaRow: Identifiable, Equatable {
 enum HomeFeedLogic {
     static func trailing(for item: UpNextItem, today: Date, calendar: Calendar = .current) -> UpNextTrailing {
         if item.track.status == "rewatching" { return .chevron }
+        if ShowProgress.from(track: item.track).next == nil { return .chevron }
         guard let raw = item.nextAirDate, let air = day(raw, calendar) else { return .mark }
         let start = calendar.startOfDay(for: today)
         if air <= start { return .mark }

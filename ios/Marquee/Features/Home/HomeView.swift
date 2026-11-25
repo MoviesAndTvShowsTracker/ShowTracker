@@ -11,7 +11,8 @@ struct HomeView: View {
     @State private var error: String?
     @State private var upNext = UpNextModel(
         mark: { try await EpisodeMarker.markNext(track: $0, catalogTotal: nil, runtime: nil, episodeName: nil) },
-        undo: { try await EpisodeMarker.undo($0) }
+        undo: { try await EpisodeMarker.undo($0) },
+        preview: { await EpisodeMarker.preview(track: $0) }
     )
 
     private var greetingName: String {
@@ -97,6 +98,8 @@ struct HomeView: View {
     private func apply(_ next: HomeFeed) {
         feed = next
         upNext.replace(next.upNext)
+        let tracks = next.upNext.prefix(6).map(\.track)
+        Task { await EpisodeMarker.prefetch(Array(tracks)) }
     }
 
     private func load() async {

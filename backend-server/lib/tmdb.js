@@ -193,8 +193,7 @@ async function getTvMetaBatch(tvIds, { maxFetches = DEFAULT_MAX_FETCHES, priorit
 const SEASON_TTL_MS = 6 * 60 * 60 * 1000;
 const seasonCache = new Map();
 
-async function getTvSeason(tvId, season) {
-  const key = `tv/${tvId}/season/${season}`;
+async function getExpiring(key) {
   const hit = seasonCache.get(key);
   if (hit && Date.now() - hit.at < SEASON_TTL_MS) return hit.data;
   const data = await fetchTmdb(key);
@@ -206,8 +205,18 @@ async function getTvSeason(tvId, season) {
   return data;
 }
 
+async function getTvSeason(tvId, season) {
+  return getExpiring(`tv/${tvId}/season/${season}`);
+}
+
+/** Full show detail (seasons, last aired episode). Expires like seasons, so new seasons appear. */
+async function getTvShow(tvId) {
+  return getExpiring(`tv/${tvId}`);
+}
+
 module.exports = {
   getTvSeason,
+  getTvShow,
   getMovieMeta,
   getTvMeta,
   getMovieMetaBatch,

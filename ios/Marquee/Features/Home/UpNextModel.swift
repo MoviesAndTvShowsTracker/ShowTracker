@@ -18,6 +18,7 @@ final class UpNextModel {
 
     @ObservationIgnored private let markAction: (TrackingRecord) async throws -> EpisodeMarker.Result
     @ObservationIgnored private let undoAction: (MarkEpisodeBody) async throws -> Void
+    @ObservationIgnored private let previewAction: (TrackingRecord) async -> TrackingRecord?
     @ObservationIgnored var onChange: () -> Void
     @ObservationIgnored private var lastMark: (index: Int, item: UpNextItem, body: MarkEpisodeBody)?
 
@@ -25,11 +26,13 @@ final class UpNextModel {
         items: [UpNextItem] = [],
         mark: @escaping (TrackingRecord) async throws -> EpisodeMarker.Result,
         undo: @escaping (MarkEpisodeBody) async throws -> Void,
+        preview: @escaping (TrackingRecord) async -> TrackingRecord? = { _ in nil },
         onChange: @escaping () -> Void = {}
     ) {
         self.items = items
         self.markAction = mark
         self.undoAction = undo
+        self.previewAction = preview
         self.onChange = onChange
     }
 
@@ -42,6 +45,11 @@ final class UpNextModel {
         guard !marking.contains(item.id), let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         marking.insert(item.id)
         defer { marking.remove(item.id) }
+        // Advance the row now; the server call confirms it (or we put it back).
+        if let guess = await previewAction(item.track), let i = items.firstIndex(where: { $0.id == item.id }) {
+            items[i] = UpNextItem(track: guess, nextAirDate: nil)
+            flashCheck(item.id)
+        }
         do {
             let result = try await markAction(item.track)
             let body = result.body
@@ -57,9 +65,11 @@ final class UpNextModel {
             }
             lastMark = (index, item, body)
             toast = Toast(title: "Logged \(item.track.tvTitle ?? "show") S\(body.seasonNumber)E\(body.episodeNumber)")
-            flashCheck(item.id)
+            if !justMarked.contains(item.id) { flashCheck(item.id) }
             onChange()
         } catch {
+            if let i = items.firstIndex(where: { $0.id == item.id }) { items[i] = item }
+            justMarked.remove(item.id)
             errorMessage = "Couldn’t log that. Try again."
         }
     }
@@ -90,13 +100,10 @@ final class UpNextModel {
     }
 
     private func advanced(_ t: TrackingRecord, by body: MarkEpisodeBody) -> TrackingRecord {
-        TrackingRecord(
-            tvId: t.tvId, status: t.status, tvTitle: t.tvTitle, tvPosterImage: t.tvPosterImage, tvPost: t.tvPost,
-            rating: t.rating, nextSeason: body.nextSeason, nextEpisode: body.nextEpisode,
-            nextEpisodeName: body.nextEpisodeName, lastSeason: body.seasonNumber, lastEpisode: body.episodeNumber,
-            watchedEpisodeCount: (t.watchedEpisodeCount ?? 0) + 1, totalEpisodes: t.totalEpisodes,
-            airedEpisodeCount: t.airedEpisodeCount, timesCompleted: t.timesCompleted,
-            activeRewatchSessionId: t.activeRewatchSessionId
-        )
+        let watched = EpisodePointer(season: body.seasonNumber, episode: body.episodeNumber)
+        let next = body.nextSeason.flatMap { season in
+            body.nextEpisode.map { EpisodePointer(season: season, episode: $0, name: body.nextEpisodeName) }
+        }
+        return EpisodeMarker.advanced(t, watched: watched, next: next)
     }
 }

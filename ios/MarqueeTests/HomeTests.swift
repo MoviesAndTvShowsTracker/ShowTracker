@@ -64,6 +64,52 @@ final class HomeTests: XCTestCase {
         XCTAssertNil(model.toast)
     }
 
+    func testRowAdvancesBeforeServerAndRollsBackOnFailure() async {
+        var seenDuringMark: Int?
+        var model: UpNextModel!
+        model = UpNextModel(
+            items: [item("1")],
+            mark: { _ in
+                seenDuringMark = model.items[0].track.nextEpisode
+                throw APIError.empty
+            },
+            undo: { _ in },
+            preview: { EpisodeMarker.advanced($0, watched: EpisodePointer(season: 1, episode: 5), next: EpisodePointer(season: 1, episode: 6)) }
+        )
+        await model.mark(model.items[0])
+        XCTAssertEqual(seenDuringMark, 6)
+        XCTAssertEqual(model.items[0].track.nextEpisode, 5)
+        XCTAssertNotNil(model.errorMessage)
+        XCTAssertNil(model.toast)
+    }
+
+    func testNoInventedNextEpisode() {
+        // Watched the finale; the server says nothing is next. Never "S1E9" or "S2E1".
+        let done = TrackingRecord(tvId: "1", status: "watching", lastSeason: 1, lastEpisode: 8, watchedEpisodeCount: 8)
+        XCTAssertNil(ShowProgress.from(track: done).next)
+        let counted = TrackingRecord(tvId: "1", status: "watching", watchedEpisodeCount: 3)
+        XCTAssertNil(ShowProgress.from(track: counted).next)
+        // A new show still starts at S1E1.
+        let fresh = TrackingRecord(tvId: "1", status: "watching")
+        XCTAssertEqual(ShowProgress.from(track: fresh).next, EpisodePointer(season: 1, episode: 1))
+    }
+
+    func testNoMarkButtonWithoutNextEpisode() {
+        let caughtUp = UpNextItem(track: TrackingRecord(tvId: "1", status: "watching", lastSeason: 1, lastEpisode: 8, watchedEpisodeCount: 8), nextAirDate: nil)
+        XCTAssertEqual(HomeFeedLogic.trailing(for: caughtUp, today: today, calendar: cal), .chevron)
+    }
+
+    func testLaterInSeasonNeverCrossesSeasons() {
+        func ep(_ n: Int) -> TVEpisode {
+            TVEpisode(id: n, name: "E\(n)", overview: nil, still_path: nil, episode_number: n, season_number: 1, runtime: nil, air_date: nil)
+        }
+        let season = [ep(1), ep(2), ep(3)]
+        XCTAssertEqual(EpisodeMarker.laterInSeason(after: EpisodePointer(season: 1, episode: 2), seasonEpisodes: season),
+                       EpisodePointer(season: 1, episode: 3, name: "E3"))
+        XCTAssertNil(EpisodeMarker.laterInSeason(after: EpisodePointer(season: 1, episode: 3), seasonEpisodes: season))
+        XCTAssertNil(EpisodeMarker.laterInSeason(after: EpisodePointer(season: 2, episode: 1), seasonEpisodes: nil))
+    }
+
     func testFallbackOnlyOn404() {
         XCTAssertTrue(HomeService.shouldFallback(APIError.server(message: "x", status: 404)))
         XCTAssertFalse(HomeService.shouldFallback(APIError.server(message: "x", status: 500)))

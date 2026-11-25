@@ -13,6 +13,28 @@ const {
 const { invalidateUserStats } = require('../services/statsCache');
 const { normalizeRating } = require('../services/ratings');
 const { mergeEpisodePlaysForTime } = require('../services/userStatsDashboard');
+const { episodeExists, loadCatalog } = require('../services/tvCatalog');
+
+/** Episodes TMDB doesn't list (e.g. a season that doesn't exist). Specials and an unreachable TMDB pass. */
+async function unknownEpisodes(tvId, episodes) {
+  const catalog = await loadCatalog(tvId);
+  if (!catalog) return [];
+  const checks = await Promise.all(
+    episodes.map(async (ep) => {
+      if (Number(ep.seasonNumber) === 0) return null;
+      const ok = await episodeExists(tvId, catalog, ep.seasonNumber, ep.episodeNumber);
+      return ok ? null : ep;
+    })
+  );
+  return checks.filter(Boolean);
+}
+
+function notListed(res, ep) {
+  return res.status(400).json({
+    success: false,
+    message: `S${ep.seasonNumber}E${ep.episodeNumber} isn't listed for this show.`,
+  });
+}
 
 router.use(bodyParser.json());
 
@@ -91,6 +113,9 @@ router.post('/mark', authenticate.verifyUser, async (req, res, next) => {
     };
     if (req.body.rating !== undefined) epSet.rating = rating;
 
+    const [missing] = await unknownEpisodes(tvId, [{ seasonNumber, episodeNumber }]);
+    if (missing) return notListed(res, missing);
+
     await TvEpisodeWatch.findOneAndUpdate(
       { userFrom: userId, tvId, seasonNumber, episodeNumber },
       epSet,
@@ -157,6 +182,9 @@ router.post('/mark-batch', authenticate.verifyUser, async (req, res, next) => {
     if (!Array.isArray(episodes) || !episodes.length) {
       return res.status(400).json({ success: false, message: 'No episodes provided' });
     }
+
+    const missing = await unknownEpisodes(tvId, episodes);
+    if (missing.length) return notListed(res, missing[0]);
 
     await Promise.all(
       episodes.map((ep) =>

@@ -148,8 +148,11 @@ enum DiaryService {
         return res.episodes ?? []
     }
 
-    static func markEpisode(_ body: MarkEpisodeBody) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/episodes/mark", body: body)
+    /// Returns the show's updated tracking, so callers don't need a second request.
+    @discardableResult
+    static func markEpisode(_ body: MarkEpisodeBody) async throws -> TrackingRecord? {
+        let res: TrackingShowResponse = try await APIClient.shared.post("/api/tv/episodes/mark", body: body)
+        return res.tracking
     }
 
     static func unmarkEpisode(_ body: MarkEpisodeBody) async throws {
