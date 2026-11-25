@@ -44,4 +44,25 @@ function profileEmailUpdate(user, rawEmail) {
   return { email, emailVerified: false };
 }
 
-module.exports = { uniqueUsername, normalizeEmail, findUserByEmail, emailTakenFilter, profileEmailUpdate };
+/** Only the account owner may read their profile. */
+function canReadProfile(requesterId, targetId) {
+  return String(requesterId) === String(targetId);
+}
+
+const PROFILE_FIELDS = ['_id', 'email', 'username', 'firstName', 'lastName', 'phonenumber', 'emailVerified', 'createdAt', 'updatedAt'];
+
+/** The profile fields clients use; never provider ids, flags or password internals. */
+function publicProfile(user) {
+  const src = user && typeof user.toObject === 'function' ? user.toObject() : user || {};
+  return Object.fromEntries(PROFILE_FIELDS.filter((k) => src[k] !== undefined).map((k) => [k, src[k]]));
+}
+
+module.exports = {
+  uniqueUsername,
+  normalizeEmail,
+  findUserByEmail,
+  emailTakenFilter,
+  profileEmailUpdate,
+  canReadProfile,
+  publicProfile,
+};

@@ -12,6 +12,8 @@ const {
   findUserByEmail,
   emailTakenFilter,
   profileEmailUpdate,
+  canReadProfile,
+  publicProfile,
 } = require('../lib/userHelpers');
 const { sendPasswordResetEmail } = require('../lib/mail');
 const {
@@ -189,15 +191,12 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// Your own profile only: someone else's id answers 404, like an id that doesn't exist.
 router.get('/getUser/:id', authenticate.verifyUser, (req, res) => {
-  User.findById(req.params.id)
-    .then((found) => {
-      if (!found) {
-        return res.status(404).send();
-      }
-      return res.status(200).json({ success: true, found });
-    })
-    .catch((err) => res.status(400).send(err));
+  if (!canReadProfile(req.user._id, req.params.id)) {
+    return res.status(404).json({ success: false, message: 'Not found.' });
+  }
+  return res.status(200).json({ success: true, found: publicProfile(req.user) });
 });
 
 router.get('/logout', (req, res) => {
@@ -215,7 +214,7 @@ router.post('/updateOrAddPhone', authenticate.verifyUser, async (req, res, next)
     if (!docs) {
       return res.status(404).send();
     }
-    return res.status(200).json({ success: true, docs });
+    return res.status(200).json({ success: true, docs: publicProfile(docs) });
   } catch (err) {
     next(err);
   }
@@ -255,7 +254,7 @@ router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) =>
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    return res.status(200).json({ success: true, user: updated });
+    return res.status(200).json({ success: true, user: publicProfile(updated) });
   } catch (err) {
     next(err);
   }

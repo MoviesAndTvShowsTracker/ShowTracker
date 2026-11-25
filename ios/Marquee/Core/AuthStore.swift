@@ -204,10 +204,19 @@ final class AuthStore {
             let currentPassword: String
             let newPassword: String
         }
-        let _: SuccessMessage = try await APIClient.shared.post(
+        struct Response: Decodable, Sendable {
+            let success: Bool?
+            let token: String?
+        }
+        let res: Response = try await APIClient.shared.post(
             "/users/changePassword",
             body: Body(currentPassword: current, newPassword: newPassword)
         )
+        // Changing the password ends older sessions; keep this one with the fresh token.
+        if let token = res.token, var updated = session {
+            updated.token = token
+            persist(updated)
+        }
     }
 
     func signOut() {

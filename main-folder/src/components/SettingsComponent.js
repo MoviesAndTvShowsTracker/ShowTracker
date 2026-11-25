@@ -109,6 +109,8 @@ export default function Settings() {
         newPassword: passwords.newPassword,
       });
       if (r.data.success) {
+        // Changing the password ends older sessions; keep this one with the fresh token.
+        if (r.data.token) localStorage.setItem('token', r.data.token);
         setPasswordMessage('Password updated.');
         setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
