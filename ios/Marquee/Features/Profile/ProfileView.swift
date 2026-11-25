@@ -76,7 +76,8 @@ struct ProfileView: View {
         .navigationDestination(isPresented: $showStats) { StatsView() }
         .task {
             if UITestingFixtures.emptyDiary { ready = true; return }
-            guard Freshness.shared.isStale("you") else { return }
+            // A fresh view instance has nothing on screen yet, so it always loads.
+            guard !ready || Freshness.shared.isStale("you") else { return }
             await load()
         }
         .refreshable { await load() }

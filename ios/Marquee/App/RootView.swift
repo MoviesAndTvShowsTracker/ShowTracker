@@ -11,19 +11,16 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            // Static-frame colour stays outside the growing window until settled.
-            if !settled {
-                LaunchSplashBackground()
-            }
-
             ZStack {
                 theme.surface.ignoresSafeArea()
                 destination
             }
-            .modifier(LaunchRevealMask(revealed: revealed, settled: settled))
+            .modifier(LaunchRevealMask(revealed: revealed))
             .allowsHitTesting(revealed)
 
+            // Static-frame colour covers everything outside the growing window until settled.
             if !settled {
+                LaunchRevealCover(revealed: revealed)
                 LaunchSplashView(revealed: revealed)
             }
 

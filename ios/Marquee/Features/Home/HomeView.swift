@@ -78,7 +78,8 @@ struct HomeView: View {
                 return
             }
             // Tab switches reuse what's on screen unless it's older than a minute or something changed.
-            guard Freshness.shared.isStale("home") else { return }
+            // A fresh view instance has nothing on screen yet, so it always loads.
+            guard loading || Freshness.shared.isStale("home") else { return }
             await load()
         }
     }

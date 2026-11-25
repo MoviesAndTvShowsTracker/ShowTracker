@@ -89,34 +89,54 @@ struct LaunchSplashView: View {
     }
 }
 
-/// The app appears through a rounded-square window that grows from under the
-/// logo to past the screen corners. Dropped entirely once settled so navigation
-/// transitions never fight a parent mask or scale.
+/// Keeps the app's view structure identical in every launch phase. Branching here
+/// (e.g. dropping a mask once settled) gives the whole app a new identity, which
+/// remounts every screen and throws away its state mid-load.
 struct LaunchRevealMask: ViewModifier {
     var revealed: Bool
-    var settled: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        if settled {
-            content
-        } else if reduceMotion {
-            content.opacity(revealed ? 1 : 0)
-        } else {
-            content
-                .scaleEffect(revealed ? 1 : 1.04)
-                .mask {
-                    GeometryReader { geo in
-                        let full = hypot(geo.size.width, geo.size.height) * 1.05
-                        // Starts just inside the logo so nothing peeks around it.
-                        let side = revealed ? full : LaunchMetrics.markSide * 0.9
-                        RoundedRectangle(cornerRadius: side * LaunchMetrics.cornerRatio, style: .continuous)
-                            .frame(width: side, height: side)
-                            .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        content.scaleEffect(revealed || reduceMotion ? 1 : 1.04)
+    }
+}
+
+/// The launch colour above the app with a rounded-square window cut out of it,
+/// growing from under the logo to past the screen corners. Removed once settled;
+/// it's a sibling of the app, so removing it never remounts anything.
+struct LaunchRevealCover: View {
+    var revealed: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                LaunchSplashBackground()
+                    .opacity(revealed ? 0 : 1)
+            } else {
+                LaunchSplashBackground()
+                    .mask {
+                        GeometryReader { geo in
+                            let full = hypot(geo.size.width, geo.size.height) * 1.05
+                            // Starts just inside the logo so nothing peeks around it.
+                            let side = revealed ? full : LaunchMetrics.markSide * 0.9
+                            Rectangle()
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: side * LaunchMetrics.cornerRatio, style: .continuous)
+                                        .frame(width: side, height: side)
+                                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                                        .blendMode(.destinationOut)
+                                }
+                                .compositingGroup()
+                        }
+                        .ignoresSafeArea()
                     }
-                    .ignoresSafeArea()
-                }
+            }
         }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
