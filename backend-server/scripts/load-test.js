@@ -2,6 +2,8 @@
 /**
  * Tiny load test: N virtual users hit the given paths in a loop for D seconds.
  *
+ * Start the API with RATE_LIMIT_DISABLED=1 when testing locally: every virtual user shares one IP.
+ *
  * Usage:
  *   BASE_URL=http://localhost:5001 TOKEN=<jwt> USERS=10 SECONDS=30 \
  *     node scripts/load-test.js /api/home /api/stats/dashboard
