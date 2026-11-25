@@ -4,6 +4,7 @@ var router = express.Router();
 var User = require('../models/user');
 var passport = require('passport');
 var authenticate = require('../authenticate');
+const { deleteAccountData } = require('../services/accountDeletion');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
 const { verifyAppleIdentityToken, findOrCreateAppleUser } = require('../lib/appleAuth');
 const {
@@ -330,39 +331,8 @@ router.post('/forgot-password', async (req, res, next) => {
 
 router.delete('/me', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const Favorite = require('../models/favorite');
-    const FavoriteForTV = require('../models/favoritefortv');
-    const Watch = require('../models/watch');
-    const TVWatch = require('../models/tvwatch');
-    const MovieWatchlist = require('../models/moviewatchlist');
-    const TVWatchlist = require('../models/tvwatchlist');
-    const TvShowTracking = require('../models/tvShowTracking');
-    const TvEpisodeWatch = require('../models/tvEpisodeWatch');
-    const ImportJob = require('../models/importJob');
-    const UserStatsCache = require('../models/userStatsCache');
-
-    await Promise.all([
-      Favorite.deleteMany({ userFrom: userId }),
-      FavoriteForTV.deleteMany({ userFrom: userId }),
-      Watch.deleteMany({ userFrom: userId }),
-      TVWatch.deleteMany({ userFrom: userId }),
-      MovieWatchlist.deleteMany({ userFrom: userId }),
-      TVWatchlist.deleteMany({ userFrom: userId }),
-      TvShowTracking.deleteMany({ userFrom: userId }),
-      TvEpisodeWatch.deleteMany({ userFrom: userId }),
-      ImportJob.deleteMany({ userFrom: userId }),
-      UserStatsCache.deleteMany({ userFrom: userId }),
-    ]);
-
-    try {
-      const DeviceToken = require('../models/deviceToken');
-      await DeviceToken.deleteMany({ userFrom: userId });
-    } catch (_) {
-      // Device tokens land in P3; ignore if model is not present yet.
-    }
-
-    await User.findByIdAndDelete(userId);
+    // Every collection with a userFrom field (found from the models), then the account itself.
+    await deleteAccountData(req.user._id);
     return res.status(200).json({ success: true, message: 'Account deleted.' });
   } catch (err) {
     next(err);
