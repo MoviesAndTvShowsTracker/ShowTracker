@@ -6,6 +6,7 @@ var passport = require('passport');
 var authenticate = require('../authenticate');
 const { deleteAccountData } = require('../services/accountDeletion');
 const { requestPasswordReset } = require('../services/passwordResetFlow');
+const { resetProvesEmail, emailChangeUpdates } = require('../lib/accountOwnership');
 const { verifyGoogleIdToken, findOrCreateGoogleUser } = require('../lib/googleAuth');
 const { verifyAppleIdentityToken, findOrCreateAppleUser } = require('../lib/appleAuth');
 const {
@@ -13,8 +14,8 @@ const {
   normalizeEmail,
   findUserByEmail,
   emailTakenFilter,
-  profileEmailUpdate,
   canReadProfile,
+  validEmail,
   publicProfile,
 } = require('../lib/userHelpers');
 const { hashResetToken, setPassword } = require('../lib/passwordReset');
@@ -45,6 +46,14 @@ router.post('/signup', async (req, res, next) => {
     }
     if (password.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    if (!validEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address.' });
+    }
+    // Registration matches emails exactly; check regardless of case first.
+    if (await User.findOne(emailTakenFilter(normalizedEmail, null))) {
+      return res.status(400).json({ success: false, err: 'An account with that email already exists.' });
     }
 
     const username = await uniqueUsername(normalizedEmail.split('@')[0]);
@@ -213,17 +222,39 @@ router.post('/updateOrAddPhone', authenticate.verifyUser, async (req, res, next)
   }
 });
 
+/** True when `password` is the account's current password. */
+function passwordMatches(userId, password) {
+  return new Promise((resolve) => {
+    User.findById(userId).select('+hash +salt').then((user) => {
+      if (!user || typeof password !== 'string' || !password) return resolve(false);
+      user.authenticate(password, (err, ok) => resolve(Boolean(!err && ok)));
+    }).catch(() => resolve(false));
+  });
+}
+
 router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) => {
   try {
-    const { firstName, lastName, email, phonenumber } = req.body;
-    if (!email?.trim()) {
-      return res.status(400).json({ success: false, message: 'Email is required.' });
+    const { firstName, lastName, email, phonenumber, currentPassword } = req.body;
+    if (!validEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address.' });
     }
 
-    // Unique regardless of case, so nobody can hold "Victim@x.com" beside "victim@x.com".
-    const emailTaken = await User.findOne(emailTakenFilter(email, req.user._id));
-    if (emailTaken) {
-      return res.status(400).json({ success: false, message: 'That email is already in use.' });
+    const change = emailChangeUpdates(req.user, email);
+    const emailChanging = change.set.email !== normalizeEmail(req.user.email);
+    if (emailChanging) {
+      // The email is the account's identity: changing it needs the current password, so a
+      // stolen session can't move the account to another address.
+      if (!(await passwordMatches(req.user._id, currentPassword))) {
+        return res.status(403).json({
+          success: false,
+          code: 'password_required',
+          message: 'Enter your current password to change your email. Signed in with Google or Apple? Set a password with "Forgot password" first.',
+        });
+      }
+      // Unique regardless of case, so nobody can hold "Victim@x.com" beside "victim@x.com".
+      if (await User.findOne(emailTakenFilter(email, req.user._id))) {
+        return res.status(400).json({ success: false, message: 'That email is already in use.' });
+      }
     }
 
     const phone = phonenumber ? String(phonenumber).replace(/\D/g, '') : '';
@@ -231,18 +262,18 @@ router.post('/updateProfile', authenticate.verifyUser, async (req, res, next) =>
       return res.status(400).json({ success: false, message: 'Phone must be 10 digits.' });
     }
 
-    const updated = await User.findByIdAndUpdate(
-      req.user._id,
-      {
+    const update = {
+      $set: {
         firstName: String(firstName ?? '').trim(),
         lastName: String(lastName ?? '').trim(),
-        // Stored lowercase; a new address is unproven until a reset link or a provider confirms it.
-        ...profileEmailUpdate(req.user, email),
         phonenumber: phone || '',
+        // Stored lowercase; a new address is unproven, and reset links sent to the old one stop working.
+        ...change.set,
       },
-      { new: true }
-    );
+    };
+    if (change.unset.length) update.$unset = Object.fromEntries(change.unset.map((f) => [f, 1]));
 
+    const updated = await User.findByIdAndUpdate(req.user._id, update, { new: true });
     if (!updated) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -263,13 +294,13 @@ router.post('/changePassword', authenticate.verifyUser, (req, res) => {
     return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
   }
 
-  req.user.changePassword(currentPassword, newPassword, async (err) => {
+  // Saved together with the new password (one save), so old sessions can't outlive the change.
+  req.user.passwordChangedAt = new Date();
+  req.user.changePassword(currentPassword, newPassword, (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
     }
     // Sessions on other devices end; this device gets a fresh token.
-    req.user.passwordChangedAt = new Date();
-    await req.user.save();
     const token = authenticate.getToken({ _id: req.user._id });
     return res.status(200).json({ success: true, message: 'Password updated.', token });
   });
@@ -309,7 +340,7 @@ router.post('/reset-password', async (req, res, next) => {
     const user = await User.findOne({
       resetPasswordToken: tokenHash,
       resetPasswordExpires: { $gt: new Date() },
-    }).select('+resetPasswordToken +resetPasswordExpires');
+    }).select('+resetPasswordToken +resetPasswordExpires +resetPasswordEmail');
 
     if (!user) {
       return res.status(400).json({
@@ -318,11 +349,14 @@ router.post('/reset-password', async (req, res, next) => {
       });
     }
 
+    // The link proves the address only if it's still the one it was sent to.
+    const proves = resetProvesEmail(user);
     await setPassword(user, newPassword);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-    // The emailed link proves the address; every older session ends.
-    user.emailVerified = true;
+    user.resetPasswordEmail = undefined;
+    if (proves) user.emailVerified = true;
+    // Every older session ends.
     user.passwordChangedAt = new Date();
     await user.save();
 

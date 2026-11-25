@@ -15,11 +15,17 @@ enum KeychainStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
         ]
-        SecItemDelete(query as CFDictionary)
-        var add = query
-        add[kSecValueData as String] = data
-        add[kSecAttrAccessible as String] = accessible
-        SecItemAdd(add as CFDictionary, nil)
+        // Update in place first: never delete a token before its replacement is stored.
+        let changes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: accessible,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, changes as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add.merge(changes) { _, new in new }
+            SecItemAdd(add as CFDictionary, nil)
+        }
     }
 
     static func string(forKey key: String) -> String? {

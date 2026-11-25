@@ -46,6 +46,14 @@ const dir = (name) => { const d = path.join(tmp, name); fs.mkdirSync(d, { recurs
   assert.ok(fs.statSync(bombZip).size < 50 * 1024, 'bomb is tiny on disk');
   await assert.rejects(readImportZip(bombZip, dir('out-bomb'), { maxEntryBytes: 1024 * 1024 }), /too large/i);
 
+  // The total cap trips mid-way through a second file: refused, and no partial file is left.
+  const twoZip = path.join(tmp, 'two.zip');
+  execFileSync('python3', ['-c', `import zipfile;z=zipfile.ZipFile(${JSON.stringify(twoZip)},'w',zipfile.ZIP_DEFLATED);z.writestr('user_tv_show_data.csv',b'1'*600000);z.writestr('tracking-prod-records.csv',b'2'*600000);z.close()`]);
+  const twoOut = dir('out-two');
+  await assert.rejects(readImportZip(twoZip, twoOut, { maxEntryBytes: 1024 * 1024, maxTotalBytes: 1000000 }), /too large/i);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(!fs.existsSync(path.join(twoOut, 'tracking-prod-records.csv')), 'the partial file is removed');
+
   // Too many entries.
   const manyZip = path.join(tmp, 'many.zip');
   execFileSync('python3', ['-c', `import zipfile;z=zipfile.ZipFile(${JSON.stringify(manyZip)},'w');[z.writestr(f'f{i}.txt','') for i in range(60)];z.close()`]);

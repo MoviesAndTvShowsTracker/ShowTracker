@@ -19,6 +19,10 @@ export default function Settings() {
     email: '',
     phonenumber: '',
   });
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const emailChanging =
+    profile.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase();
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -45,6 +49,7 @@ export default function Settings() {
             email: u.email || '',
             phonenumber: u.phonenumber ? String(u.phonenumber) : '',
           });
+          setOriginalEmail(u.email || '');
         }
       })
       .catch(() => setProfileError('Could not load your profile.'));
@@ -71,8 +76,12 @@ export default function Settings() {
         lastName: profile.lastName.trim(),
         email: profile.email.trim(),
         phonenumber: profile.phonenumber.trim(),
+        // Only needed (and only sent) when the email changes.
+        ...(emailChanging ? { currentPassword: emailPassword } : {}),
       });
       if (r.data.success) {
+        setOriginalEmail(profile.email.trim());
+        setEmailPassword('');
         setProfileMessage('Profile updated.');
       } else {
         setProfileError(r.data.message || 'Could not update profile.');
@@ -181,6 +190,24 @@ export default function Settings() {
                   autoComplete="email"
                 />
               </div>
+              {emailChanging && (
+                <div>
+                  <label htmlFor="email-password" className="section-title mb-2 block normal-case tracking-wide">
+                    Current password
+                  </label>
+                  <input
+                    id="email-password"
+                    type="password"
+                    className="input-field"
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <p className="mt-2 text-xs text-muted">
+                    Changing your email needs your password. Signed in with Google or Apple? Set one with Forgot password first.
+                  </p>
+                </div>
+              )}
               <div>
                 <label htmlFor="phone" className="section-title mb-2 block normal-case tracking-wide">
                   Phone

@@ -289,8 +289,12 @@ struct EditProfileView: View {
     @State private var lastName = ""
     @State private var email = ""
     @State private var phone = ""
+    @State private var originalEmail = ""
+    @State private var currentPassword = ""
     @State private var message: String?
     @State private var busy = false
+
+    private var emailChanging: Bool { ProfileEdit.needsPassword(original: originalEmail, edited: email) }
 
     var body: some View {
         Form {
@@ -304,6 +308,15 @@ struct EditProfileView: View {
                     .keyboardType(.numberPad)
             } footer: {
                 Text("This is how you show up in your diary.")
+            }
+
+            if emailChanging {
+                Section {
+                    SecureField("Current password", text: $currentPassword)
+                        .textContentType(.password)
+                } footer: {
+                    Text("Changing your email needs your password. Signed in with Google or Apple? Set one with Forgot password first.")
+                }
             }
 
             if let message {
@@ -327,6 +340,7 @@ struct EditProfileView: View {
             firstName = auth.profile?.firstName ?? auth.session?.firstName ?? ""
             lastName = auth.profile?.lastName ?? ""
             email = auth.profile?.email ?? auth.session?.email ?? ""
+            originalEmail = email
             phone = auth.profile?.phonenumber ?? ""
         }
     }
@@ -335,7 +349,10 @@ struct EditProfileView: View {
         busy = true
         defer { busy = false }
         do {
-            try await auth.updateProfile(firstName: firstName, lastName: lastName, email: email, phone: phone)
+            try await auth.updateProfile(
+                firstName: firstName, lastName: lastName, email: email, phone: phone,
+                currentPassword: emailChanging ? currentPassword : nil
+            )
             message = "Saved."
             Haptics.success()
             dismiss()

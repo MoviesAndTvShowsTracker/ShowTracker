@@ -185,16 +185,18 @@ final class AuthStore {
         }
     }
 
-    func updateProfile(firstName: String, lastName: String, email: String, phone: String) async throws {
+    /// `currentPassword` is required by the server only when the email changes.
+    func updateProfile(firstName: String, lastName: String, email: String, phone: String, currentPassword: String? = nil) async throws {
         struct Body: Encodable {
             let firstName: String
             let lastName: String
             let email: String
             let phonenumber: String
+            let currentPassword: String?
         }
         let _: SuccessMessage = try await APIClient.shared.post(
             "/users/updateProfile",
-            body: Body(firstName: firstName, lastName: lastName, email: email, phonenumber: phone)
+            body: Body(firstName: firstName, lastName: lastName, email: email, phonenumber: phone, currentPassword: currentPassword)
         )
         try await refreshProfile()
     }

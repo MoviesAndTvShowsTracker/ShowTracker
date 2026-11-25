@@ -159,7 +159,12 @@ actor APIClient {
         }
         guard let http = response as? HTTPURLResponse else { throw APIError.empty }
         if http.statusCode == 401 {
-            onUnauthorized?()
+            // Only a 401 for the token we hold now ends the session; one for an older token
+            // (e.g. a request in flight while the password changed) doesn't.
+            let sent = request.value(forHTTPHeaderField: "Authorization")
+            if let sent, sent == tokenProvider?().map({ "Bearer \($0)" }) {
+                onUnauthorized?()
+            }
             throw APIError.unauthorized
         }
         if !(200..<300).contains(http.statusCode) {

@@ -5,7 +5,7 @@ var express = require('express');
 var path = require('path');
 var logger = require('morgan');
 const { requestTimer, startLoopMonitor } = require('./lib/metrics');
-const { createRateLimiter } = require('./lib/rateLimit');
+const { createRateLimiter, accountKey } = require('./lib/rateLimit');
 const { errorResponse } = require('./lib/errors');
 const { securityHeaders } = require('./lib/securityHeaders');
 const { rejectOperators } = require('./lib/rejectOperators');
@@ -78,8 +78,12 @@ app.use(passport.initialize());
 // Per client address. Sign-in endpoints are tight (password guessing); the TMDB proxy needs no
 // login, so it gets its own budget; everything else gets a generous ceiling.
 const authLimit = createRateLimiter({ name: 'auth', windowMs: 15 * 60 * 1000, max: 20 });
-['/users/login', '/users/signup', '/users/google', '/users/apple', '/users/forgot-password', '/users/reset-password']
+['/users/login', '/users/signup', '/users/google', '/users/apple', '/users/forgot-password', '/users/reset-password', '/users/changePassword']
   .forEach((path) => app.post(path, authLimit));
+// Per account too, so spreading guesses across many addresses still runs out.
+app.post('/users/login', createRateLimiter({ name: 'login-account', windowMs: 15 * 60 * 1000, max: 10, keyFn: accountKey('login') }));
+// At most 3 reset emails an hour per address (no mail-bombing someone's inbox).
+app.post('/users/forgot-password', createRateLimiter({ name: 'reset-account', windowMs: 60 * 60 * 1000, max: 3, keyFn: accountKey('reset') }));
 app.use('/api/tmdb', createRateLimiter({ name: 'tmdb', windowMs: 60 * 1000, max: 300 }));
 app.use('/api', createRateLimiter({ name: 'api', windowMs: 60 * 1000, max: 600 }));
 

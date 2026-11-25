@@ -93,6 +93,25 @@ final class APIClientTests: XCTestCase {
         XCTAssertNil(cache.cachedResponse(for: request), "signing out leaves no API responses behind")
     }
 
+    func testA401ForAnOlderTokenDoesNotSignOut() async {
+        final class Box: @unchecked Sendable { var token = "old"; var signedOut = 0 }
+        let box = Box()
+        StubURLProtocol.handler = { _ in (401, Data("{}".utf8), 0.15) }
+        let api = client()
+        await api.configure(tokenProvider: { box.token }, onUnauthorized: { box.signedOut += 1 })
+
+        // The token changes (password changed) while a request made with the old one is in flight.
+        async let stale: SuccessMessage = api.get("/api/home")
+        try? await Task.sleep(for: .milliseconds(50))
+        box.token = "new"
+        _ = try? await stale
+        XCTAssertEqual(box.signedOut, 0, "a stale token's 401 keeps the fresh session")
+
+        // A 401 for the token we hold now does sign out.
+        let _: SuccessMessage? = try? await api.get("/api/stats/dashboard")
+        XCTAssertEqual(box.signedOut, 1)
+    }
+
     func testClientErrorsAreNotRetried() async {
         StubURLProtocol.handler = { _ in (404, Data(#"{"message":"nope"}"#.utf8), 0) }
         do {

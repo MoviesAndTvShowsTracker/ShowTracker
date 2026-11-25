@@ -44,6 +44,11 @@ var User = new Schema({
         type: Date,
         select: false
     },
+    // The address a pending reset link was sent to; the link proves only that address.
+    resetPasswordEmail: {
+        type: String,
+        select: false
+    },
     admin: {
         type: Boolean,
         default: false

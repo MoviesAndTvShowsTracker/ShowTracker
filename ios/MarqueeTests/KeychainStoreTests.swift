@@ -13,6 +13,13 @@ final class KeychainStoreTests: XCTestCase {
         XCTAssertEqual(KeychainStore.accessibility(forKey: key), kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
     }
 
+    func testSavingAgainReplacesTheValueInPlace() {
+        KeychainStore.set("first", forKey: key)
+        KeychainStore.set("second", forKey: key)
+        XCTAssertEqual(KeychainStore.string(forKey: key), "second")
+        XCTAssertEqual(KeychainStore.accessibility(forKey: key), kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+    }
+
     func testOlderItemsAreMigratedWhenRead() {
         // An item saved the old way (default accessibility, which can travel in backups).
         let query: [String: Any] = [

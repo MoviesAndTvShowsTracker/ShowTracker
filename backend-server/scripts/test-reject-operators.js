@@ -9,6 +9,9 @@ assert.strictEqual(hasOperatorKey({ episodes: [{ seasonNumber: 1 }, { seasonNumb
 assert.strictEqual(hasOperatorKey({ a: { b: { c: { $where: '1' } } } }), true, 'deeply nested');
 assert.strictEqual(hasOperatorKey({ note: '$5 off' }), false, 'dollar signs in values are fine');
 assert.strictEqual(hasOperatorKey(null), false);
+let deep = { x: 1 };
+for (let i = 0; i < 30; i += 1) deep = { a: deep };
+assert.strictEqual(hasOperatorKey(deep), true, 'implausibly deep input is refused');
 
 function run(req) {
   let status = 200;

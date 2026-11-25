@@ -41,7 +41,6 @@ export default function ForgotPassword() {
 
   const resetForm = () => {
     setSentTo('');
-    setEmailDispatched(false);
     setError('');
   };
 

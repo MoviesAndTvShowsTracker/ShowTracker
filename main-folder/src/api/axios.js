@@ -33,7 +33,12 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || '';
-    const hadToken = Boolean(localStorage.getItem('token'));
+    const current = localStorage.getItem('token');
+    const hadToken = Boolean(current);
+    // Only a 401 for the token we hold now ends the session; one for an older token
+    // (a request in flight while the password changed) doesn't.
+    const sentAuth = error.config?.headers?.Authorization || error.config?.headers?.authorization;
+    const forCurrentToken = !sentAuth || sentAuth === `Bearer ${current}`;
     const isAuthRoute =
       url.includes('/users/login') ||
       url.includes('/users/signup') ||
@@ -41,7 +46,7 @@ api.interceptors.response.use(
       url.includes('/users/forgot-password') ||
       url.includes('/users/reset-password');
 
-    if (status === 401 && hadToken && !isAuthRoute) {
+    if (status === 401 && hadToken && forCurrentToken && !isAuthRoute) {
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('email');

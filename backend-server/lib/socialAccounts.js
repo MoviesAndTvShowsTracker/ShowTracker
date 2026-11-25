@@ -3,6 +3,7 @@ const User = require('../models/user');
 const { uniqueUsername, findUserByEmail } = require('./userHelpers');
 const { linkDecision } = require('./socialLink');
 const { setPassword } = require('./passwordReset');
+const { claimUpdates } = require('./accountOwnership');
 
 function registerUser(user, password) {
   return new Promise((resolve, reject) => {
@@ -45,6 +46,12 @@ async function resolveSocialUser({ idField, providerId, email, emailVerified, na
     }
     user.emailVerified = true;
     await user.save();
+    if (decision.claim) {
+      // Every earlier way in goes too: another linked provider and any pending reset link.
+      const { unset } = claimUpdates(user, idField);
+      await User.updateOne({ _id: user._id }, { $unset: Object.fromEntries(unset.map((f) => [f, 1])) });
+      unset.forEach((f) => { user[f] = undefined; });
+    }
     return user;
   }
 

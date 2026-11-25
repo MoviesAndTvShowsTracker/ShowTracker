@@ -31,6 +31,13 @@ async function uniqueUsername(base) {
   return candidate;
 }
 
+/** A plain ASCII address (no spaces, zero-width or look-alike characters). */
+function validEmail(raw) {
+  if (typeof raw !== 'string') return false;
+  const email = raw.trim();
+  return email.length <= 254 && /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(email);
+}
+
 /** Another account using this email, ignoring case. */
 function emailTakenFilter(rawEmail, userId) {
   const email = normalizeEmail(rawEmail);
@@ -65,4 +72,5 @@ module.exports = {
   profileEmailUpdate,
   canReadProfile,
   publicProfile,
+  validEmail,
 };

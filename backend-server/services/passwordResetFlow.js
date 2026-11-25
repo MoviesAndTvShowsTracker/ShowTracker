@@ -10,12 +10,14 @@ async function issueReset(user) {
   const { raw, hash, expires } = generateResetToken();
   user.resetPasswordToken = hash;
   user.resetPasswordExpires = expires;
+  user.resetPasswordEmail = user.email;
   await user.save();
   try {
     await sendPasswordResetEmail({ to: user.email, resetUrl: buildResetUrl(raw) });
   } catch (err) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.resetPasswordEmail = undefined;
     await user.save();
     throw err;
   }

@@ -47,9 +47,15 @@ function readImportZip(zipPath, outDir, options = {}) {
       const written = [];
       let total = 0;
       let settled = false;
+      let active = null; // { stream, out, file } while an entry is being written
       const done = (err) => {
         if (settled) return;
         settled = true;
+        if (active) {
+          active.stream.destroy();
+          active.out.destroy();
+          fs.rm(active.file, { force: true }, () => {});
+        }
         zip.close();
         if (err) reject(err.status ? err : fail(`Could not read that zip: ${err.message}`));
         else resolve(written);
@@ -67,20 +73,21 @@ function readImportZip(zipPath, outDir, options = {}) {
         zip.openReadStream(entry, (streamErr, stream) => {
           if (streamErr) return done(streamErr);
           // 'wx': create only, never overwrite or follow an existing file.
-          const out = fs.createWriteStream(path.join(outDir, name), { flags: 'wx' });
+          const file = path.join(outDir, name);
+          const out = fs.createWriteStream(file, { flags: 'wx' });
+          active = { stream, out, file };
           let bytes = 0;
           stream.on('data', (chunk) => {
             bytes += chunk.length;
             total += chunk.length;
             if (bytes > limits.maxEntryBytes || total > limits.maxTotalBytes) {
-              stream.destroy();
-              out.destroy();
               done(fail(`${name} is too large.`));
             }
           });
           stream.on('error', done);
           out.on('error', done);
           out.on('finish', () => {
+            active = null;
             written.push(name);
             zip.readEntry();
           });

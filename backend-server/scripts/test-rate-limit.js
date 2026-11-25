@@ -37,4 +37,21 @@ assert.ok(hit('1.1.1.1').passed, 'a new window resets the budget');
 assert.strictEqual(clientKey({ ip: '10.0.0.1', headers: { 'cf-connecting-ip': '203.0.113.9' } }), '203.0.113.9');
 assert.strictEqual(clientKey({ ip: '10.0.0.1', headers: {} }), '10.0.0.1');
 
+// Per-account budgets: guessing one account's password from many addresses still runs out.
+const { accountKey } = require('../lib/rateLimit');
+let t = 0;
+const perAccount = createRateLimiter({ windowMs: 60000, max: 2, now: () => t, keyFn: accountKey('login') });
+const tryLogin = (ip, email) => {
+  let ok = false;
+  const res = fakeRes();
+  perAccount({ ip, headers: {}, body: { email } }, res, () => { ok = true; });
+  return ok;
+};
+assert.ok(tryLogin('1.1.1.1', 'Victim@x.com'));
+assert.ok(tryLogin('2.2.2.2', 'victim@x.com'));
+assert.ok(!tryLogin('3.3.3.3', 'VICTIM@x.com'), 'third attempt on the same account is blocked from any address');
+assert.ok(tryLogin('3.3.3.3', 'someone-else@x.com'), 'other accounts are unaffected');
+// No email in the body: falls back to the client address.
+assert.strictEqual(accountKey('login')({ ip: '9.9.9.9', headers: {}, body: {} }), 'login:ip:9.9.9.9');
+
 console.log('rate limit: all passed');
