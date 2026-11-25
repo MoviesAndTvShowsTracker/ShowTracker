@@ -870,18 +870,11 @@ struct TVDetailView: View {
                 let res = try await DiaryService.markRewatchEpisode(body)
                 applyRewatchMutation(res)
             } else {
-                try await DiaryService.markEpisode(body)
-                if tracking == nil, let detail {
-                    try? await DiaryService.startTracking(
-                        TrackingStartBody(tvId: idString, tvTitle: detail.name, tvPosterImage: detail.poster_path)
-                    )
-                }
-                tracking = try? await DiaryService.tracking(for: idString)
-                if let state = try? await DiaryService.rewatchState(tvId: idString) {
-                    episodePlayCounts = state.playCounts ?? episodePlayCounts
-                    episodePlayDates = state.playDates ?? episodePlayDates
-                    rewatchPlayTotal = state.rewatchPlayTotal ?? rewatchPlayTotal
-                }
+                // The mark creates tracking if needed and returns it: no follow-up requests.
+                if let updated = try await DiaryService.markEpisode(body) { tracking = updated }
+                (episodePlayCounts, episodePlayDates) = EpisodePlays.afterFirstWatch(
+                    counts: episodePlayCounts, dates: episodePlayDates, key: key, at: .now
+                )
             }
         } catch {
             watchedKeys.remove(key)
@@ -1231,12 +1224,10 @@ struct TVDetailView: View {
     }
 
     private func pause() async {
-        try? await DiaryService.stopTracking(tvId: idString, status: "paused")
-        tracking = try? await DiaryService.tracking(for: idString)
+        if let updated = try? await DiaryService.stopTracking(tvId: idString, status: "paused") { tracking = updated }
     }
 
     private func resume() async {
-        try? await DiaryService.resumeTracking(tvId: idString)
-        tracking = try? await DiaryService.tracking(for: idString)
+        if let updated = try? await DiaryService.resumeTracking(tvId: idString) { tracking = updated }
     }
 }

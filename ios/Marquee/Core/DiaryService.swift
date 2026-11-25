@@ -177,15 +177,21 @@ enum DiaryService {
         return res.tracking
     }
 
-    static func stopTracking(tvId: String, status: String = "paused") async throws {
-        let _: SuccessMessage = try await APIClient.shared.post(
+    /// Returns the updated tracking the server sends back.
+    @discardableResult
+    static func stopTracking(tvId: String, status: String = "paused") async throws -> TrackingRecord? {
+        let res: TrackingShowResponse = try await APIClient.shared.post(
             "/api/tv/tracking/stop",
             body: TrackingStopBody(tvId: tvId, status: status)
         )
+        return res.tracking
     }
 
-    static func resumeTracking(tvId: String) async throws {
-        let _: SuccessMessage = try await APIClient.shared.post("/api/tv/tracking/resume", body: ["tvId": tvId])
+    /// Returns the updated tracking the server sends back.
+    @discardableResult
+    static func resumeTracking(tvId: String) async throws -> TrackingRecord? {
+        let res: TrackingShowResponse = try await APIClient.shared.post("/api/tv/tracking/resume", body: ["tvId": tvId])
+        return res.tracking
     }
 
     static func tracking(for tvId: String) async throws -> TrackingRecord? {
